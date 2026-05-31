@@ -53,7 +53,7 @@ function normalizeCard(raw) {
 
 export const SETS = [
   { code: 'CORE',    name: 'Beyond the Gates',     color: '#1a4a6e' },
-  { code: 'COREKS',  name: 'Beyond the Gates KS',  color: '#1a3a5e' },
+  { code: 'COREKS',  name: 'Beyond the Gates KS',  color: '#1a3a5e', hidden: true },
   { code: 'ALIZE',   name: 'Trial by Frost',        color: '#2a5a7a' },
   { code: 'BISE',    name: 'Whisper from the Maze', color: '#3a3a6e' },
   { code: 'CYCLONE', name: 'Skybound Odyssey',       color: '#1a5a4a' },

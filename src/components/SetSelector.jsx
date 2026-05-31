@@ -20,7 +20,7 @@ export default function SetSelector({ selectedSets, onChange, disabled }) {
     <div>
       <label className="block text-sm text-gray-400 mb-2">Sets to draft from</label>
       <div className="space-y-2">
-        {SETS.map(set => {
+        {SETS.filter(s => !s.hidden).map(set => {
           const selected = !!selectedSets[set.code]
           return (
             <div key={set.code} className={`flex items-center gap-3 p-3 rounded-lg border transition-colors ${

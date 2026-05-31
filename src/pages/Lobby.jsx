@@ -228,7 +228,7 @@ export default function Lobby() {
                     Select a set — each player receives 4 packs of that set.
                   </p>
                   <div className="grid grid-cols-2 gap-3">
-                    {SETS.map(set => {
+                    {SETS.filter(s => !s.hidden).map(set => {
                       const selected = selectedPreset === set.code
                       const assets = SET_ASSETS[set.code]
                       const logoUrl = assets?.logo
