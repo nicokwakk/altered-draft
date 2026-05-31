@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase.js'
-import { fetchSet, apiSetCode, FACTIONS, FACTION_NAMES, FACTION_COLORS } from '../lib/cardData.js'
-import { FACTION_ICONS, RARITY_GEMS } from '../lib/assets.js'
+import { fetchSet, apiSetCode, FACTIONS, FACTION_NAMES, FACTION_COLORS, SET_ABBREV } from '../lib/cardData.js'
+import { FACTION_ICONS, RARITY_GEMS, SET_ICONS, SET_ABBREV_ICON_CODE } from '../lib/assets.js'
 import { buildDecklist } from '../lib/exportFormat.js'
 import ExportButton from '../components/ExportButton.jsx'
 import DraftStats from '../components/DraftStats.jsx'
@@ -19,6 +19,7 @@ export default function Sealed() {
   const [favorites, setFavorites] = useState(new Set())
   const [loading, setLoading] = useState(true)
   const [filterFaction, setFilterFaction] = useState('ALL')
+  const [sortBy, setSortBy] = useState('faction') // 'faction' | 'type' | 'cost' | 'set'
 
   useEffect(() => {
     const stored = localStorage.getItem(`player_${code}`)
@@ -140,27 +141,40 @@ export default function Sealed() {
 
       {/* FULL POOL TAB */}
       {tab === 'pool' && (
-        <div className="flex-1 overflow-y-auto">
-          {/* Faction filter */}
-          <div className="px-4 py-2 border-b border-gray-800 flex gap-1.5 flex-wrap">
-            <button onClick={() => setFilterFaction('ALL')}
-              className={`px-2.5 py-1 rounded text-xs transition-colors ${filterFaction === 'ALL' ? 'bg-gray-600 text-gray-100' : 'text-gray-500 hover:text-gray-300'}`}>
-              All
-            </button>
-            {FACTIONS.map(f => (
-              <button key={f} onClick={() => setFilterFaction(f === filterFaction ? 'ALL' : f)}
-                className={`px-2 py-1 rounded text-xs transition-colors flex items-center gap-1 border ${
-                  filterFaction === f ? FACTION_COLORS[f] : 'border-transparent text-gray-500 hover:text-gray-300'}`}>
-                {FACTION_ICONS[f] && <img src={FACTION_ICONS[f]} alt={f} className="w-3 h-3 object-contain" />}
-                <span className="hidden sm:inline">{FACTION_NAMES[f]}</span>
-                <span className="sm:hidden">{f}</span>
+        <div className="flex-1 overflow-y-auto flex flex-col">
+          {/* Controls */}
+          <div className="px-4 py-2 border-b border-gray-800 flex flex-wrap gap-2 items-center shrink-0">
+            {/* Faction filter */}
+            <div className="flex gap-1 flex-wrap flex-1">
+              <button onClick={() => setFilterFaction('ALL')}
+                className={`px-2.5 py-1 rounded text-xs transition-colors ${filterFaction === 'ALL' ? 'bg-gray-600 text-gray-100' : 'text-gray-500 hover:text-gray-300'}`}>
+                All
               </button>
-            ))}
+              {FACTIONS.map(f => (
+                <button key={f} onClick={() => setFilterFaction(f === filterFaction ? 'ALL' : f)}
+                  className={`px-2 py-1 rounded text-xs transition-colors flex items-center gap-1 border ${
+                    filterFaction === f ? FACTION_COLORS[f] : 'border-transparent text-gray-500 hover:text-gray-300'}`}>
+                  {FACTION_ICONS[f] && <img src={FACTION_ICONS[f]} alt={f} className="w-3 h-3 object-contain" />}
+                  <span className="hidden sm:inline">{FACTION_NAMES[f]}</span>
+                  <span className="sm:hidden">{f}</span>
+                </button>
+              ))}
+            </div>
+            {/* Sort */}
+            <div className="flex gap-1 shrink-0">
+              {['faction', 'type', 'cost', 'set'].map(s => (
+                <button key={s} onClick={() => setSortBy(s)}
+                  className={`px-2 py-1 rounded text-xs capitalize transition-colors ${sortBy === s ? 'bg-amber-500 text-gray-950 font-bold' : 'bg-gray-800 text-gray-400 hover:text-gray-200'}`}>
+                  {s}
+                </button>
+              ))}
+            </div>
           </div>
-          <div className="p-4">
-            <p className="text-xs text-gray-500 mb-3">{poolRefs.length} cards</p>
-            <CardPool refs={poolRefs} cardMap={cardMap} loading={loading}
-              favorites={favorites} onToggleFavorite={toggleFavorite} />
+
+          <div className="overflow-y-auto flex-1 p-4 space-y-5">
+            <p className="text-xs text-gray-500">{poolRefs.length} cards</p>
+            <GroupedPool refs={poolRefs} cardMap={cardMap} sortBy={sortBy}
+              loading={loading} favorites={favorites} onToggleFavorite={toggleFavorite} />
           </div>
         </div>
       )}
@@ -197,6 +211,105 @@ export default function Sealed() {
           })}
         </div>
       )}
+    </div>
+  )
+}
+
+const TYPE_LABEL = {
+  HERO: 'Hero', CHARACTER: 'Character', SPELL: 'Spell',
+  PERMANENT: 'Permanent', LANDMARK_PERMANENT: 'Permanent', EXPEDITION_PERMANENT: 'Permanent',
+}
+const TYPE_ORDER = ['Hero', 'Character', 'Spell', 'Permanent']
+
+// Groups a flat list of refs by sortBy and renders labeled sections
+function GroupedPool({ refs, cardMap, sortBy, loading, favorites, onToggleFavorite }) {
+  const cards = refs.map(r => ({ ref: r, card: cardMap[r] }))
+
+  function buildGroups() {
+    if (sortBy === 'faction') {
+      const buckets = {}
+      for (const f of ['HERO', ...FACTIONS]) buckets[f] = []
+      for (const { ref, card } of cards) {
+        const key = card?.cardType === 'HERO' ? 'HERO' : (card?.faction ?? '??')
+        ;(buckets[key] = buckets[key] ?? []).push(ref)
+      }
+      return Object.entries(buckets)
+        .filter(([, v]) => v.length)
+        .map(([key, refs]) => ({
+          key,
+          label: key === 'HERO' ? 'Hero' : (FACTION_NAMES[key] ?? key),
+          icon: FACTION_ICONS[key] ?? null,
+          colorCls: FACTION_COLORS[key] ?? (key === 'HERO' ? 'text-amber-400 bg-amber-500/10 border-amber-500/30' : 'text-gray-400 bg-gray-800 border-gray-700'),
+          refs,
+        }))
+    }
+    if (sortBy === 'type') {
+      const buckets = {}
+      for (const { ref, card } of cards) {
+        const label = TYPE_LABEL[card?.cardType] ?? (card?.cardType ?? '?')
+        ;(buckets[label] = buckets[label] ?? []).push(ref)
+      }
+      return TYPE_ORDER.filter(t => buckets[t]).map(label => ({
+        key: label, label, icon: null,
+        colorCls: 'text-gray-300 bg-gray-800 border-gray-700',
+        refs: buckets[label],
+      }))
+    }
+    if (sortBy === 'cost') {
+      const buckets = {}
+      for (const { ref, card } of cards) {
+        const cost = card?.mainCost != null ? String(card.mainCost) : '—'
+        ;(buckets[cost] = buckets[cost] ?? []).push(ref)
+      }
+      return Object.entries(buckets)
+        .sort(([a], [b]) => a === '—' ? 1 : b === '—' ? -1 : Number(a) - Number(b))
+        .map(([cost, refs]) => ({
+          key: cost, label: cost === '—' ? 'No cost' : `Cost ${cost}`, icon: null,
+          colorCls: 'text-gray-300 bg-gray-800 border-gray-700',
+          refs,
+        }))
+    }
+    if (sortBy === 'set') {
+      const buckets = {}
+      for (const { ref, card } of cards) {
+        const rawSet = ref.split('_')[1] ?? '?'
+        const abbrev = SET_ABBREV[rawSet] ?? rawSet
+        ;(buckets[abbrev] = buckets[abbrev] ?? []).push(ref)
+      }
+      const setOrder = ['BTG', 'TBF', 'WTM', 'SKY', 'SDU', 'ROC', 'NEJ']
+      return Object.entries(buckets)
+        .sort(([a], [b]) => (setOrder.indexOf(a) + 1 || 99) - (setOrder.indexOf(b) + 1 || 99))
+        .map(([abbrev, refs]) => {
+          const iconCode = SET_ABBREV_ICON_CODE[abbrev]
+          return {
+            key: abbrev, label: abbrev,
+            icon: iconCode ? SET_ICONS[iconCode] : null,
+            colorCls: 'text-gray-300 bg-gray-800 border-gray-700',
+            refs,
+          }
+        })
+    }
+    return []
+  }
+
+  const groups = buildGroups()
+
+  return (
+    <div className="space-y-5">
+      {groups.map(group => (
+        <div key={group.key}>
+          <div className={`inline-flex items-center gap-1.5 text-xs px-2 py-0.5 rounded border mb-2 ${group.colorCls}`}>
+            {group.icon && (
+              <img src={group.icon} alt="" className="w-3.5 h-3.5 object-contain"
+                onError={e => { e.currentTarget.style.display = 'none' }} />
+            )}
+            {group.label}
+            <span className="opacity-60">({group.refs.length})</span>
+          </div>
+          <CardPool refs={group.refs} cardMap={cardMap} loading={loading}
+            favorites={favorites} onToggleFavorite={onToggleFavorite} />
+        </div>
+      ))}
     </div>
   )
 }
