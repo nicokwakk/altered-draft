@@ -35,7 +35,6 @@ export default function SetSelector({ selectedSets, onChange, disabled }) {
                 className="accent-amber-500"
               />
               <label htmlFor={`set-${set.code}`} className="flex-1 cursor-pointer">
-                <span className="font-mono text-xs text-amber-400 mr-2">{set.code}</span>
                 <span className="text-sm text-gray-300">{set.name}</span>
               </label>
               {selected && (

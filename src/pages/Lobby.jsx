@@ -222,15 +222,12 @@ export default function Lobby() {
                         >
                           {logoUrl ? (
                             <img src={logoUrl} alt={set.name} className="h-14 w-full object-contain"
-                              onError={e => {
-                                e.currentTarget.style.display = 'none'
-                                e.currentTarget.nextSibling?.style && (e.currentTarget.nextSibling.style.display = 'flex')
-                              }} />
+                              onError={e => { e.currentTarget.style.display = 'none' }} />
                           ) : iconUrl ? (
                             <img src={iconUrl} alt={set.name} className="h-10 object-contain"
                               onError={e => { e.currentTarget.style.display = 'none' }} />
                           ) : null}
-                          <span className="text-xs text-gray-200 text-center leading-tight font-medium">{set.name}</span>
+                          <span className="text-xs text-gray-200 text-center leading-tight font-medium px-1">{set.name}</span>
                           {selected && (
                             <span className="absolute top-2 right-2 w-5 h-5 rounded-full bg-amber-500 flex items-center justify-center text-xs text-gray-950 font-bold">✓</span>
                           )}

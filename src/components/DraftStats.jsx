@@ -1,5 +1,5 @@
 import { FACTIONS, FACTION_NAMES, FACTION_COLORS } from '../lib/cardData.js'
-import { FACTION_ICONS } from '../lib/assets.js'
+import { FACTION_ICONS, RARITY_GEMS } from '../lib/assets.js'
 
 const TYPE_GROUPS = {
   HERO:                 { label: 'Hero',       color: 'text-amber-400' },
@@ -30,6 +30,14 @@ export default function DraftStats({ pickedRefs, cardMap }) {
     const group = TYPE_GROUPS[c.cardType]?.label ?? c.cardType
     typeCounts[group] = (typeCounts[group] ?? 0) + 1
   }
+
+  // Rarity breakdown (exclude heroes)
+  const rarityCounts = { C: 0, R1: 0, R2: 0, U: 0 }
+  for (const c of cards) {
+    if (c.cardType === 'HERO') continue
+    if (c.rarity in rarityCounts) rarityCounts[c.rarity]++
+  }
+  const rarityTotal = Object.values(rarityCounts).reduce((a, b) => a + b, 0)
 
   // Cost curve (main cost, exclude heroes and cards without cost)
   const costCounts = {}
@@ -87,6 +95,30 @@ export default function DraftStats({ pickedRefs, cardMap }) {
           })}
         </div>
       </section>
+
+      {/* Rarity breakdown */}
+      {rarityTotal > 0 && (
+        <section>
+          <h4 className="text-xs uppercase tracking-widest text-gray-500 mb-2">Rarity</h4>
+          <div className="flex gap-2">
+            {[
+              { key: 'C',  label: 'Common', gem: RARITY_GEMS.C },
+              { key: 'R1', label: 'Rare',   gem: RARITY_GEMS.R1 },
+              { key: 'U',  label: 'Unique',  gem: RARITY_GEMS.U },
+            ].map(({ key, label, gem }) => {
+              const count = key === 'R1' ? rarityCounts.R1 + rarityCounts.R2 : rarityCounts[key]
+              if (!count) return null
+              return (
+                <div key={key} className="flex-1 bg-gray-800 rounded-lg px-2 py-2 flex flex-col items-center gap-1">
+                  <img src={gem} alt={label} className="w-6 h-6 object-contain" />
+                  <span className="text-sm font-bold text-gray-200">{count}</span>
+                  <span className="text-xs text-gray-500">{label}</span>
+                </div>
+              )
+            })}
+          </div>
+        </section>
+      )}
 
       {/* Cost curve */}
       {Object.keys(costCounts).length > 0 && (
