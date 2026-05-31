@@ -32,7 +32,7 @@ function deduplicateByNameFaction(cards) {
 }
 
 export function generateAllPacks(allCards, playerCount, packsPerPlayer = 4, options = {}) {
-  const { includeHeroes = true } = options
+  const { includeHeroes = true, cubeMode = false } = options
   const isDraftable = c => c.cardType !== 'TOKEN'
   const heroes  = includeHeroes
     ? deduplicateByNameFaction(allCards.filter(c => isDraftable(c) && c.cardType === 'HERO' && c.rarity !== 'U'))
@@ -42,12 +42,58 @@ export function generateAllPacks(allCards, playerCount, packsPerPlayer = 4, opti
   const uniques = deduplicateByNameFaction(allCards.filter(c => isDraftable(c) && c.rarity === 'U'))
 
   const totalPacks = playerCount * packsPerPlayer
-  const packs = []
 
+  if (cubeMode) {
+    return generateCubePacks(heroes, commons, rares, uniques, totalPacks, includeHeroes)
+  }
+
+  const packs = []
   for (let i = 0; i < totalPacks; i++) {
     packs.push(generateOnePack(heroes, commons, rares, uniques, i))
   }
+  return packs
+}
 
+/**
+ * Cube mode: each card appears at most once across ALL packs.
+ * Pools are shuffled and dealt sequentially — no card repeats between packs.
+ */
+function generateCubePacks(heroes, commons, rares, uniques, totalPacks, includeHeroes) {
+  // Shuffle each pool once — cards dealt in order, no replacement
+  const heroPool   = shuffle(heroes)
+  const commonPool = shuffle(commons)
+  const rarePool   = shuffle([...rares, ...uniques]) // treat uniques as rares in cube
+  let hIdx = 0, cIdx = 0, rIdx = 0
+
+  function takeHero()   { return hIdx < heroPool.length   ? heroPool[hIdx++].reference   : null }
+  function takeCommon() { return cIdx < commonPool.length ? commonPool[cIdx++].reference : null }
+  function takeRare()   { return rIdx < rarePool.length   ? rarePool[rIdx++].reference   : null }
+
+  const packs = []
+  for (let i = 0; i < totalPacks; i++) {
+    const pack = []
+
+    // 1 hero slot
+    if (includeHeroes) {
+      const h = takeHero()
+      if (h) pack.push(h)
+    }
+
+    // 9 commons: 1 per faction + 3 paired draws, taken from the global shuffled pool
+    // We still respect the slot structure but draw sequentially
+    for (let s = 0; s < 9; s++) {
+      const c = takeCommon()
+      if (c) pack.push(c)
+    }
+
+    // 3 rare slots
+    for (let s = 0; s < 3; s++) {
+      const r = takeRare()
+      if (r) pack.push(r)
+    }
+
+    packs.push(pack)
+  }
   return packs
 }
 

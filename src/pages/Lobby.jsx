@@ -109,7 +109,7 @@ export default function Lobby() {
         const cubeRefSet = new Set(cube.refs)
         const allCards = results.flat().filter(c => cubeRefSet.has(c.reference))
         if (!allCards.length) { setStartError('Could not load cube card data.'); setLoading(false); return }
-        const packs = generateAllPacks(allCards, playerCount, 4, { includeHeroes })
+        const packs = generateAllPacks(allCards, playerCount, 4, { includeHeroes, cubeMode: true })
         const apiCodes = [...new Set(setCodes.map(apiSetCode))]
         const state = buildInitialState(
           { sets: apiCodes, playerCount, lang, cubeId: cube.id, includeHeroes, timerEnabled, timerSeconds },
