@@ -1,8 +1,9 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase.js'
-import { fetchSet, SETS } from '../lib/cardData.js'
+import { fetchSet, SETS, apiSetCode } from '../lib/cardData.js'
 import { SET_ASSETS } from '../lib/assets.js'
+import { COMMUNITY_CUBES, setsForCube } from '../lib/cubes.js'
 import { generateAllPacks, generatePacksFromPool } from '../lib/packGenerator.js'
 import { buildInitialState } from '../lib/draftLogic.js'
 import SetSelector from '../components/SetSelector.jsx'
@@ -29,8 +30,9 @@ export default function Lobby() {
   const [linkCopied, setLinkCopied] = useState(false)
 
   // Config
-  const [configTab, setConfigTab] = useState('presets') // 'presets' | 'advanced'
+  const [configTab, setConfigTab] = useState('presets') // 'presets' | 'cubes' | 'advanced'
   const [selectedPreset, setSelectedPreset] = useState(null) // set code
+  const [selectedCube, setSelectedCube] = useState(null) // cube id
   const [selectedSets, setSelectedSets] = useState({ CORE: 1 })
   const [lang, setLang] = useState('EN')
   const [includeHeroes, setIncludeHeroes] = useState(true)
@@ -96,18 +98,35 @@ export default function Lobby() {
       const shuffledPlayers = shuffle(roomState.players)
       const playerCount = shuffledPlayers.length
 
-      if (customPoolText.trim()) {
-        const refs = customPoolText.trim().split(/\s+/).filter(r => r.startsWith('ALT_'))
-        if (!refs.length) { setStartError('No valid card references found in custom pool.'); setLoading(false); return }
-        const packs = generatePacksFromPool(refs, playerCount, 4)
+      // Cube mode
+      if (configTab === 'cubes' && selectedCube) {
+        const cube = COMMUNITY_CUBES.find(c => c.id === selectedCube)
+        if (!cube) { setStartError('Cube not found.'); setLoading(false); return }
+        const packs = generatePacksFromPool(cube.refs, playerCount, 4)
+        const setCodes = [...new Set(setsForCube(cube.refs).map(apiSetCode))]
         const state = buildInitialState(
-          { sets: [], playerCount, lang, customPool: true, includeHeroes, timerEnabled, timerSeconds },
+          { sets: setCodes, playerCount, lang, cubeId: cube.id, cubeRefs: cube.refs, includeHeroes, timerEnabled, timerSeconds },
           shuffledPlayers, packs
         )
         await supabase.from('draft_rooms').update({ state }).eq('id', code)
         return
       }
 
+      // Custom pool mode
+      if (customPoolText.trim()) {
+        const refs = customPoolText.trim().split(/\s+/).filter(r => r.startsWith('ALT_'))
+        if (!refs.length) { setStartError('No valid card references found in custom pool.'); setLoading(false); return }
+        const packs = generatePacksFromPool(refs, playerCount, 4)
+        const setCodes = [...new Set(refs.map(r => r.split('_')[1]).filter(Boolean).map(apiSetCode))]
+        const state = buildInitialState(
+          { sets: setCodes, playerCount, lang, customPool: true, cubeRefs: refs, includeHeroes, timerEnabled, timerSeconds },
+          shuffledPlayers, packs
+        )
+        await supabase.from('draft_rooms').update({ state }).eq('id', code)
+        return
+      }
+
+      // Booster preset / advanced mode
       const setsToUse = resolveConfig(playerCount)
       if (!setsToUse || !Object.keys(setsToUse).filter(k => setsToUse[k] > 0).length) {
         setStartError('Select a set to draft from.')
@@ -188,7 +207,7 @@ export default function Lobby() {
           <div className="bg-gray-900 rounded-xl overflow-hidden">
             {/* Tab bar */}
             <div className="flex border-b border-gray-800">
-              {['presets', 'advanced'].map(t => (
+              {['presets', 'cubes', 'advanced'].map(t => (
                 <button key={t} onClick={() => setConfigTab(t)}
                   className={`flex-1 py-3 text-sm font-medium transition-colors capitalize ${
                     configTab === t
@@ -237,6 +256,32 @@ export default function Lobby() {
                       )
                     })}
                   </div>
+                </div>
+              )}
+
+              {/* CUBES TAB */}
+              {configTab === 'cubes' && (
+                <div className="space-y-3">
+                  <p className="text-sm text-gray-400">Community cubes — curated card pools ready to draft.</p>
+                  {COMMUNITY_CUBES.map(cube => {
+                    const selected = selectedCube === cube.id
+                    return (
+                      <button key={cube.id} onClick={() => setSelectedCube(selected ? null : cube.id)}
+                        className={`w-full text-left p-4 rounded-xl border-2 transition-all ${
+                          selected ? 'border-amber-500 bg-amber-500/5' : 'border-gray-700 bg-gray-800 hover:border-gray-500'}`}>
+                        <div className="flex items-start justify-between gap-3">
+                          <div>
+                            <p className="font-semibold text-sm text-gray-100">{cube.name}</p>
+                            <p className="text-xs text-gray-500 mt-0.5">by {cube.author} · {cube.cardCount} cards</p>
+                            <p className="text-xs text-gray-400 mt-1.5 leading-relaxed">{cube.description}</p>
+                          </div>
+                          {selected && (
+                            <span className="w-5 h-5 rounded-full bg-amber-500 flex items-center justify-center text-xs text-gray-950 font-bold shrink-0">✓</span>
+                          )}
+                        </div>
+                      </button>
+                    )
+                  })}
                 </div>
               )}
 
@@ -325,7 +370,9 @@ export default function Lobby() {
 
               <button
                 onClick={handleStart}
-                disabled={loading || roomState.players.length < 2 || (configTab === 'presets' && !selectedPreset)}
+                disabled={loading || roomState.players.length < 2
+                || (configTab === 'presets' && !selectedPreset)
+                || (configTab === 'cubes' && !selectedCube)}
                 className="w-full py-3 bg-amber-500 hover:bg-amber-400 disabled:opacity-40 text-gray-950 font-bold rounded-lg transition-colors"
               >
                 {loading ? 'Generating packs…' : 'Start draft'}

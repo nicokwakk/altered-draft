@@ -23,7 +23,15 @@ function normalizeRarity(raw, refStr) {
   if (ref === 'EXALTED') return 'EX'  // treated as rare in pack generation (set 5+)
   if (ref === 'RARE') return refStr.endsWith('_R2') ? 'R2' : 'R1'
   if (ref === 'UNCOMMON') return 'R2'
+  // Also handle _E suffix in reference string (Exalted shorthand)
+  if (refStr.endsWith('_E')) return 'EX'
   return 'C'
+}
+
+// COREKS is the Kickstarter promo set — fetch it under CORE in the API
+export function apiSetCode(code) {
+  if (code === 'COREKS') return 'CORE'
+  return code
 }
 
 function normalizeCard(raw) {

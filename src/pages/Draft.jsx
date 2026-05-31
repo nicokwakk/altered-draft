@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase.js'
-import { fetchSet } from '../lib/cardData.js'
+import { fetchSet, apiSetCode } from '../lib/cardData.js'
 import { applyPick } from '../lib/draftLogic.js'
 import CardGrid from '../components/CardGrid.jsx'
 import DraftSidebar from '../components/DraftSidebar.jsx'
@@ -69,7 +69,9 @@ export default function Draft() {
         if (state.config.sets?.length) {
           const errors = []
           const maps = {}
-          await Promise.all(state.config.sets.map(async setCode => {
+          // Deduplicate API set codes (e.g. COREKS → CORE)
+          const apiCodes = [...new Set(state.config.sets.map(apiSetCode))]
+          await Promise.all(apiCodes.map(async setCode => {
             try {
               const cards = await fetchSet(setCode, state.config.lang || 'EN')
               for (const c of cards) maps[c.reference] = c
