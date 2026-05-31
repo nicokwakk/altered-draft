@@ -96,7 +96,7 @@ export default function Lobby() {
 
   const handleStart = useCallback(async () => {
     if (!roomState) return
-    if (roomState.players.length < 2) { setStartError('Need at least 2 players to start.'); return }
+    if (draftMode === 'draft' && roomState.players.length < 2) { setStartError('Need at least 2 players to start a draft.'); return }
     setLoading(true)
     setStartError('')
 
@@ -244,7 +244,11 @@ export default function Lobby() {
             ))}
           </ul>
           {roomState.players.length < 2 && (
-            <p className="text-xs text-gray-500 mt-3">Waiting for more players to join…</p>
+            <p className="text-xs text-gray-500 mt-3">
+              {isHost && draftMode === 'sealed'
+                ? 'You can start sealed solo, or wait for others to join.'
+                : 'Waiting for more players to join…'}
+            </p>
           )}
         </div>
 
@@ -438,8 +442,10 @@ export default function Lobby() {
 
               <button
                 onClick={handleStart}
-                disabled={loading || roomState.players.length < 2
-                || (configTab === 'presets' && !selectedPreset)
+                disabled={loading
+                || (draftMode === 'draft' && roomState.players.length < 2)
+                || (configTab === 'presets' && draftMode === 'draft' && !selectedPreset)
+                || (configTab === 'presets' && draftMode === 'sealed' && !selectedPreset)
                 || (configTab === 'cubes' && !selectedCube)}
                 className="w-full py-3 bg-amber-500 hover:bg-amber-400 disabled:opacity-40 text-gray-950 font-bold rounded-lg transition-colors"
               >
