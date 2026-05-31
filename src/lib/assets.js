@@ -13,6 +13,7 @@ export const RARITY_GEMS = {
   C:  `${CDN}/game_assets/rarity_gems/RARITY_GEM_COMMON.png`,
   R1: `${CDN}/game_assets/rarity_gems/RARITY_GEM_RARE.png`,
   R2: `${CDN}/game_assets/rarity_gems/RARITY_GEM_RARE.png`,
+  EX: `${CDN}/game_assets/rarity_gems/RARITY_GEM_RARE.png`,  // Exalted — same gem as rare for now
   U:  `${CDN}/game_assets/rarity_gems/RARITY_GEM_UNIQUE.png`,
 }
 

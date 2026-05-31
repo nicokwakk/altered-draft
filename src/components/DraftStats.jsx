@@ -39,7 +39,7 @@ export default function DraftStats({ pickedRefs, cardMap }) {
   }
 
   // Rarity breakdown (exclude heroes)
-  const rarityCounts = { C: 0, R1: 0, R2: 0, U: 0 }
+  const rarityCounts = { C: 0, R1: 0, R2: 0, EX: 0, U: 0 }
   for (const c of cards) {
     if (c.cardType === 'HERO') continue
     if (c.rarity in rarityCounts) rarityCounts[c.rarity]++
@@ -135,9 +135,10 @@ export default function DraftStats({ pickedRefs, cardMap }) {
           <h4 className="text-xs uppercase tracking-widest text-gray-500 mb-2">Rarity</h4>
           <div className="flex gap-2">
             {[
-              { key: 'C',  label: 'Common', gem: RARITY_GEMS.C },
-              { key: 'R1', label: 'Rare',   gem: RARITY_GEMS.R1 },
-              { key: 'U',  label: 'Unique',  gem: RARITY_GEMS.U },
+              { key: 'C',  label: 'Common',   gem: RARITY_GEMS.C },
+              { key: 'R1', label: 'Rare',     gem: RARITY_GEMS.R1 },
+              { key: 'EX', label: 'Exalted',  gem: RARITY_GEMS.EX },
+              { key: 'U',  label: 'Unique',   gem: RARITY_GEMS.U },
             ].map(({ key, label, gem }) => {
               const count = key === 'R1' ? rarityCounts.R1 + rarityCounts.R2 : rarityCounts[key]
               if (!count) return null

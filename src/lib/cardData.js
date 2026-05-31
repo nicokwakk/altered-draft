@@ -20,6 +20,7 @@ export async function fetchSet(setCode, lang = 'EN') {
 function normalizeRarity(raw, refStr) {
   const ref = (raw?.reference ?? '').toUpperCase()
   if (ref === 'UNIQUE') return 'U'
+  if (ref === 'EXALTED') return 'EX'  // treated as rare in pack generation (set 5+)
   if (ref === 'RARE') return refStr.endsWith('_R2') ? 'R2' : 'R1'
   if (ref === 'UNCOMMON') return 'R2'
   return 'C'
