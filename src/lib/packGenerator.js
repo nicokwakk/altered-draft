@@ -21,13 +21,22 @@ function pickRandom(pool) {
  * @param {number} packsPerPlayer - typically 4
  * @returns {string[][]} array of packs, each pack is an array of card references
  */
+function deduplicateByNameFaction(cards) {
+  const seen = new Set()
+  return cards.filter(c => {
+    const key = `${c.name}__${c.faction}`
+    if (seen.has(key)) return false
+    seen.add(key)
+    return true
+  })
+}
+
 export function generateAllPacks(allCards, playerCount, packsPerPlayer = 4) {
-  // Exclude UNIQUE rarity heroes (promos) from the draft pool
   const isDraftable = c => c.cardType !== 'TOKEN'
-  const heroes  = allCards.filter(c => isDraftable(c) && c.cardType === 'HERO' && c.rarity !== 'U')
-  const commons = allCards.filter(c => isDraftable(c) && c.rarity === 'C' && c.cardType !== 'HERO')
-  const rares   = allCards.filter(c => isDraftable(c) && (c.rarity === 'R1' || c.rarity === 'R2'))
-  const uniques = allCards.filter(c => isDraftable(c) && c.rarity === 'U')
+  const heroes  = deduplicateByNameFaction(allCards.filter(c => isDraftable(c) && c.cardType === 'HERO' && c.rarity !== 'U'))
+  const commons = deduplicateByNameFaction(allCards.filter(c => isDraftable(c) && c.rarity === 'C' && c.cardType !== 'HERO'))
+  const rares   = deduplicateByNameFaction(allCards.filter(c => isDraftable(c) && (c.rarity === 'R1' || c.rarity === 'R2')))
+  const uniques = deduplicateByNameFaction(allCards.filter(c => isDraftable(c) && c.rarity === 'U'))
 
   const totalPacks = playerCount * packsPerPlayer
   const packs = []
@@ -54,6 +63,7 @@ function generateOnePack(heroes, commons, rares, uniques, packIndex) {
 
   const usedRefs = new Set(pack)
 
+  // 9 commons: 1 per faction (6) + 3 paired draws (3) = 9
   for (const f of FACTIONS) {
     const pool = commonsByFaction[f].filter(c => !usedRefs.has(c.reference))
     const card = pickRandom(pool.length ? pool : commonsByFaction[f])
