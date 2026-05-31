@@ -1,5 +1,4 @@
 const BASE_URL = 'https://raw.githubusercontent.com/PolluxTroy0/Altered-TCG-Card-Database/main/SETS'
-const IMG_BASE = 'https://cdn.alteredcore.org/'
 
 const cache = {}
 
@@ -12,19 +11,37 @@ export async function fetchSet(setCode, lang = 'EN') {
   if (!res.ok) throw new Error(`Failed to fetch set ${setCode} (${lang}): ${res.status}`)
 
   const json = await res.json()
-  const cards = (json['hydra:member'] || []).map(normalizeCard)
+  // Root is a plain array
+  const raw = Array.isArray(json) ? json : (json['hydra:member'] || [])
+  const cards = raw.map(normalizeCard)
   cache[key] = cards
   return cards
 }
 
+// Map verbose rarity strings to short codes used in pack generation
+function normalizeRarity(raw) {
+  const ref = (raw?.reference ?? '').toUpperCase()
+  if (ref === 'UNIQUE') return 'U'
+  if (ref === 'RARE') return 'R1'
+  if (ref === 'UNCOMMON') return 'R2'
+  return 'C' // COMMON and anything else
+}
+
 function normalizeCard(raw) {
+  // Determine R1 vs R2 from the reference string suffix
+  const refStr = raw.reference ?? ''
+  const isR2 = refStr.endsWith('_R2')
+  const baseRarity = normalizeRarity(raw.rarity)
+  const rarity = baseRarity === 'R1' && isR2 ? 'R2' : baseRarity
+
   return {
-    reference: raw.reference,
+    reference: refStr,
     name: raw.name,
     faction: raw.mainFaction?.reference ?? raw.faction?.reference ?? 'XX',
     factionName: raw.mainFaction?.name ?? raw.faction?.name ?? 'Unknown',
-    rarity: raw.rarity?.reference ?? 'C',
-    imagePath: raw.imagePath ? IMG_BASE + raw.imagePath : null,
+    rarity,
+    // imagePath is already a full URL in the dataset
+    imagePath: raw.imagePath ?? null,
     cardType: raw.cardType?.reference ?? '',
     mainCost: raw.elements?.MAIN_COST ?? null,
     recallCost: raw.elements?.RECALL_COST ?? null,
