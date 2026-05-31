@@ -13,7 +13,7 @@ export default function CardGrid({ packRefs, cardMap, onPick, onHover, disabled 
   }
 
   return (
-    <div className="grid grid-cols-4 gap-3">
+    <div className="grid grid-cols-5 gap-2">
       {packRefs.map(ref => {
         const card = cardMap[ref]
         const rarity = RARITY_BADGE[card?.rarity] ?? RARITY_BADGE.C
@@ -49,15 +49,15 @@ export default function CardGrid({ packRefs, cardMap, onPick, onHover, disabled 
             </div>
 
             {/* Card info */}
-            <div className="p-2 space-y-1">
-              <p className="text-xs font-medium leading-tight line-clamp-2 text-gray-200">
+            <div className="p-1.5 space-y-1">
+              <p className="text-xs font-medium leading-tight line-clamp-1 text-gray-200">
                 {card?.name ?? ref}
               </p>
               <div className="flex items-center gap-1">
-                <span className={`text-xs px-1.5 py-0.5 rounded border font-mono ${factionCls}`}>
+                <span className={`text-xs px-1 py-0.5 rounded border font-mono leading-none ${factionCls}`}>
                   {faction}
                 </span>
-                <span className={`text-xs px-1.5 py-0.5 rounded font-bold ml-auto ${rarity.cls}`}>
+                <span className={`text-xs px-1 py-0.5 rounded font-bold ml-auto leading-none ${rarity.cls}`}>
                   {rarity.label}
                 </span>
               </div>
