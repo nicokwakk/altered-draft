@@ -73,7 +73,9 @@ function PickRow({ ref_, qty, card }) {
     <div className="flex items-center gap-2 text-xs py-0.5">
       <span className="w-5 text-center text-gray-500 font-mono">{qty}</span>
       <span className="text-gray-300 truncate flex-1">{card?.name ?? ref_}</span>
-      <span className="text-gray-600 font-mono text-xs shrink-0">{card?.rarity ?? ''}</span>
+      {card?.cardType !== 'HERO' && (
+        <span className="text-gray-600 font-mono text-xs shrink-0">{card?.rarity ?? ''}</span>
+      )}
     </div>
   )
 }

@@ -76,8 +76,8 @@ export const FACTION_COLORS = {
 }
 
 export const FACTION_NAMES = {
-  AX: 'Axile',
-  BR: 'Bravura',
+  AX: 'Axiom',
+  BR: 'Bravos',
   LY: 'Lyra',
   MU: 'Muna',
   OR: 'Ordis',
