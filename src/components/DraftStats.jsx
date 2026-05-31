@@ -10,10 +10,6 @@ const TYPE_GROUPS = {
 }
 
 export default function DraftStats({ pickedRefs, cardMap }) {
-  if (!pickedRefs.length) {
-    return <p className="text-xs text-gray-600 italic px-4 py-3">No picks yet.</p>
-  }
-
   const cards = pickedRefs.map(r => cardMap[r]).filter(Boolean)
   const total = cards.length
 
@@ -65,9 +61,10 @@ export default function DraftStats({ pickedRefs, cardMap }) {
       <section>
         <h4 className="text-xs uppercase tracking-widest text-gray-500 mb-2">Faction split</h4>
         <div className="space-y-1.5">
-          {FACTIONS.filter(f => factionCounts[f]).map(f => {
+          {FACTIONS.map(f => {
             const count = factionCounts[f] ?? 0
-            const pct = Math.round((count / (total - (typeCounts['Hero'] ?? 0))) * 100)
+            const nonHeroTotal = total - (typeCounts['Hero'] ?? 0)
+            const pct = nonHeroTotal > 0 ? Math.round((count / nonHeroTotal) * 100) : 0
             return (
               <div key={f} className="flex items-center gap-2">
                 <span className={`text-xs w-20 shrink-0 px-1.5 py-0.5 rounded border inline-flex items-center gap-1 ${FACTION_COLORS[f]}`}>
