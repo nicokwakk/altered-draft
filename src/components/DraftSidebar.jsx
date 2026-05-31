@@ -1,8 +1,11 @@
+import { useState } from 'react'
 import { FACTIONS, FACTION_NAMES, FACTION_COLORS } from '../lib/cardData.js'
 import { buildDecklist, groupPicksByFaction } from '../lib/exportFormat.js'
 import ExportButton from './ExportButton.jsx'
+import DraftStats from './DraftStats.jsx'
 
 export default function DraftSidebar({ pickedRefs, cardMap, round, code }) {
+  const [tab, setTab] = useState('picks')
   const grouped = groupPicksByFaction(pickedRefs, cardMap)
   const decklist = buildDecklist(pickedRefs, cardMap)
   const total = pickedRefs.length
@@ -23,40 +26,63 @@ export default function DraftSidebar({ pickedRefs, cardMap, round, code }) {
         <p className="text-xs text-gray-500 mt-1">Pack {round} of 4</p>
       </div>
 
-      {/* Picks list */}
-      <div className="flex-1 overflow-y-auto px-4 py-3 space-y-4">
-        {/* Heroes */}
-        {grouped.HERO && (
-          <section>
-            <h4 className="text-xs uppercase tracking-widest text-amber-400 mb-1">Hero</h4>
-            {Object.entries(grouped.HERO).map(([ref, qty]) => (
-              <PickRow key={ref} ref_={ref} qty={qty} card={cardMap[ref]} />
-            ))}
-          </section>
-        )}
+      {/* Tabs */}
+      <div className="flex border-b border-gray-800">
+        {['picks', 'stats'].map(t => (
+          <button
+            key={t}
+            onClick={() => setTab(t)}
+            className={`flex-1 py-2 text-xs font-medium transition-colors capitalize ${
+              tab === t
+                ? 'text-amber-400 border-b-2 border-amber-400'
+                : 'text-gray-500 hover:text-gray-300'
+            }`}
+          >
+            {t}
+          </button>
+        ))}
+      </div>
 
-        {FACTIONS.map(f => {
-          const group = grouped[f]
-          if (!group) return null
-          const fTotal = Object.values(group).reduce((a, b) => a + b, 0)
-          return (
-            <section key={f}>
-              <h4 className={`text-xs uppercase tracking-widest mb-1 inline-flex items-center gap-1 px-1.5 py-0.5 rounded border ${FACTION_COLORS[f]}`}>
-                {FACTION_NAMES[f] ?? f} <span className="opacity-60">({fTotal})</span>
-              </h4>
-              <div className="space-y-0.5">
-                {Object.entries(group)
-                  .sort((a, b) => (cardMap[a[0]]?.name ?? '').localeCompare(cardMap[b[0]]?.name ?? ''))
-                  .map(([ref, qty]) => (
-                    <PickRow key={ref} ref_={ref} qty={qty} card={cardMap[ref]} />
-                  ))}
-              </div>
-            </section>
-          )
-        })}
+      {/* Tab content */}
+      <div className="flex-1 overflow-y-auto">
+        {tab === 'picks' ? (
+          <div className="px-4 py-3 space-y-4">
+            {/* Heroes */}
+            {grouped.HERO && (
+              <section>
+                <h4 className="text-xs uppercase tracking-widest text-amber-400 mb-1">Hero</h4>
+                {Object.entries(grouped.HERO).map(([ref, qty]) => (
+                  <PickRow key={ref} ref_={ref} qty={qty} card={cardMap[ref]} />
+                ))}
+              </section>
+            )}
 
-        {total === 0 && (
-          <p className="text-xs text-gray-600 italic">No picks yet — click a card to draft it.</p>
+            {FACTIONS.map(f => {
+              const group = grouped[f]
+              if (!group) return null
+              const fTotal = Object.values(group).reduce((a, b) => a + b, 0)
+              return (
+                <section key={f}>
+                  <h4 className={`text-xs uppercase tracking-widest mb-1 inline-flex items-center gap-1 px-1.5 py-0.5 rounded border ${FACTION_COLORS[f]}`}>
+                    {FACTION_NAMES[f] ?? f} <span className="opacity-60">({fTotal})</span>
+                  </h4>
+                  <div className="space-y-0.5">
+                    {Object.entries(group)
+                      .sort((a, b) => (cardMap[a[0]]?.name ?? '').localeCompare(cardMap[b[0]]?.name ?? ''))
+                      .map(([ref, qty]) => (
+                        <PickRow key={ref} ref_={ref} qty={qty} card={cardMap[ref]} />
+                      ))}
+                  </div>
+                </section>
+              )
+            })}
+
+            {total === 0 && (
+              <p className="text-xs text-gray-600 italic">No picks yet — click a card to draft it.</p>
+            )}
+          </div>
+        ) : (
+          <DraftStats pickedRefs={pickedRefs} cardMap={cardMap} />
         )}
       </div>
 

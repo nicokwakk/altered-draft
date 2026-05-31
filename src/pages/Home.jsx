@@ -5,10 +5,13 @@ import { generateRoomCode } from '../lib/roomCode.js'
 
 export default function Home() {
   const navigate = useNavigate()
-  const [joinCode, setJoinCode] = useState('')
+  const params = new URLSearchParams(window.location.search)
+  const prefillCode = params.get('join') ?? ''
+
+  const [joinCode, setJoinCode] = useState(prefillCode.toUpperCase())
   const [joinName, setJoinName] = useState('')
   const [createName, setCreateName] = useState('')
-  const [mode, setMode] = useState(null) // 'create' | 'join'
+  const [mode, setMode] = useState(prefillCode ? 'join' : null)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 

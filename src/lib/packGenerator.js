@@ -31,9 +31,12 @@ function deduplicateByNameFaction(cards) {
   })
 }
 
-export function generateAllPacks(allCards, playerCount, packsPerPlayer = 4) {
+export function generateAllPacks(allCards, playerCount, packsPerPlayer = 4, options = {}) {
+  const { includeHeroes = true } = options
   const isDraftable = c => c.cardType !== 'TOKEN'
-  const heroes  = deduplicateByNameFaction(allCards.filter(c => isDraftable(c) && c.cardType === 'HERO' && c.rarity !== 'U'))
+  const heroes  = includeHeroes
+    ? deduplicateByNameFaction(allCards.filter(c => isDraftable(c) && c.cardType === 'HERO' && c.rarity !== 'U'))
+    : []
   const commons = deduplicateByNameFaction(allCards.filter(c => isDraftable(c) && c.rarity === 'C' && c.cardType !== 'HERO'))
   const rares   = deduplicateByNameFaction(allCards.filter(c => isDraftable(c) && (c.rarity === 'R1' || c.rarity === 'R2')))
   const uniques = deduplicateByNameFaction(allCards.filter(c => isDraftable(c) && c.rarity === 'U'))
@@ -51,9 +54,11 @@ export function generateAllPacks(allCards, playerCount, packsPerPlayer = 4) {
 function generateOnePack(heroes, commons, rares, uniques, packIndex) {
   const pack = []
 
-  // 1 hero
-  const hero = pickRandom(heroes)
-  if (hero) pack.push(hero.reference)
+  // 1 hero (only if heroes pool is non-empty)
+  if (heroes.length) {
+    const hero = pickRandom(heroes)
+    if (hero) pack.push(hero.reference)
+  }
 
   // 8 commons: 1 per faction + 3 paired draws
   const commonsByFaction = {}
