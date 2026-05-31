@@ -1,7 +1,6 @@
 import { useState, useMemo, useEffect } from 'react'
 import { createPortal } from 'react-dom'
-import { FACTIONS, FACTION_NAMES, FACTION_COLORS } from '../lib/cardData.js'
-import { fetchSet, apiSetCode } from '../lib/cardData.js'
+import { FACTIONS, FACTION_NAMES, FACTION_COLORS, SET_ABBREV, SET_FULL_NAMES, SET_ABBREV_ICON_CODE, fetchSet, apiSetCode } from '../lib/cardData.js'
 import { FACTION_ICONS, RARITY_GEMS, SET_ICONS } from '../lib/assets.js'
 import { setsForCube } from '../lib/cubes.js'
 
@@ -9,7 +8,8 @@ import { setsForCube } from '../lib/cubes.js'
 function parseRef(ref) {
   const parts = ref.split('_')
   const knownFactions = new Set(['AX', 'BR', 'LY', 'MU', 'OR', 'YZ'])
-  const set = parts[1] === 'CORE' && parts[2] === 'KS' ? 'COREKS' : parts[1]
+  const rawSet = parts[1] === 'CORE' && parts[2] === 'KS' ? 'COREKS' : parts[1]
+  const abbrev = SET_ABBREV[rawSet] ?? rawSet  // CORE/COREKS → BTG etc.
   let faction = '??', rarity = 'C'
   for (let i = 2; i < parts.length; i++) {
     if (knownFactions.has(parts[i])) {
@@ -19,7 +19,7 @@ function parseRef(ref) {
     }
   }
   if (rarity === 'E') rarity = 'EX'
-  return { set, faction, rarity, ref }
+  return { set: rawSet, abbrev, faction, rarity, ref }
 }
 
 const RARITY_ORDER = { C: 0, R1: 1, R2: 2, EX: 3, U: 4 }
@@ -65,12 +65,12 @@ export default function CubePreviewModal({ cube, onClose }) {
     )
   }, [enriched, search])
 
-  // Stats
+  // Stats — sets merged by abbreviation (CORE+COREKS → BTG)
   const factionCounts = {}, rarityCounts = { C: 0, R1: 0, R2: 0, EX: 0, U: 0 }, setCounts = {}
   for (const c of parsedCards) {
     factionCounts[c.faction] = (factionCounts[c.faction] ?? 0) + 1
     if (c.rarity in rarityCounts) rarityCounts[c.rarity]++
-    setCounts[c.set] = (setCounts[c.set] ?? 0) + 1
+    setCounts[c.abbrev] = (setCounts[c.abbrev] ?? 0) + 1
   }
 
   function groupCards() {
@@ -88,12 +88,20 @@ export default function CubePreviewModal({ cube, onClose }) {
     }
     if (groupBy === 'set') {
       const groups = {}
-      for (const c of filtered) { if (!groups[c.set]) groups[c.set] = []; groups[c.set].push(c) }
-      return Object.entries(groups).sort((a, b) => a[0].localeCompare(b[0])).map(([key, cards]) => ({
-        key, label: key, icon: SET_ICONS[key] ?? null,
-        colorCls: 'text-gray-300 bg-gray-800 border-gray-700',
-        cards: sortedByRarity(cards),
-      }))
+      // Group by abbreviation so CORE+COREKS merge under BTG
+      for (const c of filtered) { if (!groups[c.abbrev]) groups[c.abbrev] = []; groups[c.abbrev].push(c) }
+      const abbrevOrder = ['BTG','TBF','WTM','SKY','SDU','ROC','NEJ']
+      return Object.entries(groups)
+        .sort((a, b) => (abbrevOrder.indexOf(a[0]) + 1 || 99) - (abbrevOrder.indexOf(b[0]) + 1 || 99))
+        .map(([key, cards]) => {
+          const iconCode = SET_ABBREV_ICON_CODE[key]
+          return {
+            key, label: `${key} — ${SET_FULL_NAMES[key] ?? key}`,
+            icon: iconCode ? SET_ICONS[iconCode] : null,
+            colorCls: 'text-gray-300 bg-gray-800 border-gray-700',
+            cards: sortedByRarity(cards),
+          }
+        })
     }
     if (groupBy === 'rarity') {
       const order = ['C', 'R1', 'R2', 'EX', 'U']
@@ -159,15 +167,18 @@ export default function CubePreviewModal({ cube, onClose }) {
             <div>
               <p className="text-xs uppercase tracking-widest text-gray-500 mb-2">Sets</p>
               <div className="space-y-1.5">
-                {Object.entries(setCounts).sort((a, b) => b[1] - a[1]).map(([s, count]) => (
-                  <div key={s} className="flex items-center gap-1.5">
-                    {SET_ICONS[s]
-                      ? <img src={SET_ICONS[s]} alt={s} className="w-3.5 h-3.5 object-contain shrink-0" onError={e => { e.currentTarget.style.display = 'none' }} />
-                      : <span className="w-3.5 shrink-0" />}
-                    <span className="text-xs text-gray-300 flex-1 truncate">{s}</span>
-                    <span className="text-xs text-gray-500">{count}</span>
-                  </div>
-                ))}
+                {Object.entries(setCounts).sort((a, b) => b[1] - a[1]).map(([abbrev, count]) => {
+                  const iconCode = SET_ABBREV_ICON_CODE[abbrev]
+                  return (
+                    <div key={abbrev} className="flex items-center gap-1.5" title={SET_FULL_NAMES[abbrev] ?? abbrev}>
+                      {iconCode && SET_ICONS[iconCode]
+                        ? <img src={SET_ICONS[iconCode]} alt={abbrev} className="w-3.5 h-3.5 object-contain shrink-0" onError={e => { e.currentTarget.style.display = 'none' }} />
+                        : <span className="w-3.5 shrink-0" />}
+                      <span className="text-xs text-gray-300 flex-1 truncate">{abbrev}</span>
+                      <span className="text-xs text-gray-500">{count}</span>
+                    </div>
+                  )
+                })}
               </div>
             </div>
           </div>
@@ -257,8 +268,10 @@ export default function CubePreviewModal({ cube, onClose }) {
                           {RARITY_GEMS[c.rarity] && c.rarity !== 'C' && (
                             <img src={RARITY_GEMS[c.rarity]} alt={c.rarity} className="w-3 h-3 object-contain shrink-0" />
                           )}
-                          {SET_ICONS[c.set] && (
-                            <img src={SET_ICONS[c.set]} alt={c.set} className="w-3 h-3 object-contain shrink-0 opacity-40"
+                          {SET_ABBREV_ICON_CODE[c.abbrev] && SET_ICONS[SET_ABBREV_ICON_CODE[c.abbrev]] && (
+                            <img src={SET_ICONS[SET_ABBREV_ICON_CODE[c.abbrev]]} alt={c.abbrev}
+                              className="w-3 h-3 object-contain shrink-0 opacity-40"
+                              title={SET_FULL_NAMES[c.abbrev]}
                               onError={e => { e.currentTarget.style.display = 'none' }} />
                           )}
                         </div>

@@ -52,15 +52,49 @@ function normalizeCard(raw) {
 }
 
 export const SETS = [
-  { code: 'CORE',    name: 'Beyond the Gates',       color: '#1a4a6e' },
-  { code: 'COREKS',  name: 'Beyond the Gates KS',    color: '#1a3a5e' },
-  { code: 'ALIZE',   name: 'Trial by Frost',          color: '#2a5a7a' },
-  { code: 'BISE',    name: 'Whisper from the Maze',   color: '#3a3a6e' },
-  { code: 'CYCLONE', name: 'Skybound Odyssey',         color: '#1a5a4a' },
-  { code: 'DUSTER',  name: 'Seeds of Unity',           color: '#4a4a1a' },
-  { code: 'EOLE',    name: 'Roots of Corruption',      color: '#4a2a1a' },
-  { code: 'FUGUE',   name: 'Neverending Journey',      color: '#2a1a4a' },
+  { code: 'CORE',    name: 'Beyond the Gates',     color: '#1a4a6e' },
+  { code: 'COREKS',  name: 'Beyond the Gates KS',  color: '#1a3a5e' },
+  { code: 'ALIZE',   name: 'Trial by Frost',        color: '#2a5a7a' },
+  { code: 'BISE',    name: 'Whisper from the Maze', color: '#3a3a6e' },
+  { code: 'CYCLONE', name: 'Skybound Odyssey',       color: '#1a5a4a' },
+  { code: 'DUSTER',  name: 'Seeds of Unity',         color: '#4a4a1a' },
+  { code: 'EOLE',    name: 'Roots of Corruption',    color: '#4a2a1a' },
+  { code: 'FUGUE',   name: 'Neverending Journey',    color: '#2a1a4a' },
 ]
+
+// Short display names for use in UI (codes → friendly abbreviation)
+// CORE and COREKS are merged under BTG
+export const SET_ABBREV = {
+  CORE:    'BTG',
+  COREKS:  'BTG',
+  ALIZE:   'TBF',
+  BISE:    'WTM',
+  CYCLONE: 'SKY',
+  DUSTER:  'SDU',
+  EOLE:    'ROC',
+  FUGUE:   'NEJ',
+}
+
+export const SET_FULL_NAMES = {
+  BTG: 'Beyond the Gates',
+  TBF: 'Trial by Frost',
+  WTM: 'Whisper from the Maze',
+  SKY: 'Skybound Odyssey',
+  SDU: 'Seeds of Unity',
+  ROC: 'Roots of Corruption',
+  NEJ: 'Neverending Journey',
+}
+
+// Canonical icon per abbreviation (BTG maps to CORE icon)
+export const SET_ABBREV_ICON_CODE = {
+  BTG: 'CORE',
+  TBF: 'ALIZE',
+  WTM: 'BISE',
+  SKY: 'CYCLONE',
+  SDU: 'DUSTER',
+  ROC: 'EOLE',
+  NEJ: 'FUGUE',
+}
 
 export const FACTIONS = ['AX', 'BR', 'LY', 'MU', 'OR', 'YZ']
 
