@@ -1,0 +1,195 @@
+import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { supabase } from '../lib/supabase.js'
+import { generateRoomCode } from '../lib/roomCode.js'
+
+export default function Home() {
+  const navigate = useNavigate()
+  const [joinCode, setJoinCode] = useState('')
+  const [joinName, setJoinName] = useState('')
+  const [createName, setCreateName] = useState('')
+  const [mode, setMode] = useState(null) // 'create' | 'join'
+  const [error, setError] = useState('')
+  const [loading, setLoading] = useState(false)
+
+  async function handleCreate(e) {
+    e.preventDefault()
+    if (!createName.trim()) { setError('Enter your display name'); return }
+    setLoading(true)
+    setError('')
+
+    const code = generateRoomCode()
+    const playerId = crypto.randomUUID()
+
+    const initialState = {
+      config: { sets: ['CORE'], playerCount: 4, lang: 'EN' },
+      players: [{ id: playerId, name: createName.trim(), joinedAt: new Date().toISOString() }],
+      phase: 'lobby',
+      round: 1,
+      packs: {},
+      picks: {},
+      waitingFor: [],
+      remainingPacks: [],
+    }
+
+    const { error: dbErr } = await supabase
+      .from('draft_rooms')
+      .insert({ id: code, state: initialState })
+
+    if (dbErr) {
+      setError('Could not create room: ' + dbErr.message)
+      setLoading(false)
+      return
+    }
+
+    sessionStorage.setItem(`player_${code}`, JSON.stringify({ id: playerId, name: createName.trim(), isHost: true }))
+    navigate(`/room/${code}`)
+  }
+
+  async function handleJoin(e) {
+    e.preventDefault()
+    const code = joinCode.trim().toUpperCase()
+    if (!code || code.length < 3) { setError('Enter a valid room code'); return }
+    if (!joinName.trim()) { setError('Enter your display name'); return }
+    setLoading(true)
+    setError('')
+
+    const { data, error: dbErr } = await supabase
+      .from('draft_rooms')
+      .select('state')
+      .eq('id', code)
+      .single()
+
+    if (dbErr || !data) {
+      setError('Room not found. Check the code and try again.')
+      setLoading(false)
+      return
+    }
+
+    if (data.state.phase !== 'lobby') {
+      setError('This draft has already started.')
+      setLoading(false)
+      return
+    }
+
+    const playerId = crypto.randomUUID()
+    const newPlayer = { id: playerId, name: joinName.trim(), joinedAt: new Date().toISOString() }
+    const updatedPlayers = [...data.state.players, newPlayer]
+    const newState = { ...data.state, players: updatedPlayers }
+
+    const { error: updateErr } = await supabase
+      .from('draft_rooms')
+      .update({ state: newState })
+      .eq('id', code)
+
+    if (updateErr) {
+      setError('Could not join room: ' + updateErr.message)
+      setLoading(false)
+      return
+    }
+
+    sessionStorage.setItem(`player_${code}`, JSON.stringify({ id: playerId, name: joinName.trim(), isHost: false }))
+    navigate(`/room/${code}`)
+  }
+
+  return (
+    <div className="min-h-screen flex flex-col items-center justify-center px-4">
+      <div className="max-w-md w-full">
+        {/* Header */}
+        <div className="text-center mb-10">
+          <h1 className="text-4xl font-bold tracking-tight mb-2">
+            <span className="text-amber-400">Altered</span> Draft
+          </h1>
+          <p className="text-gray-400 text-sm">
+            Multiplayer booster draft simulator for the Altered TCG.
+            Open a room, share the code, draft together in real time.
+          </p>
+        </div>
+
+        {/* Action buttons */}
+        {!mode && (
+          <div className="flex gap-4">
+            <button
+              onClick={() => setMode('create')}
+              className="flex-1 bg-amber-500 hover:bg-amber-400 text-gray-950 font-semibold py-3 rounded-lg transition-colors"
+            >
+              Create a room
+            </button>
+            <button
+              onClick={() => setMode('join')}
+              className="flex-1 bg-gray-800 hover:bg-gray-700 text-gray-100 font-semibold py-3 rounded-lg transition-colors"
+            >
+              Join a room
+            </button>
+          </div>
+        )}
+
+        {/* Create form */}
+        {mode === 'create' && (
+          <form onSubmit={handleCreate} className="bg-gray-900 rounded-xl p-6 space-y-4">
+            <h2 className="font-semibold text-lg">Create a draft room</h2>
+            <div>
+              <label className="block text-sm text-gray-400 mb-1">Your display name</label>
+              <input
+                value={createName}
+                onChange={e => setCreateName(e.target.value)}
+                placeholder="e.g. Alice"
+                className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-amber-500"
+                autoFocus
+              />
+            </div>
+            {error && <p className="text-red-400 text-sm">{error}</p>}
+            <div className="flex gap-3">
+              <button type="button" onClick={() => { setMode(null); setError('') }}
+                className="flex-1 py-2 rounded-lg bg-gray-800 hover:bg-gray-700 text-sm transition-colors">
+                Back
+              </button>
+              <button type="submit" disabled={loading}
+                className="flex-1 py-2 rounded-lg bg-amber-500 hover:bg-amber-400 text-gray-950 font-semibold text-sm transition-colors disabled:opacity-50">
+                {loading ? 'Creating…' : 'Create room'}
+              </button>
+            </div>
+          </form>
+        )}
+
+        {/* Join form */}
+        {mode === 'join' && (
+          <form onSubmit={handleJoin} className="bg-gray-900 rounded-xl p-6 space-y-4">
+            <h2 className="font-semibold text-lg">Join a draft room</h2>
+            <div>
+              <label className="block text-sm text-gray-400 mb-1">Room code</label>
+              <input
+                value={joinCode}
+                onChange={e => setJoinCode(e.target.value.toUpperCase())}
+                placeholder="e.g. XKQZ"
+                maxLength={6}
+                className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm font-mono tracking-widest uppercase focus:outline-none focus:border-amber-500"
+                autoFocus
+              />
+            </div>
+            <div>
+              <label className="block text-sm text-gray-400 mb-1">Your display name</label>
+              <input
+                value={joinName}
+                onChange={e => setJoinName(e.target.value)}
+                placeholder="e.g. Bob"
+                className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-amber-500"
+              />
+            </div>
+            {error && <p className="text-red-400 text-sm">{error}</p>}
+            <div className="flex gap-3">
+              <button type="button" onClick={() => { setMode(null); setError('') }}
+                className="flex-1 py-2 rounded-lg bg-gray-800 hover:bg-gray-700 text-sm transition-colors">
+                Back
+              </button>
+              <button type="submit" disabled={loading}
+                className="flex-1 py-2 rounded-lg bg-amber-500 hover:bg-amber-400 text-gray-950 font-semibold text-sm transition-colors disabled:opacity-50">
+                {loading ? 'Joining…' : 'Join room'}
+              </button>
+            </div>
+          </form>
+        )}
+      </div>
+    </div>
+  )
+}
