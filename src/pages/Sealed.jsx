@@ -5,6 +5,7 @@ import { fetchSet, apiSetCode, FACTIONS, FACTION_NAMES, FACTION_COLORS } from '.
 import { FACTION_ICONS, RARITY_GEMS } from '../lib/assets.js'
 import { buildDecklist } from '../lib/exportFormat.js'
 import ExportButton from '../components/ExportButton.jsx'
+import DraftStats from '../components/DraftStats.jsx'
 
 export default function Sealed() {
   const { code } = useParams()
@@ -91,6 +92,7 @@ export default function Sealed() {
           { id: 'booster', label: `Boosters (${totalPacks})` },
           { id: 'pool',    label: `Full Pool (${allRefs.length})` },
           { id: 'favorites', label: `❤️ Favorites (${favorites.size})` },
+      { id: 'stats',     label: 'Stats' },
         ].map(t => (
           <button key={t.id} onClick={() => setTab(t.id)}
             className={`flex-1 py-2.5 text-sm transition-colors ${
@@ -170,6 +172,13 @@ export default function Sealed() {
             ? <p className="text-gray-500 text-sm text-center py-12">No favorites yet — click ❤️ on any card.</p>
             : <CardPool refs={favoriteRefs} cardMap={cardMap} loading={loading}
                 favorites={favorites} onToggleFavorite={toggleFavorite} />}
+        </div>
+      )}
+
+      {/* STATS TAB */}
+      {tab === 'stats' && (
+        <div className="flex-1 overflow-y-auto">
+          <DraftStats pickedRefs={allRefs} cardMap={cardMap} />
         </div>
       )}
 

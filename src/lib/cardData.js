@@ -17,6 +17,13 @@ export async function fetchSet(setCode, lang = 'EN') {
   return cards
 }
 
+// Strip #...# formatting markers used in Altered card text fields
+function stripMarkers(val) {
+  if (val == null) return null
+  const n = Number(String(val).replace(/#/g, ''))
+  return isNaN(n) ? null : n
+}
+
 function normalizeRarity(raw, refStr) {
   const ref = (raw?.reference ?? '').toUpperCase()
   if (ref === 'UNIQUE') return 'U'
@@ -43,11 +50,11 @@ function normalizeCard(raw) {
     rarity: normalizeRarity(raw.rarity, refStr),
     imagePath: raw.imagePath ?? null,
     cardType: raw.cardType?.reference ?? '',
-    mainCost: raw.elements?.MAIN_COST ?? null,
-    recallCost: raw.elements?.RECALL_COST ?? null,
-    forestPower: raw.elements?.FOREST_POWER ?? null,
-    mountainPower: raw.elements?.MOUNTAIN_POWER ?? null,
-    oceanPower: raw.elements?.OCEAN_POWER ?? null,
+    mainCost: stripMarkers(raw.elements?.MAIN_COST),
+    recallCost: stripMarkers(raw.elements?.RECALL_COST),
+    forestPower: stripMarkers(raw.elements?.FOREST_POWER),
+    mountainPower: stripMarkers(raw.elements?.MOUNTAIN_POWER),
+    oceanPower: stripMarkers(raw.elements?.OCEAN_POWER),
   }
 }
 
