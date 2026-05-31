@@ -34,7 +34,7 @@ export function setCodeFromRef(reference) {
 
 // Set logos and icons from CDN
 export const SET_ASSETS = {
-  CORE:    { icon: null,                                    logo: `${CDN}/sets_logo/BTG-EN.png` },
+  CORE:    { icon: null,                                    logo: `${CDN}/sets_logo/LOGO%20BTG-EN.png` },
   ALIZE:   { icon: `${CDN}/sets_logo/ALT_TBF_ICON.png`,   logo: `${CDN}/sets_logo/ALT_TBF_LOGO_en_EN.png` },
   BISE:    { icon: `${CDN}/sets_logo/ALT_WFM_ICON.png`,   logo: `${CDN}/sets_logo/ALT_WFM_LOGO_en_EN.png` },
   CYCLONE: { icon: `${CDN}/sets_logo/ALT_SKY_ICON.png`,   logo: `${CDN}/sets_logo/ALT_SKY_LOGO_en_EN.png` },
