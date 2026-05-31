@@ -100,28 +100,39 @@ export default function Lobby() {
       const shuffledPlayers = shuffle(roomState.players)
       const playerCount = shuffledPlayers.length
 
-      // Cube mode
+      // Cube mode — fetch card data and apply booster rules
       if (configTab === 'cubes' && selectedCube) {
         const cube = COMMUNITY_CUBES.find(c => c.id === selectedCube)
         if (!cube) { setStartError('Cube not found.'); setLoading(false); return }
-        const packs = generatePacksFromPool(cube.refs, playerCount, 4)
-        const setCodes = [...new Set(setsForCube(cube.refs).map(apiSetCode))]
+        const setCodes = [...new Set(setsForCube(cube.refs))]
+        const results = await Promise.all(setCodes.map(s => fetchSet(s, lang).catch(() => [])))
+        const cubeRefSet = new Set(cube.refs)
+        const allCards = results.flat().filter(c => cubeRefSet.has(c.reference))
+        if (!allCards.length) { setStartError('Could not load cube card data.'); setLoading(false); return }
+        const packs = generateAllPacks(allCards, playerCount, 4, { includeHeroes })
+        const apiCodes = [...new Set(setCodes.map(apiSetCode))]
         const state = buildInitialState(
-          { sets: setCodes, playerCount, lang, cubeId: cube.id, cubeRefs: cube.refs, includeHeroes, timerEnabled, timerSeconds },
+          { sets: apiCodes, playerCount, lang, cubeId: cube.id, includeHeroes, timerEnabled, timerSeconds },
           shuffledPlayers, packs
         )
         await supabase.from('draft_rooms').update({ state }).eq('id', code)
         return
       }
 
-      // Custom pool mode
+      // Custom pool mode — same booster rules
       if (customPoolText.trim()) {
         const refs = customPoolText.trim().split(/\s+/).filter(r => r.startsWith('ALT_'))
         if (!refs.length) { setStartError('No valid card references found in custom pool.'); setLoading(false); return }
-        const packs = generatePacksFromPool(refs, playerCount, 4)
-        const setCodes = [...new Set(refs.map(r => r.split('_')[1]).filter(Boolean).map(apiSetCode))]
+        const rawCodes = [...new Set(refs.map(r => r.split('_')[1]).filter(Boolean))]
+        const results = await Promise.all(rawCodes.map(s => fetchSet(s, lang).catch(() => [])))
+        const refSet = new Set(refs)
+        const allCards = results.flat().filter(c => refSet.has(c.reference))
+        const packs = allCards.length
+          ? generateAllPacks(allCards, playerCount, 4, { includeHeroes })
+          : generatePacksFromPool(refs, playerCount, 4) // fallback if fetch fails
+        const apiCodes = [...new Set(rawCodes.map(apiSetCode))]
         const state = buildInitialState(
-          { sets: setCodes, playerCount, lang, customPool: true, cubeRefs: refs, includeHeroes, timerEnabled, timerSeconds },
+          { sets: apiCodes, playerCount, lang, customPool: true, includeHeroes, timerEnabled, timerSeconds },
           shuffledPlayers, packs
         )
         await supabase.from('draft_rooms').update({ state }).eq('id', code)
