@@ -18,9 +18,9 @@ export const RARITY_GEMS = {
 
 // Set logos and icons from CDN
 export const SET_ASSETS = {
-  CORE:    { icon: null,                                    logo: null },
+  CORE:    { icon: null,                                    logo: `${CDN}/sets_logo/BTG-EN.png` },
   ALIZE:   { icon: `${CDN}/sets_logo/ALT_TBF_ICON.png`,   logo: `${CDN}/sets_logo/ALT_TBF_LOGO_en_EN.png` },
-  BISE:    { icon: `${CDN}/sets_logo/ALT_WFM_ICON.png`,   logo: null },
+  BISE:    { icon: `${CDN}/sets_logo/ALT_WFM_ICON.png`,   logo: `${CDN}/sets_logo/ALT_WFM_LOGO_en_EN.png` },
   CYCLONE: { icon: `${CDN}/sets_logo/ALT_SKY_ICON.png`,   logo: `${CDN}/sets_logo/ALT_SKY_LOGO_en_EN.png` },
   DUSTER:  { icon: `${CDN}/sets_logo/ALT_SDU_ICON.png`,   logo: `${CDN}/sets_logo/ALT_SDU_LOGO_EN.png` },
   EOLE:    { icon: `${CDN}/sets_logo/ALT_EOLE_ICON.png`,  logo: `${CDN}/sets_logo/ALT_ROC_LOGO_en_EN.png` },
