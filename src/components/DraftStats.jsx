@@ -1,4 +1,5 @@
 import { FACTIONS, FACTION_NAMES, FACTION_COLORS } from '../lib/cardData.js'
+import { FACTION_ICONS } from '../lib/assets.js'
 
 const TYPE_GROUPS = {
   HERO:                 { label: 'Hero',       color: 'text-amber-400' },
@@ -54,7 +55,8 @@ export default function DraftStats({ pickedRefs, cardMap }) {
             const pct = Math.round((count / (total - (typeCounts['Hero'] ?? 0))) * 100)
             return (
               <div key={f} className="flex items-center gap-2">
-                <span className={`text-xs w-16 shrink-0 px-1.5 py-0.5 rounded border font-mono ${FACTION_COLORS[f]}`}>
+                <span className={`text-xs w-20 shrink-0 px-1.5 py-0.5 rounded border inline-flex items-center gap-1 ${FACTION_COLORS[f]}`}>
+                  {FACTION_ICONS[f] && <img src={FACTION_ICONS[f]} alt="" className="w-3 h-3 object-contain shrink-0" />}
                   {FACTION_NAMES[f]}
                 </span>
                 <div className="flex-1 h-2 bg-gray-800 rounded-full overflow-hidden">

@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase.js'
 import { fetchSet } from '../lib/cardData.js'
 import { buildDecklist, groupPicksByFaction } from '../lib/exportFormat.js'
 import { FACTIONS, FACTION_NAMES, FACTION_COLORS } from '../lib/cardData.js'
+import { FACTION_ICONS } from '../lib/assets.js'
 import ExportButton from '../components/ExportButton.jsx'
 
 export default function Results() {
@@ -94,7 +95,8 @@ export default function Results() {
             const total = Object.values(group).reduce((a, b) => a + b, 0)
             return (
               <div key={f} className="mb-4">
-                <h3 className={`text-xs uppercase tracking-widest mb-2 inline-flex items-center gap-1 px-2 py-0.5 rounded border ${FACTION_COLORS[f]}`}>
+                <h3 className={`text-xs mb-2 inline-flex items-center gap-1.5 px-2 py-0.5 rounded border ${FACTION_COLORS[f]}`}>
+                  {FACTION_ICONS[f] && <img src={FACTION_ICONS[f]} alt="" className="w-4 h-4 object-contain" />}
                   {FACTION_NAMES[f] ?? f} ({total})
                 </h3>
                 <div className="space-y-1">
@@ -134,7 +136,8 @@ export default function Results() {
                   </div>
                   <div className="flex flex-wrap gap-1">
                     {FACTIONS.filter(f => factionCounts[f]).map(f => (
-                      <span key={f} className={`text-xs px-2 py-0.5 rounded border ${FACTION_COLORS[f]}`}>
+                      <span key={f} className={`text-xs px-2 py-0.5 rounded border inline-flex items-center gap-1 ${FACTION_COLORS[f]}`}>
+                        {FACTION_ICONS[f] && <img src={FACTION_ICONS[f]} alt="" className="w-3 h-3 object-contain" />}
                         {FACTION_NAMES[f]} {factionCounts[f]}
                       </span>
                     ))}

@@ -1,11 +1,5 @@
-import { FACTION_COLORS, FACTION_NAMES } from '../lib/cardData.js'
-
-const RARITY_BADGE = {
-  C:  { label: 'C',  cls: 'bg-gray-700 text-gray-300' },
-  U:  { label: 'U',  cls: 'bg-yellow-600 text-yellow-100' },
-  R1: { label: 'R',  cls: 'bg-purple-700 text-purple-100' },
-  R2: { label: 'R',  cls: 'bg-purple-700 text-purple-100' },
-}
+import { FACTION_ICONS, RARITY_GEMS } from '../lib/assets.js'
+import { FACTION_NAMES } from '../lib/cardData.js'
 
 export default function CardGrid({ packRefs, cardMap, onPick, onHover, disabled }) {
   if (!packRefs?.length) {
@@ -16,9 +10,10 @@ export default function CardGrid({ packRefs, cardMap, onPick, onHover, disabled 
     <div className="grid grid-cols-6 gap-2">
       {packRefs.map(ref => {
         const card = cardMap[ref]
-        const rarity = RARITY_BADGE[card?.rarity] ?? RARITY_BADGE.C
         const faction = card?.faction ?? 'XX'
-        const factionCls = FACTION_COLORS[faction] ?? 'text-gray-400 bg-gray-800 border-gray-700'
+        const rarity = card?.rarity ?? 'C'
+        const factionIcon = FACTION_ICONS[faction]
+        const rarityGem = RARITY_GEMS[rarity]
 
         return (
           <button
@@ -44,22 +39,28 @@ export default function CardGrid({ packRefs, cardMap, onPick, onHover, disabled 
                   onError={e => { e.currentTarget.style.display = 'none' }}
                 />
               ) : (
-                <div className="text-gray-600 text-xs px-2 text-center">{card?.name ?? ref}</div>
+                <div className="text-gray-600 text-xs px-2 text-center break-all">{card?.name ?? ref}</div>
               )}
             </div>
 
-            {/* Card info */}
+            {/* Card info bar */}
             <div className="p-1.5 space-y-1">
               <p className="text-xs font-medium leading-tight line-clamp-1 text-gray-200">
                 {card?.name ?? ref}
               </p>
               <div className="flex items-center gap-1">
-                <span className={`text-xs px-1 py-0.5 rounded border font-mono leading-none ${factionCls}`}>
-                  {faction}
-                </span>
-                <span className={`text-xs px-1 py-0.5 rounded font-bold ml-auto leading-none ${rarity.cls}`}>
-                  {rarity.label}
-                </span>
+                {factionIcon ? (
+                  <img src={factionIcon} alt={FACTION_NAMES[faction] ?? faction}
+                    className="w-4 h-4 object-contain shrink-0"
+                    onError={e => { e.currentTarget.style.display = 'none' }} />
+                ) : (
+                  <span className="text-xs text-gray-500 font-mono">{faction}</span>
+                )}
+                {rarityGem && card?.cardType !== 'HERO' ? (
+                  <img src={rarityGem} alt={rarity}
+                    className="w-4 h-4 object-contain ml-auto shrink-0"
+                    onError={e => { e.currentTarget.style.display = 'none' }} />
+                ) : null}
               </div>
             </div>
           </button>

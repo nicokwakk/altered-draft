@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase.js'
 import { fetchSet, SETS } from '../lib/cardData.js'
+import { SET_ASSETS } from '../lib/assets.js'
 import { generateAllPacks, generatePacksFromPool } from '../lib/packGenerator.js'
 import { buildInitialState } from '../lib/draftLogic.js'
 import SetSelector from '../components/SetSelector.jsx'
@@ -206,26 +207,30 @@ export default function Lobby() {
                   <div className="grid grid-cols-2 gap-3">
                     {SETS.map(set => {
                       const selected = selectedPreset === set.code
-                      const logoSrc = `/sets/${set.code}.png`
+                      const assets = SET_ASSETS[set.code]
+                      const logoUrl = assets?.logo
+                      const iconUrl = assets?.icon
                       return (
                         <button
                           key={set.code}
                           onClick={() => setSelectedPreset(selected ? null : set.code)}
-                          className={`relative flex flex-col items-center justify-center rounded-xl border-2 p-4 h-28 transition-all overflow-hidden ${
+                          className={`relative flex flex-col items-center justify-center rounded-xl border-2 p-3 h-32 transition-all overflow-hidden gap-1 ${
                             selected
                               ? 'border-amber-500 shadow-lg shadow-amber-500/20'
                               : 'border-gray-700 hover:border-gray-500'}`}
-                          style={{ backgroundColor: set.color }}
+                          style={{ backgroundColor: set.color + 'cc' }}
                         >
-                          {/* Try logo image, fallback to text */}
-                          <img
-                            src={logoSrc}
-                            alt=""
-                            className="h-10 object-contain mb-2"
-                            onError={e => { e.currentTarget.style.display = 'none' }}
-                          />
-                          <span className="font-mono text-xs text-amber-300 font-bold tracking-widest">{set.code}</span>
-                          <span className="text-xs text-gray-300 text-center leading-tight mt-1">{set.name}</span>
+                          {logoUrl ? (
+                            <img src={logoUrl} alt={set.name} className="h-14 w-full object-contain"
+                              onError={e => {
+                                e.currentTarget.style.display = 'none'
+                                e.currentTarget.nextSibling?.style && (e.currentTarget.nextSibling.style.display = 'flex')
+                              }} />
+                          ) : iconUrl ? (
+                            <img src={iconUrl} alt={set.name} className="h-10 object-contain"
+                              onError={e => { e.currentTarget.style.display = 'none' }} />
+                          ) : null}
+                          <span className="text-xs text-gray-200 text-center leading-tight font-medium">{set.name}</span>
                           {selected && (
                             <span className="absolute top-2 right-2 w-5 h-5 rounded-full bg-amber-500 flex items-center justify-center text-xs text-gray-950 font-bold">✓</span>
                           )}
