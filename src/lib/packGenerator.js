@@ -57,17 +57,19 @@ export function generateAllPacks(allCards, playerCount, packsPerPlayer = 4, opti
 /**
  * Cube mode: each card appears at most once across ALL packs.
  * Pools are shuffled and dealt sequentially — no card repeats between packs.
+ * Uniques may only appear in the last (3rd) rare slot of a pack.
  */
 function generateCubePacks(heroes, commons, rares, uniques, totalPacks, includeHeroes) {
-  // Shuffle each pool once — cards dealt in order, no replacement
   const heroPool   = shuffle(heroes)
   const commonPool = shuffle(commons)
-  const rarePool   = shuffle([...rares, ...uniques]) // treat uniques as rares in cube
-  let hIdx = 0, cIdx = 0, rIdx = 0
+  const rarePool   = shuffle(rares)   // R1, R2, EX only
+  const uniquePool = shuffle(uniques) // U only — last slot only
+  let hIdx = 0, cIdx = 0, rIdx = 0, uIdx = 0
 
   function takeHero()   { return hIdx < heroPool.length   ? heroPool[hIdx++].reference   : null }
   function takeCommon() { return cIdx < commonPool.length ? commonPool[cIdx++].reference : null }
   function takeRare()   { return rIdx < rarePool.length   ? rarePool[rIdx++].reference   : null }
+  function takeUnique() { return uIdx < uniquePool.length ? uniquePool[uIdx++].reference : null }
 
   const packs = []
   for (let i = 0; i < totalPacks; i++) {
@@ -79,18 +81,21 @@ function generateCubePacks(heroes, commons, rares, uniques, totalPacks, includeH
       if (h) pack.push(h)
     }
 
-    // 9 commons: 1 per faction + 3 paired draws, taken from the global shuffled pool
-    // We still respect the slot structure but draw sequentially
+    // 9 common slots (sequential from shuffled pool)
     for (let s = 0; s < 9; s++) {
       const c = takeCommon()
       if (c) pack.push(c)
     }
 
-    // 3 rare slots
-    for (let s = 0; s < 3; s++) {
+    // 2 regular rare slots
+    for (let s = 0; s < 2; s++) {
       const r = takeRare()
       if (r) pack.push(r)
     }
+
+    // Last slot: unique if available, otherwise a rare
+    const lastCard = takeUnique() ?? takeRare()
+    if (lastCard) pack.push(lastCard)
 
     packs.push(pack)
   }
