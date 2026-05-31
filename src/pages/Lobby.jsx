@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase.js'
 import { fetchSet, SETS, apiSetCode } from '../lib/cardData.js'
@@ -94,7 +94,7 @@ export default function Lobby() {
     return selectedSets
   }
 
-  const handleStart = useCallback(async () => {
+  const handleStart = async () => {
     if (!roomState) return
     if (draftMode === 'draft' && roomState.players.length < 2) { setStartError('Need at least 2 players to start a draft.'); return }
     setLoading(true)
@@ -212,7 +212,7 @@ export default function Lobby() {
       setStartError('Error starting draft: ' + err.message)
       setLoading(false)
     }
-  }, [roomState, configTab, selectedPreset, selectedSets, lang, customPoolText, code, includeHeroes])
+  }
 
   if (!roomState || !me) {
     return <div className="min-h-screen flex items-center justify-center text-gray-400">Loading room…</div>

@@ -226,11 +226,11 @@ function CardPool({ refs, cardMap, loading, favorites, onToggleFavorite }) {
             {/* Favorite button */}
             <button
               onClick={() => onToggleFavorite(ref)}
-              className={`absolute top-1 right-1 w-6 h-6 rounded-full flex items-center justify-center text-xs
+              className={`absolute top-1 right-1 w-8 h-8 rounded-full flex items-center justify-center text-base
                 transition-all shadow-md
                 ${isFav
                   ? 'bg-red-500 text-white opacity-100'
-                  : 'bg-black/50 text-white opacity-0 group-hover:opacity-100'}`}>
+                  : 'bg-black/60 text-white opacity-0 group-hover:opacity-100'}`}>
               {isFav ? '❤️' : '♡'}
             </button>
 
