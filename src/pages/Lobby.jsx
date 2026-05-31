@@ -31,6 +31,7 @@ export default function Lobby() {
   const [linkCopied, setLinkCopied] = useState(false)
 
   // Config
+  const [draftMode, setDraftMode] = useState('draft') // 'draft' | 'sealed'
   const [configTab, setConfigTab] = useState('presets') // 'presets' | 'cubes' | 'advanced'
   const [selectedPreset, setSelectedPreset] = useState(null) // set code
   const [selectedCube, setSelectedCube] = useState(null) // cube id
@@ -57,7 +58,9 @@ export default function Lobby() {
       .then(({ data, error }) => {
         if (error || !data) { navigate('/'); return }
         setRoomState(data.state)
-        if (data.state.phase !== 'lobby') navigate(`/room/${code}/draft`)
+        if (data.state.phase === 'drafting') navigate(`/room/${code}/draft`)
+        else if (data.state.phase === 'sealed') navigate(`/room/${code}/sealed`)
+        else if (data.state.phase === 'done') navigate(`/room/${code}/results`)
       })
   }, [code, navigate])
 
@@ -69,6 +72,7 @@ export default function Lobby() {
           const state = payload.new.state
           setRoomState(state)
           if (state.phase === 'drafting') navigate(`/room/${code}/draft`)
+          else if (state.phase === 'sealed') navigate(`/room/${code}/sealed`)
         })
       .subscribe()
     return () => supabase.removeChannel(channel)
@@ -99,6 +103,35 @@ export default function Lobby() {
     try {
       const shuffledPlayers = shuffle(roomState.players)
       const playerCount = shuffledPlayers.length
+      const SEALED_PACKS = 7
+
+      // Sealed mode — generate 7 boosters per player, flatten into sealed pools
+      if (draftMode === 'sealed') {
+        const setCodes = configTab === 'presets' && selectedPreset
+          ? [selectedPreset]
+          : Object.keys(selectedSets).filter(k => selectedSets[k] > 0)
+        if (!setCodes.length) { setStartError('Select a set.'); setLoading(false); return }
+        const results = await Promise.all(setCodes.map(s => fetchSet(s, lang)))
+        const allCards = results.flat()
+        if (!allCards.length) { setStartError('No cards loaded.'); setLoading(false); return }
+
+        const { generateAllPacks: genPacks } = await import('../lib/packGenerator.js')
+        const sealedPools = {}
+        for (let i = 0; i < playerCount; i++) {
+          // Generate SEALED_PACKS packs for this player and flatten
+          const playerPacks = genPacks(allCards, 1, SEALED_PACKS, { includeHeroes })
+          sealedPools[String(i)] = playerPacks.flat()
+        }
+        const state = {
+          config: { sets: setCodes, playerCount, lang, includeHeroes, mode: 'sealed' },
+          players: shuffledPlayers,
+          phase: 'sealed',
+          sealedPools,
+          version: 0,
+        }
+        await supabase.from('draft_rooms').update({ state }).eq('id', code)
+        return
+      }
 
       // Cube mode — fetch card data and apply booster rules
       if (configTab === 'cubes' && selectedCube) {
@@ -179,19 +212,19 @@ export default function Lobby() {
           <div className="flex gap-6 items-center">
             <div className="flex-1">
               <p className="text-xs text-gray-500 uppercase tracking-widest mb-1">Room code</p>
-              <p className="text-5xl font-mono font-bold tracking-widest text-amber-400">{code}</p>
+              <p className="text-4xl sm:text-5xl font-mono font-bold tracking-widest text-amber-400">{code}</p>
               <p className="text-sm text-gray-500 mt-2">Share this code or the link below</p>
               <div className="flex gap-2 mt-3">
                 <input readOnly value={joinUrl}
-                  className="flex-1 bg-gray-800 border border-gray-700 rounded-lg px-3 py-1.5 text-xs text-gray-400 font-mono" />
+                  className="flex-1 bg-gray-800 border border-gray-700 rounded-lg px-3 py-1.5 text-xs text-gray-400 font-mono min-w-0" />
                 <button onClick={copyLink}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                  className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors shrink-0 ${
                     linkCopied ? 'bg-green-600 text-white' : 'bg-gray-700 hover:bg-gray-600 text-gray-300'}`}>
                   {linkCopied ? '✓ Copied' : 'Copy'}
                 </button>
               </div>
             </div>
-            <img src={qrUrl} alt="QR code" className="w-[140px] h-[140px] rounded-lg shrink-0" />
+            <img src={qrUrl} alt="QR code" className="hidden sm:block w-[120px] h-[120px] rounded-lg shrink-0" />
           </div>
         </div>
 
@@ -218,7 +251,20 @@ export default function Lobby() {
         {/* Draft config — host only */}
         {isHost && (
           <div className="bg-gray-900 rounded-xl overflow-hidden">
-            {/* Tab bar */}
+            {/* Mode selector: Draft vs Sealed */}
+            <div className="grid grid-cols-2 border-b border-gray-800">
+              {[{ id: 'draft', label: 'Draft', desc: 'Pick from passing packs' },
+                { id: 'sealed', label: 'Sealed', desc: '7 boosters, build your pool' }].map(m => (
+                <button key={m.id} onClick={() => setDraftMode(m.id)}
+                  className={`py-3 px-4 text-left transition-colors ${
+                    draftMode === m.id ? 'bg-amber-500/10 border-b-2 border-amber-500' : 'hover:bg-gray-800/50'}`}>
+                  <p className={`text-sm font-semibold ${draftMode === m.id ? 'text-amber-400' : 'text-gray-400'}`}>{m.label}</p>
+                  <p className="text-xs text-gray-600 hidden sm:block">{m.desc}</p>
+                </button>
+              ))}
+            </div>
+
+            {/* Config tab bar */}
             <div className="flex border-b border-gray-800">
               {['presets', 'cubes', 'advanced'].map(t => (
                 <button key={t} onClick={() => setConfigTab(t)}
@@ -238,7 +284,7 @@ export default function Lobby() {
                   <p className="text-sm text-gray-400 mb-3">
                     Select a set — each player receives 4 packs of that set.
                   </p>
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     {SETS.filter(s => !s.hidden).map(set => {
                       const selected = selectedPreset === set.code
                       const assets = SET_ASSETS[set.code]
@@ -397,7 +443,7 @@ export default function Lobby() {
                 || (configTab === 'cubes' && !selectedCube)}
                 className="w-full py-3 bg-amber-500 hover:bg-amber-400 disabled:opacity-40 text-gray-950 font-bold rounded-lg transition-colors"
               >
-                {loading ? 'Generating packs…' : 'Start draft'}
+                {loading ? 'Generating packs…' : draftMode === 'sealed' ? 'Start sealed' : 'Start draft'}
               </button>
             </div>
           </div>

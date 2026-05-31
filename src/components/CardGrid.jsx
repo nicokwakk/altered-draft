@@ -7,7 +7,7 @@ export default function CardGrid({ packRefs, cardMap, onPick, onHover, disabled 
   }
 
   return (
-    <div className="grid grid-cols-6 gap-2">
+    <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-2">
       {packRefs.map(ref => {
         const card = cardMap[ref]
         const faction = card?.faction ?? 'XX'
