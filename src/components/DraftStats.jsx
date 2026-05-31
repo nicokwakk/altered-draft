@@ -6,6 +6,7 @@ const TYPE_GROUPS = {
   HERO:                 { label: 'Hero',       color: 'text-amber-400' },
   CHARACTER:            { label: 'Character',  color: 'text-blue-400' },
   SPELL:                { label: 'Spell',      color: 'text-purple-400' },
+  PERMANENT:            { label: 'Permanent',  color: 'text-green-400' },
   LANDMARK_PERMANENT:   { label: 'Permanent',  color: 'text-green-400' },
   EXPEDITION_PERMANENT: { label: 'Permanent',  color: 'text-green-400' },
 }
