@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { FACTIONS, FACTION_NAMES, FACTION_COLORS } from '../lib/cardData.js'
 import { FACTION_ICONS, RARITY_GEMS, SET_ICONS, setCodeFromRef } from '../lib/assets.js'
 
@@ -7,6 +8,60 @@ const TYPE_GROUPS = {
   SPELL:                { label: 'Spell',      color: 'text-purple-400' },
   LANDMARK_PERMANENT:   { label: 'Permanent',  color: 'text-green-400' },
   EXPEDITION_PERMANENT: { label: 'Permanent',  color: 'text-green-400' },
+}
+
+const FACTION_BAR_COLORS = {
+  AX: '#894b33', BR: '#9e3c40', LY: '#d89da3',
+  MU: '#3f9085', OR: '#00628e', YZ: '#6d4f95',
+}
+
+function buildCostCounts(cards, costField) {
+  const counts = {}
+  let max = 0
+  for (const c of cards) {
+    if (c.cardType === 'HERO' || c[costField] == null) continue
+    const cost = Number(c[costField])
+    if (isNaN(cost)) continue
+    counts[cost] = (counts[cost] ?? 0) + 1
+    if (cost > max) max = cost
+  }
+  return { counts, max }
+}
+
+function CostCurve({ title, counts, maxCost, color }) {
+  const [hovered, setHovered] = useState(null)
+  if (!Object.keys(counts).length) return null
+  const maxCount = Math.max(...Object.values(counts), 1)
+
+  return (
+    <div>
+      <p className="text-xs text-gray-500 mb-1">{title}</p>
+      <div className="flex items-end gap-1 h-14 relative">
+        {Array.from({ length: maxCost + 1 }, (_, i) => i).map(cost => {
+          const count = counts[cost] ?? 0
+          const height = count ? Math.max(6, Math.round((count / maxCount) * 48)) : 3
+          const isHov = hovered === cost
+          return (
+            <div key={cost} className="flex flex-col items-center gap-0.5 flex-1 relative"
+              onMouseEnter={() => setHovered(cost)}
+              onMouseLeave={() => setHovered(null)}
+            >
+              {isHov && count > 0 && (
+                <div className="absolute -top-5 left-1/2 -translate-x-1/2 bg-gray-700 text-gray-100 text-xs rounded px-1 py-0.5 whitespace-nowrap z-10">
+                  {count} card{count !== 1 ? 's' : ''}
+                </div>
+              )}
+              <div
+                className="w-full rounded-t transition-all duration-200"
+                style={{ height: `${height}px`, backgroundColor: count ? color : '#1f2937', opacity: isHov ? 1 : 0.85 }}
+              />
+              <span className="text-xs text-gray-600">{cost}</span>
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
 }
 
 export default function DraftStats({ pickedRefs, cardMap }) {
@@ -20,7 +75,7 @@ export default function DraftStats({ pickedRefs, cardMap }) {
     factionCounts[c.faction] = (factionCounts[c.faction] ?? 0) + 1
   }
 
-  // Card type breakdown (merge permanents)
+  // Card type breakdown
   const typeCounts = {}
   for (const c of cards) {
     const group = TYPE_GROUPS[c.cardType]?.label ?? c.cardType
@@ -42,17 +97,19 @@ export default function DraftStats({ pickedRefs, cardMap }) {
   }
   const rarityTotal = Object.values(rarityCounts).reduce((a, b) => a + b, 0)
 
-  // Cost curve (main cost, exclude heroes and cards without cost)
-  const costCounts = {}
-  let maxCost = 0
+  // Cost curves
+  const { counts: handCounts, max: handMax } = buildCostCounts(cards, 'mainCost')
+  const { counts: recallCounts, max: recallMax } = buildCostCounts(cards, 'recallCost')
+
+  // Biome totals (sum of power values across all non-hero cards)
+  let forestTotal = 0, mountainTotal = 0, oceanTotal = 0
   for (const c of cards) {
-    if (c.cardType === 'HERO' || c.mainCost == null) continue
-    const cost = Number(c.mainCost)
-    if (isNaN(cost)) continue
-    costCounts[cost] = (costCounts[cost] ?? 0) + 1
-    if (cost > maxCost) maxCost = cost
+    if (c.cardType === 'HERO') continue
+    if (c.forestPower != null)   forestTotal   += Number(c.forestPower)   || 0
+    if (c.mountainPower != null) mountainTotal += Number(c.mountainPower) || 0
+    if (c.oceanPower != null)    oceanTotal    += Number(c.oceanPower)    || 0
   }
-  const costMax = Math.max(...Object.values(costCounts), 1)
+  const hasBiomes = forestTotal + mountainTotal + oceanTotal > 0
 
   return (
     <div className="px-4 py-3 space-y-5 overflow-y-auto">
@@ -72,12 +129,10 @@ export default function DraftStats({ pickedRefs, cardMap }) {
                   {FACTION_NAMES[f]}
                 </span>
                 <div className="flex-1 h-2 bg-gray-800 rounded-full overflow-hidden">
-                  <div
-                    className="h-full rounded-full transition-all duration-300"
-                    style={{ width: `${pct}%`, backgroundColor: factionBarColor(f) }}
-                  />
+                  <div className="h-full rounded-full transition-all duration-300"
+                    style={{ width: `${pct}%`, backgroundColor: FACTION_BAR_COLORS[f] ?? '#6b7280' }} />
                 </div>
-                <span className="text-xs text-gray-400 w-8 text-right">{count}</span>
+                <span className="text-xs text-gray-400 w-6 text-right">{count}</span>
               </div>
             )
           })}
@@ -91,12 +146,12 @@ export default function DraftStats({ pickedRefs, cardMap }) {
           <div className="space-y-1.5">
             {Object.entries(setCounts).sort((a, b) => b[1] - a[1]).map(([s, count]) => {
               const icon = SET_ICONS[s]
-              const pct = Math.round((count / total) * 100)
+              const pct = total > 0 ? Math.round((count / total) * 100) : 0
               return (
                 <div key={s} className="flex items-center gap-2">
                   <div className="w-5 h-5 shrink-0 flex items-center justify-center">
                     {icon
-                      ? <img src={icon} alt={s} className="w-5 h-5 object-contain" onError={e => { e.currentTarget.style.display='none' }} />
+                      ? <img src={icon} alt={s} className="w-5 h-5 object-contain" onError={e => { e.currentTarget.style.display = 'none' }} />
                       : <span className="text-xs text-gray-500">{s}</span>}
                   </div>
                   <div className="flex-1 h-2 bg-gray-800 rounded-full overflow-hidden">
@@ -132,10 +187,10 @@ export default function DraftStats({ pickedRefs, cardMap }) {
           <h4 className="text-xs uppercase tracking-widest text-gray-500 mb-2">Rarity</h4>
           <div className="flex gap-2">
             {[
-              { key: 'C',  label: 'Common',   gem: RARITY_GEMS.C },
-              { key: 'R1', label: 'Rare',     gem: RARITY_GEMS.R1 },
-              { key: 'EX', label: 'Exalted',  gem: RARITY_GEMS.EX },
-              { key: 'U',  label: 'Unique',   gem: RARITY_GEMS.U },
+              { key: 'C',  label: 'Common',  gem: RARITY_GEMS.C },
+              { key: 'R1', label: 'Rare',    gem: RARITY_GEMS.R1 },
+              { key: 'EX', label: 'Exalted', gem: RARITY_GEMS.EX },
+              { key: 'U',  label: 'Unique',  gem: RARITY_GEMS.U },
             ].map(({ key, label, gem }) => {
               const count = key === 'R1' ? rarityCounts.R1 + rarityCounts.R2 : rarityCounts[key]
               if (!count) return null
@@ -151,45 +206,35 @@ export default function DraftStats({ pickedRefs, cardMap }) {
         </section>
       )}
 
-      {/* Cost curve */}
-      {Object.keys(costCounts).length > 0 && (
+      {/* Cost curves */}
+      <section>
+        <h4 className="text-xs uppercase tracking-widest text-gray-500 mb-3">Cost curves</h4>
+        <div className="space-y-4">
+          <CostCurve title="Hand cost" counts={handCounts} maxCost={handMax} color="#f59e0b" />
+          <CostCurve title="Recall cost" counts={recallCounts} maxCost={recallMax} color="#60a5fa" />
+        </div>
+      </section>
+
+      {/* Biome totals */}
+      {hasBiomes && (
         <section>
-          <h4 className="text-xs uppercase tracking-widest text-gray-500 mb-2">Cost curve</h4>
-          <div className="flex items-end gap-1 h-16">
-            {Array.from({ length: maxCost + 1 }, (_, i) => i).map(cost => {
-              const count = costCounts[cost] ?? 0
-              const height = count ? Math.max(8, Math.round((count / costMax) * 56)) : 4
-              return (
-                <div key={cost} className="flex flex-col items-center gap-1 flex-1">
-                  <div
-                    className="w-full rounded-t transition-all duration-300"
-                    style={{
-                      height: `${height}px`,
-                      backgroundColor: count ? '#f59e0b' : '#1f2937',
-                    }}
-                    title={`Cost ${cost}: ${count} card${count !== 1 ? 's' : ''}`}
-                  />
-                  <span className="text-xs text-gray-600">{cost}</span>
-                </div>
-              )
-            })}
+          <h4 className="text-xs uppercase tracking-widest text-gray-500 mb-2">Biome power</h4>
+          <div className="grid grid-cols-3 gap-2">
+            {[
+              { label: 'Forest',   emoji: '🌲', value: forestTotal,   color: 'text-green-400' },
+              { label: 'Mountain', emoji: '⛰️',  value: mountainTotal, color: 'text-orange-400' },
+              { label: 'Ocean',    emoji: '🌊', value: oceanTotal,    color: 'text-blue-400' },
+            ].map(({ label, emoji, value, color }) => (
+              <div key={label} className="bg-gray-800 rounded-lg px-2 py-2 flex flex-col items-center gap-1">
+                <span className="text-lg leading-none">{emoji}</span>
+                <span className={`text-sm font-bold ${color}`}>{value}</span>
+                <span className="text-xs text-gray-500">{label}</span>
+              </div>
+            ))}
           </div>
         </section>
       )}
 
     </div>
   )
-}
-
-const FACTION_BAR_COLORS = {
-  AX: '#894b33',
-  BR: '#9e3c40',
-  LY: '#d89da3',
-  MU: '#3f9085',
-  OR: '#00628e',
-  YZ: '#6d4f95',
-}
-
-function factionBarColor(f) {
-  return FACTION_BAR_COLORS[f] ?? '#6b7280'
 }
