@@ -16,6 +16,22 @@ export const RARITY_GEMS = {
   U:  `${CDN}/game_assets/rarity_gems/RARITY_GEM_UNIQUE.png`,
 }
 
+// Small set icons for use in decklists and stats
+export const SET_ICONS = {
+  CORE:    `${CDN}/sets_logo/BTG-set-icon.png`,
+  ALIZE:   `${CDN}/sets_logo/ALT_TBF_ICON.png`,
+  BISE:    `${CDN}/sets_logo/ALT_WFM_ICON.png`,
+  CYCLONE: `${CDN}/sets_logo/ALT_SKY_ICON.png`,
+  DUSTER:  `${CDN}/sets_logo/ALT_SDU_ICON_SIMPLIFIED.svg`,
+  EOLE:    `${CDN}/sets_logo/ALT_EOLE_ICON.png`,
+  FUGUE:   null,
+}
+
+// Extract set code from a card reference e.g. ALT_CORE_B_AX_01_C → CORE
+export function setCodeFromRef(reference) {
+  return reference?.split('_')[1] ?? null
+}
+
 // Set logos and icons from CDN
 export const SET_ASSETS = {
   CORE:    { icon: null,                                    logo: `${CDN}/sets_logo/BTG-EN.png` },

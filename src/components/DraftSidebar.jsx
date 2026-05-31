@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { FACTIONS, FACTION_NAMES, FACTION_COLORS } from '../lib/cardData.js'
-import { FACTION_ICONS, RARITY_GEMS } from '../lib/assets.js'
+import { FACTION_ICONS, RARITY_GEMS, SET_ICONS, setCodeFromRef } from '../lib/assets.js'
 import { buildDecklist, groupPicksByFaction } from '../lib/exportFormat.js'
 import ExportButton from './ExportButton.jsx'
 import DraftStats from './DraftStats.jsx'
@@ -100,13 +100,13 @@ export default function DraftSidebar({ pickedRefs, cardMap, round, code }) {
 
 function PickRow({ ref_, qty, card }) {
   const rarityGem = card?.rarity && card?.cardType !== 'HERO' ? RARITY_GEMS[card.rarity] : null
+  const setIcon = SET_ICONS[setCodeFromRef(ref_)]
   return (
-    <div className="flex items-center gap-2 text-xs py-0.5">
-      <span className="w-5 text-center text-gray-500 font-mono">{qty}</span>
+    <div className="flex items-center gap-1.5 text-xs py-0.5">
+      <span className="w-5 text-center text-gray-500 font-mono shrink-0">{qty}</span>
       <span className="text-gray-300 truncate flex-1">{card?.name ?? ref_}</span>
-      {rarityGem
-        ? <img src={rarityGem} alt={card.rarity} className="w-3.5 h-3.5 object-contain shrink-0" />
-        : null}
+      {rarityGem && <img src={rarityGem} alt={card.rarity} className="w-3.5 h-3.5 object-contain shrink-0" />}
+      {setIcon && <img src={setIcon} alt="" className="w-3.5 h-3.5 object-contain shrink-0 opacity-60" />}
     </div>
   )
 }

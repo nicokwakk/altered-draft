@@ -1,5 +1,5 @@
 import { FACTIONS, FACTION_NAMES, FACTION_COLORS } from '../lib/cardData.js'
-import { FACTION_ICONS, RARITY_GEMS } from '../lib/assets.js'
+import { FACTION_ICONS, RARITY_GEMS, SET_ICONS, setCodeFromRef } from '../lib/assets.js'
 
 const TYPE_GROUPS = {
   HERO:                 { label: 'Hero',       color: 'text-amber-400' },
@@ -29,6 +29,13 @@ export default function DraftStats({ pickedRefs, cardMap }) {
   for (const c of cards) {
     const group = TYPE_GROUPS[c.cardType]?.label ?? c.cardType
     typeCounts[group] = (typeCounts[group] ?? 0) + 1
+  }
+
+  // Set breakdown
+  const setCounts = {}
+  for (const c of cards) {
+    const s = setCodeFromRef(c.reference)
+    if (s) setCounts[s] = (setCounts[s] ?? 0) + 1
   }
 
   // Rarity breakdown (exclude heroes)
@@ -79,6 +86,32 @@ export default function DraftStats({ pickedRefs, cardMap }) {
           })}
         </div>
       </section>
+
+      {/* Set breakdown */}
+      {Object.keys(setCounts).length > 1 && (
+        <section>
+          <h4 className="text-xs uppercase tracking-widest text-gray-500 mb-2">Sets</h4>
+          <div className="space-y-1.5">
+            {Object.entries(setCounts).sort((a, b) => b[1] - a[1]).map(([s, count]) => {
+              const icon = SET_ICONS[s]
+              const pct = Math.round((count / total) * 100)
+              return (
+                <div key={s} className="flex items-center gap-2">
+                  <div className="w-5 h-5 shrink-0 flex items-center justify-center">
+                    {icon
+                      ? <img src={icon} alt={s} className="w-5 h-5 object-contain" onError={e => { e.currentTarget.style.display='none' }} />
+                      : <span className="text-xs text-gray-500">{s}</span>}
+                  </div>
+                  <div className="flex-1 h-2 bg-gray-800 rounded-full overflow-hidden">
+                    <div className="h-full rounded-full bg-gray-500 transition-all duration-300" style={{ width: `${pct}%` }} />
+                  </div>
+                  <span className="text-xs text-gray-400 w-6 text-right">{count}</span>
+                </div>
+              )
+            })}
+          </div>
+        </section>
+      )}
 
       {/* Card type breakdown */}
       <section>

@@ -4,7 +4,7 @@ import { supabase } from '../lib/supabase.js'
 import { fetchSet } from '../lib/cardData.js'
 import { buildDecklist, groupPicksByFaction } from '../lib/exportFormat.js'
 import { FACTIONS, FACTION_NAMES, FACTION_COLORS } from '../lib/cardData.js'
-import { FACTION_ICONS } from '../lib/assets.js'
+import { FACTION_ICONS, SET_ICONS, RARITY_GEMS, setCodeFromRef } from '../lib/assets.js'
 import ExportButton from '../components/ExportButton.jsx'
 
 export default function Results() {
@@ -78,11 +78,7 @@ export default function Results() {
               <h3 className="text-xs uppercase tracking-widest text-amber-400 mb-2">Hero</h3>
               <div className="space-y-1">
                 {Object.entries(grouped.HERO).map(([ref, qty]) => (
-                  <div key={ref} className="flex items-center gap-2 text-sm">
-                    <span className="w-6 text-center text-amber-400 font-bold">{qty}</span>
-                    <span className="text-gray-300">{cardMap[ref]?.name ?? ref}</span>
-                    <span className="text-xs text-gray-600 font-mono ml-auto">{ref}</span>
-                  </div>
+                  <ResultRow key={ref} ref_={ref} qty={qty} card={cardMap[ref]} />
                 ))}
               </div>
             </div>
@@ -103,11 +99,7 @@ export default function Results() {
                   {Object.entries(group)
                     .sort((a, b) => (cardMap[a[0]]?.name ?? '').localeCompare(cardMap[b[0]]?.name ?? ''))
                     .map(([ref, qty]) => (
-                      <div key={ref} className="flex items-center gap-2 text-sm">
-                        <span className="w-6 text-center font-bold text-gray-400">{qty}</span>
-                        <span className="text-gray-300">{cardMap[ref]?.name ?? ref}</span>
-                        <span className="text-xs text-gray-600 font-mono ml-auto">{ref}</span>
-                      </div>
+                      <ResultRow key={ref} ref_={ref} qty={qty} card={cardMap[ref]} />
                     ))}
                 </div>
               </div>
@@ -148,6 +140,19 @@ export default function Results() {
           </div>
         </div>
       </div>
+    </div>
+  )
+}
+
+function ResultRow({ ref_, qty, card }) {
+  const setIcon = SET_ICONS[setCodeFromRef(ref_)]
+  const rarityGem = card?.rarity && card?.cardType !== 'HERO' ? RARITY_GEMS[card.rarity] : null
+  return (
+    <div className="flex items-center gap-2 text-sm py-0.5">
+      <span className="w-6 text-center font-bold text-gray-400 shrink-0">{qty}</span>
+      <span className="text-gray-300 truncate flex-1">{card?.name ?? ref_}</span>
+      {rarityGem && <img src={rarityGem} alt={card.rarity} className="w-4 h-4 object-contain shrink-0" />}
+      {setIcon && <img src={setIcon} alt="" className="w-4 h-4 object-contain shrink-0 opacity-60" />}
     </div>
   )
 }
