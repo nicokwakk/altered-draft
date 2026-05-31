@@ -3,6 +3,14 @@
  * All functions return a new state object (immutable updates).
  */
 
+import { makeDeadline } from '../components/PickTimer.jsx'
+
+function freshDeadline(state) {
+  const seconds = state.config?.timerSeconds
+  if (!state.config?.timerEnabled || !seconds) return null
+  return makeDeadline(seconds)
+}
+
 /**
  * Direction: pack 1 & 3 pass left (index - 1), pack 2 & 4 pass right (index + 1).
  */
@@ -74,7 +82,6 @@ export function applyPick(state, playerIndex, cardReference) {
         nextState.phase = 'done'
       } else {
         const nextRound = state.round + 1
-        // Pull next round's packs from remainingPacks array
         const remaining = state.remainingPacks ?? []
         const freshPacks = remaining[0] ?? {}
         nextState = {
@@ -83,6 +90,7 @@ export function applyPick(state, playerIndex, cardReference) {
           packs: freshPacks,
           remainingPacks: remaining.slice(1),
           waitingFor: allPlayerIndices(state.players.length),
+          pickDeadline: freshDeadline(nextState),
         }
       }
     } else {
@@ -92,6 +100,7 @@ export function applyPick(state, playerIndex, cardReference) {
         ...nextState,
         packs: rotated,
         waitingFor: allPlayerIndices(state.players.length),
+        pickDeadline: freshDeadline(nextState),
       }
     }
   }
@@ -130,7 +139,7 @@ export function buildInitialState(config, players, allPacks) {
     remainingPacks.push(roundPacks)
   }
 
-  return {
+  const state = {
     config,
     players,
     phase: 'drafting',
@@ -139,5 +148,8 @@ export function buildInitialState(config, players, allPacks) {
     picks: initialPicks,
     waitingFor: allPlayerIndices(playerCount),
     remainingPacks,
+    pickDeadline: null,
   }
+  state.pickDeadline = freshDeadline(state)
+  return state
 }

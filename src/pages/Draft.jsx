@@ -7,6 +7,7 @@ import CardGrid from '../components/CardGrid.jsx'
 import DraftSidebar from '../components/DraftSidebar.jsx'
 import PlayerStatus from '../components/PlayerStatus.jsx'
 import CardPreview from '../components/CardPreview.jsx'
+import PickTimer from '../components/PickTimer.jsx'
 
 export default function Draft() {
   const { code } = useParams()
@@ -20,16 +21,29 @@ export default function Draft() {
   const [reconnecting, setReconnecting] = useState(false)
   const [fetchErrors, setFetchErrors] = useState([])
 
+  // Reconnection: ask for name if no session found
+  const [needsRejoin, setNeedsRejoin] = useState(false)
+  const [rejoinName, setRejoinName] = useState('')
+  const [rejoinError, setRejoinError] = useState('')
+
   const stateRef = useRef(null)
   stateRef.current = roomState
+  const pickingRef = useRef(false)
+  pickingRef.current = picking
 
+  // Load identity from localStorage
   useEffect(() => {
     const stored = localStorage.getItem(`player_${code}`)
-    if (!stored) { navigate('/'); return }
-    setMe(JSON.parse(stored))
-  }, [code, navigate])
+    if (stored) {
+      setMe(JSON.parse(stored))
+    } else {
+      setNeedsRejoin(true)
+    }
+  }, [code])
 
+  // Load room + card data
   useEffect(() => {
+    if (needsRejoin && !me) return // wait until rejoined
     supabase.from('draft_rooms').select('state').eq('id', code).single()
       .then(async ({ data, error }) => {
         if (error || !data) { navigate('/'); return }
@@ -39,7 +53,6 @@ export default function Draft() {
         if (state.phase === 'done') { navigate(`/room/${code}/results`); return }
 
         if (state.config.customPool) {
-          // Custom pool: build a minimal cardMap from all known references
           const allRefs = new Set([
             ...Object.values(state.packs).flat(),
             ...Object.values(state.picks).flat(),
@@ -68,8 +81,9 @@ export default function Draft() {
           setCardMap(maps)
         }
       })
-  }, [code, navigate])
+  }, [code, navigate, me, needsRejoin])
 
+  // Realtime
   useEffect(() => {
     const channel = supabase
       .channel(`draft-${code}`)
@@ -85,7 +99,6 @@ export default function Draft() {
         if (ev.event === 'SUBSCRIBED') setReconnecting(false)
       })
       .subscribe()
-
     return () => supabase.removeChannel(channel)
   }, [code, navigate])
 
@@ -93,34 +106,79 @@ export default function Draft() {
     ? roomState.players.findIndex(p => p.id === me.id)
     : -1
 
-  const isMyTurn = myIndex !== -1 && roomState?.waitingFor?.includes(myIndex)
+  const isMyTurn = myIndex !== -1 && (roomState?.waitingFor?.includes(myIndex) ?? false)
   const myPack = (myIndex !== -1 && roomState) ? (roomState.packs[String(myIndex)] ?? []) : []
   const myPicks = (myIndex !== -1 && roomState) ? (roomState.picks[String(myIndex)] ?? []) : []
 
-  const handlePick = useCallback(async (ref) => {
-    if (!roomState || picking || !isMyTurn || myIndex === -1) return
+  const doPick = useCallback(async (ref) => {
+    if (!stateRef.current || pickingRef.current) return
+    const state = stateRef.current
+    const idx = state.players.findIndex(p => p.id === me?.id)
+    if (idx === -1 || !state.waitingFor?.includes(idx)) return
+
     setPicking(true)
+    const newState = applyPick(state, idx, ref)
+    newState.version = (state.version ?? 0) + 1
 
-    const currentState = stateRef.current
-    const newState = applyPick(currentState, myIndex, ref)
-
-    // Version-based conflict detection: only update if version matches
-    const currentVersion = currentState.version ?? 0
-    newState.version = currentVersion + 1
-
-    const { error } = await supabase
-      .from('draft_rooms')
-      .update({ state: newState })
-      .eq('id', code)
-
+    const { error } = await supabase.from('draft_rooms').update({ state: newState }).eq('id', code)
     if (error) {
-      console.error('Pick failed:', error)
-      // Refetch latest state and let realtime update handle it
       const { data } = await supabase.from('draft_rooms').select('state').eq('id', code).single()
       if (data) setRoomState(data.state)
       setPicking(false)
     }
-  }, [roomState, picking, isMyTurn, myIndex, code])
+  }, [me, code])
+
+  // Auto-pick on timer expiry
+  const handleTimeout = useCallback(() => {
+    if (!isMyTurn || myPack.length === 0 || pickingRef.current) return
+    const randomRef = myPack[Math.floor(Math.random() * myPack.length)]
+    doPick(randomRef)
+  }, [isMyTurn, myPack, doPick])
+
+  // Rejoin handler
+  async function handleRejoin(e) {
+    e.preventDefault()
+    const name = rejoinName.trim()
+    if (!name) { setRejoinError('Enter your display name'); return }
+
+    const { data } = await supabase.from('draft_rooms').select('state').eq('id', code).single()
+    if (!data) { setRejoinError('Room not found'); return }
+
+    const player = data.state.players.find(p => p.name.toLowerCase() === name.toLowerCase())
+    if (!player) { setRejoinError('No player with that name in this room'); return }
+
+    const identity = { id: player.id, name: player.name, isHost: data.state.players[0]?.id === player.id }
+    localStorage.setItem(`player_${code}`, JSON.stringify(identity))
+    setMe(identity)
+    setNeedsRejoin(false)
+    setRejoinError('')
+  }
+
+  // Reconnection rejoin screen
+  if (needsRejoin && !me) {
+    return (
+      <div className="min-h-screen flex items-center justify-center px-4">
+        <form onSubmit={handleRejoin} className="bg-gray-900 rounded-xl p-6 w-full max-w-sm space-y-4">
+          <h2 className="font-semibold text-lg">Rejoin draft</h2>
+          <p className="text-sm text-gray-400">Enter the name you used when joining room <span className="text-amber-400 font-mono">{code}</span>.</p>
+          <input
+            value={rejoinName}
+            onChange={e => setRejoinName(e.target.value)}
+            placeholder="Your display name"
+            autoFocus
+            className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-amber-500"
+          />
+          {rejoinError && <p className="text-red-400 text-sm">{rejoinError}</p>}
+          <div className="flex gap-3">
+            <button type="button" onClick={() => navigate('/')}
+              className="flex-1 py-2 rounded-lg bg-gray-800 hover:bg-gray-700 text-sm">Home</button>
+            <button type="submit"
+              className="flex-1 py-2 rounded-lg bg-amber-500 hover:bg-amber-400 text-gray-950 font-semibold text-sm">Rejoin</button>
+          </div>
+        </form>
+      </div>
+    )
+  }
 
   if (!roomState || !me) {
     return <div className="min-h-screen flex items-center justify-center text-gray-400">Loading draft…</div>
@@ -130,9 +188,7 @@ export default function Draft() {
     return (
       <div className="min-h-screen flex items-center justify-center flex-col gap-4 text-gray-400">
         <p>You are not a participant in this draft.</p>
-        <button onClick={() => navigate('/')} className="px-4 py-2 bg-gray-800 rounded-lg text-sm hover:bg-gray-700">
-          Go home
-        </button>
+        <button onClick={() => navigate('/')} className="px-4 py-2 bg-gray-800 rounded-lg text-sm hover:bg-gray-700">Go home</button>
       </div>
     )
   }
@@ -143,9 +199,7 @@ export default function Draft() {
   return (
     <div className="min-h-screen flex flex-col">
       {reconnecting && (
-        <div className="bg-yellow-600 text-yellow-100 text-center text-sm py-2">
-          Reconnecting to server…
-        </div>
+        <div className="bg-yellow-600 text-yellow-100 text-center text-sm py-2">Reconnecting to server…</div>
       )}
       {fetchErrors.length > 0 && (
         <div className="bg-red-900/50 border border-red-700 text-red-300 text-sm px-4 py-2">
@@ -167,10 +221,19 @@ export default function Draft() {
 
       <div className="flex flex-1 overflow-hidden">
         <div className="flex-1 p-6 overflow-y-auto">
-          <div className="flex items-baseline gap-3 mb-4">
+          <div className="flex items-baseline gap-3 mb-3">
             <h2 className="font-semibold text-lg">Pack {roomState.round}</h2>
             <span className="text-sm text-gray-500">Pick {currentPickNum} of {packSize + currentPickNum - 1}</span>
           </div>
+
+          {/* Timer */}
+          {roomState.config?.timerEnabled && roomState.pickDeadline && (
+            <PickTimer
+              deadline={roomState.pickDeadline}
+              isMyTurn={isMyTurn}
+              onTimeout={handleTimeout}
+            />
+          )}
 
           {!isMyTurn && (
             <div className="mb-4 bg-gray-900 border border-gray-800 rounded-lg px-4 py-3 text-sm text-gray-400">
@@ -181,19 +244,14 @@ export default function Draft() {
           <CardGrid
             packRefs={myPack}
             cardMap={cardMap}
-            onPick={handlePick}
+            onPick={doPick}
             onHover={setHoverCard}
             disabled={!isMyTurn || picking}
           />
         </div>
 
         <div className="w-80 border-l border-gray-800 flex flex-col">
-          <DraftSidebar
-            pickedRefs={myPicks}
-            cardMap={cardMap}
-            round={roomState.round}
-            code={code}
-          />
+          <DraftSidebar pickedRefs={myPicks} cardMap={cardMap} round={roomState.round} code={code} />
         </div>
       </div>
 

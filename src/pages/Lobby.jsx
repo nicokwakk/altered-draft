@@ -34,6 +34,8 @@ export default function Lobby() {
   const [selectedSets, setSelectedSets] = useState({ CORE: 1 })
   const [lang, setLang] = useState('EN')
   const [includeHeroes, setIncludeHeroes] = useState(true)
+  const [timerEnabled, setTimerEnabled] = useState(false)
+  const [timerSeconds, setTimerSeconds] = useState(60)
   const [showCustomPool, setShowCustomPool] = useState(false)
   const [customPoolText, setCustomPoolText] = useState('')
 
@@ -99,7 +101,7 @@ export default function Lobby() {
         if (!refs.length) { setStartError('No valid card references found in custom pool.'); setLoading(false); return }
         const packs = generatePacksFromPool(refs, playerCount, 4)
         const state = buildInitialState(
-          { sets: [], playerCount, lang, customPool: true, includeHeroes },
+          { sets: [], playerCount, lang, customPool: true, includeHeroes, timerEnabled, timerSeconds },
           shuffledPlayers, packs
         )
         await supabase.from('draft_rooms').update({ state }).eq('id', code)
@@ -120,7 +122,7 @@ export default function Lobby() {
 
       const packs = generateAllPacks(allCards, playerCount, 4, { includeHeroes })
       const state = buildInitialState(
-        { sets: setCodes, playerCount, lang, includeHeroes },
+        { sets: setCodes, playerCount, lang, includeHeroes, timerEnabled, timerSeconds },
         shuffledPlayers, packs
       )
       await supabase.from('draft_rooms').update({ state }).eq('id', code)
@@ -290,6 +292,32 @@ export default function Lobby() {
                   <label htmlFor="include-heroes" className="text-sm text-gray-300 cursor-pointer">
                     Include hero cards in packs
                   </label>
+                </div>
+
+                <div className="space-y-2">
+                  <div className="flex items-center gap-3">
+                    <input type="checkbox" id="timer-enabled" checked={timerEnabled}
+                      onChange={e => setTimerEnabled(e.target.checked)}
+                      className="accent-amber-500 w-4 h-4" />
+                    <label htmlFor="timer-enabled" className="text-sm text-gray-300 cursor-pointer">
+                      Pick timer
+                    </label>
+                  </div>
+                  {timerEnabled && (
+                    <div className="flex items-center gap-3 pl-7">
+                      <span className="text-sm text-gray-400">Time per pick:</span>
+                      <div className="flex gap-2">
+                        {[30, 60, 90, 120].map(s => (
+                          <button key={s} onClick={() => setTimerSeconds(s)}
+                            className={`px-2.5 py-1 rounded text-sm transition-colors ${timerSeconds === s
+                              ? 'bg-amber-500 text-gray-950 font-bold'
+                              : 'bg-gray-800 hover:bg-gray-700 text-gray-300'}`}>
+                            {s}s
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
 
