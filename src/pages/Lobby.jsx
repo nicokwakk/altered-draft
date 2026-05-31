@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase.js'
 import { fetchSet, SETS, apiSetCode } from '../lib/cardData.js'
 import { SET_ASSETS } from '../lib/assets.js'
 import { COMMUNITY_CUBES, setsForCube } from '../lib/cubes.js'
+import CubePreviewModal from '../components/CubePreviewModal.jsx'
 import { generateAllPacks, generatePacksFromPool } from '../lib/packGenerator.js'
 import { buildInitialState } from '../lib/draftLogic.js'
 import SetSelector from '../components/SetSelector.jsx'
@@ -33,6 +34,7 @@ export default function Lobby() {
   const [configTab, setConfigTab] = useState('presets') // 'presets' | 'cubes' | 'advanced'
   const [selectedPreset, setSelectedPreset] = useState(null) // set code
   const [selectedCube, setSelectedCube] = useState(null) // cube id
+  const [previewCube, setPreviewCube] = useState(null)  // cube being previewed
   const [selectedSets, setSelectedSets] = useState({ CORE: 1 })
   const [lang, setLang] = useState('EN')
   const [includeHeroes, setIncludeHeroes] = useState(true)
@@ -266,20 +268,29 @@ export default function Lobby() {
                   {COMMUNITY_CUBES.map(cube => {
                     const selected = selectedCube === cube.id
                     return (
-                      <button key={cube.id} onClick={() => setSelectedCube(selected ? null : cube.id)}
-                        className={`w-full text-left p-4 rounded-xl border-2 transition-all ${
-                          selected ? 'border-amber-500 bg-amber-500/5' : 'border-gray-700 bg-gray-800 hover:border-gray-500'}`}>
-                        <div className="flex items-start justify-between gap-3">
-                          <div>
-                            <p className="font-semibold text-sm text-gray-100">{cube.name}</p>
-                            <p className="text-xs text-gray-500 mt-0.5">by {cube.author} · {cube.cardCount} cards</p>
-                            <p className="text-xs text-gray-400 mt-1.5 leading-relaxed">{cube.description}</p>
+                      <div key={cube.id}
+                        className={`rounded-xl border-2 transition-all ${
+                          selected ? 'border-amber-500 bg-amber-500/5' : 'border-gray-700 bg-gray-800'}`}>
+                        <button onClick={() => setSelectedCube(selected ? null : cube.id)}
+                          className="w-full text-left p-4">
+                          <div className="flex items-start justify-between gap-3">
+                            <div>
+                              <p className="font-semibold text-sm text-gray-100">{cube.name}</p>
+                              <p className="text-xs text-gray-500 mt-0.5">by {cube.author} · {cube.cardCount} cards</p>
+                              <p className="text-xs text-gray-400 mt-1.5 leading-relaxed">{cube.description}</p>
+                            </div>
+                            {selected && (
+                              <span className="w-5 h-5 rounded-full bg-amber-500 flex items-center justify-center text-xs text-gray-950 font-bold shrink-0">✓</span>
+                            )}
                           </div>
-                          {selected && (
-                            <span className="w-5 h-5 rounded-full bg-amber-500 flex items-center justify-center text-xs text-gray-950 font-bold shrink-0">✓</span>
-                          )}
+                        </button>
+                        <div className="px-4 pb-3">
+                          <button onClick={() => setPreviewCube(cube)}
+                            className="text-xs text-amber-400 hover:text-amber-300 transition-colors">
+                            Preview cube →
+                          </button>
                         </div>
-                      </button>
+                      </div>
                     )
                   })}
                 </div>
@@ -387,6 +398,10 @@ export default function Lobby() {
           </div>
         )}
       </div>
+
+      {previewCube && (
+        <CubePreviewModal cube={previewCube} onClose={() => setPreviewCube(null)} />
+      )}
     </div>
   )
 }
