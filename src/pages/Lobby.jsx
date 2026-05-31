@@ -105,28 +105,45 @@ export default function Lobby() {
       const playerCount = shuffledPlayers.length
       const SEALED_PACKS = 7
 
-      // Sealed mode — generate 7 boosters per player, flatten into sealed pools
+      // Sealed mode — generate 7 boosters per player, stored as array of arrays
       if (draftMode === 'sealed') {
-        const setCodes = configTab === 'presets' && selectedPreset
-          ? [selectedPreset]
-          : Object.keys(selectedSets).filter(k => selectedSets[k] > 0)
-        if (!setCodes.length) { setStartError('Select a set.'); setLoading(false); return }
-        const results = await Promise.all(setCodes.map(s => fetchSet(s, lang)))
-        const allCards = results.flat()
+        const SEALED_PACKS = 7
+        const { generateAllPacks: genPacks } = await import('../lib/packGenerator.js')
+
+        let allCards = [], apiCodes = []
+
+        if (configTab === 'cubes' && selectedCube) {
+          // Cube sealed: filter to cube refs only
+          const cube = COMMUNITY_CUBES.find(c => c.id === selectedCube)
+          if (!cube) { setStartError('Cube not found.'); setLoading(false); return }
+          const rawCodes = [...new Set(setsForCube(cube.refs))]
+          apiCodes = [...new Set(rawCodes.map(apiSetCode))]
+          const results = await Promise.all(rawCodes.map(s => fetchSet(s, lang).catch(() => [])))
+          const cubeRefSet = new Set(cube.refs)
+          allCards = results.flat().filter(c => cubeRefSet.has(c.reference))
+        } else {
+          const setCodes = configTab === 'presets' && selectedPreset
+            ? [selectedPreset]
+            : Object.keys(selectedSets).filter(k => selectedSets[k] > 0)
+          if (!setCodes.length) { setStartError('Select a set.'); setLoading(false); return }
+          apiCodes = setCodes
+          const results = await Promise.all(setCodes.map(s => fetchSet(s, lang)))
+          allCards = results.flat()
+        }
+
         if (!allCards.length) { setStartError('No cards loaded.'); setLoading(false); return }
 
-        const { generateAllPacks: genPacks } = await import('../lib/packGenerator.js')
-        const sealedPools = {}
+        // Store packs as array of arrays (7 packs per player) for booster-by-booster reveal
+        const sealedPacks = {}
         for (let i = 0; i < playerCount; i++) {
-          // Generate SEALED_PACKS packs for this player and flatten
           const playerPacks = genPacks(allCards, 1, SEALED_PACKS, { includeHeroes })
-          sealedPools[String(i)] = playerPacks.flat()
+          sealedPacks[String(i)] = playerPacks // array of 7 packs
         }
         const state = {
-          config: { sets: setCodes, playerCount, lang, includeHeroes, mode: 'sealed' },
+          config: { sets: apiCodes, playerCount, lang, includeHeroes, mode: 'sealed' },
           players: shuffledPlayers,
           phase: 'sealed',
-          sealedPools,
+          sealedPacks,
           version: 0,
         }
         await supabase.from('draft_rooms').update({ state }).eq('id', code)
