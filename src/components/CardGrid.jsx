@@ -13,7 +13,7 @@ export default function CardGrid({ packRefs, cardMap, onPick, onHover, disabled 
   }
 
   return (
-    <div className="grid grid-cols-5 gap-2">
+    <div className="grid grid-cols-6 gap-2">
       {packRefs.map(ref => {
         const card = cardMap[ref]
         const rarity = RARITY_BADGE[card?.rarity] ?? RARITY_BADGE.C

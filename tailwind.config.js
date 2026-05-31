@@ -4,12 +4,12 @@ export default {
   theme: {
     extend: {
       colors: {
-        ax: '#4b8ec8',  // Axiom — blue
-        br: '#c84b3c',  // Bravos — red
-        ly: '#d4679c',  // Lyra — pink/rose
-        mu: '#7b5bb0',  // Muna — purple
-        or: '#c8a030',  // Ordis — gold
-        yz: '#3aab9b',  // Yzmir — teal
+        ax: '#894b33',  // Axiom — brown/orange
+        br: '#9e3c40',  // Bravos — dark red
+        ly: '#d89da3',  // Lyra — pink/rose
+        mu: '#3f9085',  // Muna — teal
+        or: '#00628e',  // Ordis — blue
+        yz: '#6d4f95',  // Yzmir — purple
       },
     },
   },

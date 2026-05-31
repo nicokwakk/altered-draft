@@ -23,10 +23,11 @@ function pickRandom(pool) {
  */
 export function generateAllPacks(allCards, playerCount, packsPerPlayer = 4) {
   // Exclude UNIQUE rarity heroes (promos) from the draft pool
-  const heroes  = allCards.filter(c => c.cardType === 'HERO' && c.rarity !== 'U')
-  const commons = allCards.filter(c => c.rarity === 'C' && c.cardType !== 'HERO')
-  const rares   = allCards.filter(c => c.rarity === 'R1' || c.rarity === 'R2')
-  const uniques = allCards.filter(c => c.rarity === 'U')
+  const isDraftable = c => c.cardType !== 'TOKEN'
+  const heroes  = allCards.filter(c => isDraftable(c) && c.cardType === 'HERO' && c.rarity !== 'U')
+  const commons = allCards.filter(c => isDraftable(c) && c.rarity === 'C' && c.cardType !== 'HERO')
+  const rares   = allCards.filter(c => isDraftable(c) && (c.rarity === 'R1' || c.rarity === 'R2'))
+  const uniques = allCards.filter(c => isDraftable(c) && c.rarity === 'U')
 
   const totalPacks = playerCount * packsPerPlayer
   const packs = []
