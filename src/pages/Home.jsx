@@ -33,6 +33,7 @@ export default function Home() {
       picks: {},
       waitingFor: [],
       remainingPacks: [],
+      version: 0,
     }
 
     const { error: dbErr } = await supabase
@@ -40,12 +41,12 @@ export default function Home() {
       .insert({ id: code, state: initialState })
 
     if (dbErr) {
-      setError('Could not create room: ' + dbErr.message)
+      setError('Could not create room. Please try again.')
       setLoading(false)
       return
     }
 
-    sessionStorage.setItem(`player_${code}`, JSON.stringify({ id: playerId, name: createName.trim(), isHost: true }))
+    localStorage.setItem(`player_${code}`, JSON.stringify({ id: playerId, name: createName.trim(), isHost: true }))
     navigate(`/room/${code}`)
   }
 
@@ -86,19 +87,18 @@ export default function Home() {
       .eq('id', code)
 
     if (updateErr) {
-      setError('Could not join room: ' + updateErr.message)
+      setError('Could not join room. Please try again.')
       setLoading(false)
       return
     }
 
-    sessionStorage.setItem(`player_${code}`, JSON.stringify({ id: playerId, name: joinName.trim(), isHost: false }))
+    localStorage.setItem(`player_${code}`, JSON.stringify({ id: playerId, name: joinName.trim(), isHost: false }))
     navigate(`/room/${code}`)
   }
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center px-4">
       <div className="max-w-md w-full">
-        {/* Header */}
         <div className="text-center mb-10">
           <h1 className="text-4xl font-bold tracking-tight mb-2">
             <span className="text-amber-400">Altered</span> Draft
@@ -109,44 +109,33 @@ export default function Home() {
           </p>
         </div>
 
-        {/* Action buttons */}
         {!mode && (
           <div className="flex gap-4">
-            <button
-              onClick={() => setMode('create')}
-              className="flex-1 bg-amber-500 hover:bg-amber-400 text-gray-950 font-semibold py-3 rounded-lg transition-colors"
-            >
+            <button onClick={() => setMode('create')}
+              className="flex-1 bg-amber-500 hover:bg-amber-400 text-gray-950 font-semibold py-3 rounded-lg transition-colors">
               Create a room
             </button>
-            <button
-              onClick={() => setMode('join')}
-              className="flex-1 bg-gray-800 hover:bg-gray-700 text-gray-100 font-semibold py-3 rounded-lg transition-colors"
-            >
+            <button onClick={() => setMode('join')}
+              className="flex-1 bg-gray-800 hover:bg-gray-700 text-gray-100 font-semibold py-3 rounded-lg transition-colors">
               Join a room
             </button>
           </div>
         )}
 
-        {/* Create form */}
         {mode === 'create' && (
           <form onSubmit={handleCreate} className="bg-gray-900 rounded-xl p-6 space-y-4">
             <h2 className="font-semibold text-lg">Create a draft room</h2>
             <div>
               <label className="block text-sm text-gray-400 mb-1">Your display name</label>
-              <input
-                value={createName}
-                onChange={e => setCreateName(e.target.value)}
+              <input value={createName} onChange={e => setCreateName(e.target.value)}
                 placeholder="e.g. Alice"
                 className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-amber-500"
-                autoFocus
-              />
+                autoFocus />
             </div>
             {error && <p className="text-red-400 text-sm">{error}</p>}
             <div className="flex gap-3">
               <button type="button" onClick={() => { setMode(null); setError('') }}
-                className="flex-1 py-2 rounded-lg bg-gray-800 hover:bg-gray-700 text-sm transition-colors">
-                Back
-              </button>
+                className="flex-1 py-2 rounded-lg bg-gray-800 hover:bg-gray-700 text-sm transition-colors">Back</button>
               <button type="submit" disabled={loading}
                 className="flex-1 py-2 rounded-lg bg-amber-500 hover:bg-amber-400 text-gray-950 font-semibold text-sm transition-colors disabled:opacity-50">
                 {loading ? 'Creating…' : 'Create room'}
@@ -155,36 +144,26 @@ export default function Home() {
           </form>
         )}
 
-        {/* Join form */}
         {mode === 'join' && (
           <form onSubmit={handleJoin} className="bg-gray-900 rounded-xl p-6 space-y-4">
             <h2 className="font-semibold text-lg">Join a draft room</h2>
             <div>
               <label className="block text-sm text-gray-400 mb-1">Room code</label>
-              <input
-                value={joinCode}
-                onChange={e => setJoinCode(e.target.value.toUpperCase())}
-                placeholder="e.g. XKQZ"
-                maxLength={6}
+              <input value={joinCode} onChange={e => setJoinCode(e.target.value.toUpperCase())}
+                placeholder="e.g. XKQZ" maxLength={6}
                 className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm font-mono tracking-widest uppercase focus:outline-none focus:border-amber-500"
-                autoFocus
-              />
+                autoFocus />
             </div>
             <div>
               <label className="block text-sm text-gray-400 mb-1">Your display name</label>
-              <input
-                value={joinName}
-                onChange={e => setJoinName(e.target.value)}
+              <input value={joinName} onChange={e => setJoinName(e.target.value)}
                 placeholder="e.g. Bob"
-                className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-amber-500"
-              />
+                className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-amber-500" />
             </div>
             {error && <p className="text-red-400 text-sm">{error}</p>}
             <div className="flex gap-3">
               <button type="button" onClick={() => { setMode(null); setError('') }}
-                className="flex-1 py-2 rounded-lg bg-gray-800 hover:bg-gray-700 text-sm transition-colors">
-                Back
-              </button>
+                className="flex-1 py-2 rounded-lg bg-gray-800 hover:bg-gray-700 text-sm transition-colors">Back</button>
               <button type="submit" disabled={loading}
                 className="flex-1 py-2 rounded-lg bg-amber-500 hover:bg-amber-400 text-gray-950 font-semibold text-sm transition-colors disabled:opacity-50">
                 {loading ? 'Joining…' : 'Join room'}

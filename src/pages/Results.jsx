@@ -15,7 +15,7 @@ export default function Results() {
   const [cardMap, setCardMap] = useState({})
 
   useEffect(() => {
-    const stored = sessionStorage.getItem(`player_${code}`)
+    const stored = localStorage.getItem(`player_${code}`)
     if (!stored) { navigate('/'); return }
     setMe(JSON.parse(stored))
   }, [code, navigate])

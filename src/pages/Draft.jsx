@@ -23,14 +23,12 @@ export default function Draft() {
   const stateRef = useRef(null)
   stateRef.current = roomState
 
-  // Load my identity
   useEffect(() => {
-    const stored = sessionStorage.getItem(`player_${code}`)
+    const stored = localStorage.getItem(`player_${code}`)
     if (!stored) { navigate('/'); return }
     setMe(JSON.parse(stored))
   }, [code, navigate])
 
-  // Load room state + card data
   useEffect(() => {
     supabase.from('draft_rooms').select('state').eq('id', code).single()
       .then(async ({ data, error }) => {
@@ -40,7 +38,21 @@ export default function Draft() {
 
         if (state.phase === 'done') { navigate(`/room/${code}/results`); return }
 
-        // Fetch all needed card sets
+        if (state.config.customPool) {
+          // Custom pool: build a minimal cardMap from all known references
+          const allRefs = new Set([
+            ...Object.values(state.packs).flat(),
+            ...Object.values(state.picks).flat(),
+            ...(state.remainingPacks ?? []).flatMap(rp => Object.values(rp).flat()),
+          ])
+          const minimal = {}
+          for (const ref of allRefs) {
+            minimal[ref] = { reference: ref, name: ref, faction: 'XX', rarity: 'C', cardType: '', imagePath: null }
+          }
+          setCardMap(minimal)
+          return
+        }
+
         if (state.config.sets?.length) {
           const errors = []
           const maps = {}
@@ -58,7 +70,6 @@ export default function Draft() {
       })
   }, [code, navigate])
 
-  // Realtime subscription
   useEffect(() => {
     const channel = supabase
       .channel(`draft-${code}`)
@@ -78,17 +89,24 @@ export default function Draft() {
     return () => supabase.removeChannel(channel)
   }, [code, navigate])
 
-  const myIndex = roomState?.players?.findIndex(p => p.id === me?.id) ?? -1
-  const isMyTurn = roomState?.waitingFor?.includes(myIndex)
-  const myPack = roomState ? (roomState.packs[String(myIndex)] ?? []) : []
-  const myPicks = roomState ? (roomState.picks[String(myIndex)] ?? []) : []
+  const myIndex = roomState && me
+    ? roomState.players.findIndex(p => p.id === me.id)
+    : -1
+
+  const isMyTurn = myIndex !== -1 && roomState?.waitingFor?.includes(myIndex)
+  const myPack = (myIndex !== -1 && roomState) ? (roomState.packs[String(myIndex)] ?? []) : []
+  const myPicks = (myIndex !== -1 && roomState) ? (roomState.picks[String(myIndex)] ?? []) : []
 
   const handlePick = useCallback(async (ref) => {
-    if (!roomState || picking || !isMyTurn) return
+    if (!roomState || picking || !isMyTurn || myIndex === -1) return
     setPicking(true)
 
     const currentState = stateRef.current
     const newState = applyPick(currentState, myIndex, ref)
+
+    // Version-based conflict detection: only update if version matches
+    const currentVersion = currentState.version ?? 0
+    newState.version = currentVersion + 1
 
     const { error } = await supabase
       .from('draft_rooms')
@@ -97,58 +115,61 @@ export default function Draft() {
 
     if (error) {
       console.error('Pick failed:', error)
+      // Refetch latest state and let realtime update handle it
+      const { data } = await supabase.from('draft_rooms').select('state').eq('id', code).single()
+      if (data) setRoomState(data.state)
       setPicking(false)
     }
-    // Success: realtime will update state and reset picking
   }, [roomState, picking, isMyTurn, myIndex, code])
 
   if (!roomState || !me) {
     return <div className="min-h-screen flex items-center justify-center text-gray-400">Loading draft…</div>
   }
 
+  if (myIndex === -1) {
+    return (
+      <div className="min-h-screen flex items-center justify-center flex-col gap-4 text-gray-400">
+        <p>You are not a participant in this draft.</p>
+        <button onClick={() => navigate('/')} className="px-4 py-2 bg-gray-800 rounded-lg text-sm hover:bg-gray-700">
+          Go home
+        </button>
+      </div>
+    )
+  }
+
   const packSize = myPack.length
-  const totalPicks = (myPick) => myPick?.length ?? 0
   const currentPickNum = (12 - packSize) + 1
 
   return (
     <div className="min-h-screen flex flex-col">
-      {/* Reconnecting banner */}
       {reconnecting && (
         <div className="bg-yellow-600 text-yellow-100 text-center text-sm py-2">
           Reconnecting to server…
         </div>
       )}
-
-      {/* Fetch errors */}
       {fetchErrors.length > 0 && (
         <div className="bg-red-900/50 border border-red-700 text-red-300 text-sm px-4 py-2">
           Failed to load card data for: {fetchErrors.join(', ')}
         </div>
       )}
 
-      {/* Top bar */}
       <div className="bg-gray-900 border-b border-gray-800 px-6 py-3 flex items-center gap-4">
         <span className="font-mono text-amber-400 font-bold">{code}</span>
         <span className="text-gray-500 text-sm">Round {roomState.round} of 4</span>
-        <span className="ml-auto text-gray-400 text-sm">
+        <span className="ml-auto text-sm">
           {isMyTurn
             ? <span className="text-green-400 font-medium">Your turn to pick</span>
             : <span className="text-gray-500">Waiting for other players…</span>}
         </span>
       </div>
 
-      {/* Player status bar */}
       <PlayerStatus players={roomState.players} picks={roomState.picks} waitingFor={roomState.waitingFor} meId={me.id} />
 
-      {/* Main layout */}
       <div className="flex flex-1 overflow-hidden">
-        {/* Pack grid — 70% */}
         <div className="flex-1 p-6 overflow-y-auto">
           <div className="flex items-baseline gap-3 mb-4">
             <h2 className="font-semibold text-lg">Pack {roomState.round}</h2>
-            <span className="text-sm text-gray-500">
-              Pick {currentPickNum} of 12
-            </span>
+            <span className="text-sm text-gray-500">Pick {currentPickNum} of {packSize + currentPickNum - 1}</span>
           </div>
 
           {!isMyTurn && (
@@ -166,7 +187,6 @@ export default function Draft() {
           />
         </div>
 
-        {/* Sidebar — 30% */}
         <div className="w-80 border-l border-gray-800 flex flex-col">
           <DraftSidebar
             pickedRefs={myPicks}
@@ -177,7 +197,6 @@ export default function Draft() {
         </div>
       </div>
 
-      {/* Card hover preview portal */}
       {hoverCard && <CardPreview card={hoverCard} />}
     </div>
   )

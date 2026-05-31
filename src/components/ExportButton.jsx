@@ -1,14 +1,35 @@
 import { useState } from 'react'
 
 export default function ExportButton({ decklist, small }) {
-  const [copied, setCopied] = useState(false)
+  const [state, setState] = useState('idle') // idle | copied | error
 
   async function handleCopy() {
     if (!decklist) return
-    await navigator.clipboard.writeText(decklist)
-    setCopied(true)
-    setTimeout(() => setCopied(false), 2000)
+    try {
+      await navigator.clipboard.writeText(decklist)
+      setState('copied')
+    } catch {
+      // Fallback for browsers that deny clipboard API
+      try {
+        const ta = document.createElement('textarea')
+        ta.value = decklist
+        ta.style.position = 'fixed'
+        ta.style.opacity = '0'
+        document.body.appendChild(ta)
+        ta.select()
+        document.execCommand('copy')
+        document.body.removeChild(ta)
+        setState('copied')
+      } catch {
+        setState('error')
+      }
+    }
+    setTimeout(() => setState('idle'), 2500)
   }
+
+  const label = state === 'copied' ? '✓ Copied!'
+    : state === 'error' ? 'Copy failed — select text manually'
+    : 'Copy decklist for altered.re'
 
   return (
     <button
@@ -17,12 +38,12 @@ export default function ExportButton({ decklist, small }) {
       className={`
         ${small ? 'w-full py-2 text-xs' : 'px-4 py-2 text-sm'}
         rounded-lg font-medium transition-colors disabled:opacity-40
-        ${copied
-          ? 'bg-green-600 text-white'
+        ${state === 'copied' ? 'bg-green-600 text-white'
+          : state === 'error' ? 'bg-red-700 text-white'
           : 'bg-amber-500 hover:bg-amber-400 text-gray-950'}
       `}
     >
-      {copied ? '✓ Copied!' : 'Copy decklist for altered.re'}
+      {label}
     </button>
   )
 }

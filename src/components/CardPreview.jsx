@@ -13,7 +13,8 @@ export default function CardPreview({ card }) {
       style={{ boxShadow: '0 0 40px rgba(0,0,0,0.8)' }}
     >
       {card.imagePath ? (
-        <img src={card.imagePath} alt={card.name} className="w-full object-cover" />
+        <img src={card.imagePath} alt={card.name} className="w-full object-cover"
+          onError={e => { e.currentTarget.style.display = 'none' }} />
       ) : (
         <div className="aspect-[2/3] bg-gray-800 flex items-center justify-center text-gray-600 text-sm px-4 text-center">
           {card.name ?? card.reference}
