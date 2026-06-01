@@ -30,9 +30,9 @@ export default function DeckList({ deck, cardMap, onRemove, onAdd, poolCounts })
             </div>
             <div className="grid grid-cols-5 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-10 gap-2">
               {sorted.map(({ ref, qty, card }) => (
-                <div key={ref} className="relative flex flex-col rounded-lg overflow-hidden border border-gray-700 bg-gray-900 group
-                  transition-transform duration-150 ease-out hover:scale-[1.6] hover:z-30 hover:border-amber-500 hover:shadow-xl hover:shadow-black/60">
-                  <div className="aspect-[2/3] bg-gray-800 overflow-hidden relative">
+                <div key={ref} className="relative flex flex-col rounded-lg border border-gray-700 bg-gray-900">
+                  <div className="aspect-[2/3] bg-gray-800 overflow-hidden rounded-t-lg relative cursor-zoom-in
+                    transition-transform duration-150 ease-out origin-center hover:scale-[1.6] hover:z-30 hover:shadow-xl hover:shadow-black/70">
                     {card?.imagePath ? (
                       <img src={card.imagePath} alt={card?.name} className="w-full h-full object-cover" loading="lazy"
                         onError={e => { e.currentTarget.style.display = 'none' }} />
