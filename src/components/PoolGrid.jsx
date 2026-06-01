@@ -140,8 +140,8 @@ export default function PoolGrid({ refs, cardMap, deck, poolCounts, onAdd, onRem
         ))}
       </div>
 
-      {/* Grouped grid — generous padding so zoomed cards stay on screen */}
-      <div className="overflow-y-auto flex-1 px-8 py-8 space-y-6">
+      {/* Grouped grid — generous padding + stable gutter so zoom never reflows the page */}
+      <div className="overflow-y-auto flex-1 px-8 pt-8 pb-40 space-y-6" style={{ scrollbarGutter: 'stable' }}>
         {groups.map(group => (
           <div key={group.key}>
             <div className={`inline-flex items-center gap-1.5 text-xs px-2 py-0.5 rounded border mb-2 ${group.colorCls}`}>

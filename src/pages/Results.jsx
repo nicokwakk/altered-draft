@@ -145,7 +145,7 @@ export default function Results() {
           </div>
           {deckTotal === 0
             ? <div className="flex-1 flex items-center justify-center text-gray-500 text-sm">No cards in deck yet — add them from the All Picks tab.</div>
-            : <div className="flex-1 overflow-y-auto"><DeckList deck={deck} cardMap={cardMap} onRemove={removeFromDeck} onAdd={addToDeck} poolCounts={poolCounts} /></div>}
+            : <div className="flex-1 overflow-y-auto" style={{ scrollbarGutter: 'stable' }}><DeckList deck={deck} cardMap={cardMap} onRemove={removeFromDeck} onAdd={addToDeck} poolCounts={poolCounts} /></div>}
         </div>
       )}
 

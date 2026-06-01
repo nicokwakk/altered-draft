@@ -16,7 +16,7 @@ export default function DeckList({ deck, cardMap, onRemove, onAdd, poolCounts })
   }
 
   return (
-    <div className="space-y-6 px-4 py-4">
+    <div className="space-y-6 px-4 pt-4 pb-40">
       {[...FACTIONS, '??'].filter(k => groups[k]).map(key => {
         const factionCls = FACTION_COLORS[key] ?? 'text-gray-300 bg-gray-800 border-gray-700'
         const total = groups[key].reduce((a, { qty }) => a + qty, 0)
