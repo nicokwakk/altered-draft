@@ -225,9 +225,9 @@ function PoolCard({ ref_, occurrences, card, loading, deck, poolCounts, onAdd, o
             <span className="text-xs text-gray-600 text-center leading-tight">{loading ? '…' : (card?.name ?? ref_)}</span>
           </div>
         )}
-        {poolQty > 1 && (
+        {occurrences > 1 && (
           <div className="absolute top-1 left-1 bg-gray-900/90 text-gray-300 font-bold text-xs px-1.5 py-0.5 rounded border border-gray-600">
-            ×{poolQty}
+            ×{occurrences}
           </div>
         )}
         {inDeck > 0 && (

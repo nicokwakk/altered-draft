@@ -168,7 +168,7 @@ export default function Sealed() {
               {currentSet.name && (
                 <span className="text-gray-400 font-normal">
                   · {currentSet.name}
-                  {setTotal > 1 && <span className="text-gray-500"> {setOrdinal}/{setTotal}</span>}
+                  <span className="text-gray-500"> {setOrdinal}/{setTotal}</span>
                 </span>
               )}
             </h2>
