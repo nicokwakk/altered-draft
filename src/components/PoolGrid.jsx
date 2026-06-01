@@ -184,7 +184,7 @@ function CardGridInner({ refs, cardMap, loading, deck, poolCounts, onAdd, onRemo
           <div key={ref}
             className="relative flex flex-col rounded-lg border border-gray-700 bg-gray-900">
             <div className="aspect-[2/3] bg-gray-800 overflow-hidden rounded-t-lg relative cursor-zoom-in
-              transition-transform duration-150 ease-out origin-center hover:scale-[1.6] hover:z-30 hover:shadow-xl hover:shadow-black/70">
+              transition-transform duration-150 ease-out origin-top hover:scale-[1.6] hover:z-30 hover:shadow-xl hover:shadow-black/70">
               {card?.imagePath ? (
                 <img src={card.imagePath} alt={card?.name} className="w-full h-full object-cover" loading="lazy"
                   onError={e => { e.currentTarget.style.display = 'none' }} />
