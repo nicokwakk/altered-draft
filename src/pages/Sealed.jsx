@@ -162,7 +162,6 @@ export default function Sealed() {
               {currentSet.icon && <img src={currentSet.icon} alt="" className="w-5 h-5 object-contain" onError={e => { e.currentTarget.style.display = 'none' }} />}
               <span>Booster {packIndex + 1}</span>
               {currentSet.name && <span className="text-gray-400 font-normal">· {currentSet.name}</span>}
-              <span className="text-gray-500 text-sm font-normal">· {currentPack.length} cards</span>
             </h2>
             <SimpleCardGrid refs={currentPack} cardMap={cardMap} loading={loading}
               deck={deck} poolCounts={poolCounts} onAdd={addToDeck} onRemove={removeFromDeck} />
