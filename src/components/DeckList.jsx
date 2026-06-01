@@ -33,7 +33,8 @@ export default function DeckList({ deck, cardMap, onRemove }) {
             </div>
             <div className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-7 lg:grid-cols-9 gap-2">
               {sorted.map(({ ref, qty, card }) => (
-                <div key={ref} className="relative flex flex-col rounded-lg overflow-hidden border border-gray-700 bg-gray-900 group">
+                <div key={ref} className="relative flex flex-col rounded-lg overflow-hidden border border-gray-700 bg-gray-900 group
+                  transition-transform duration-150 ease-out hover:scale-[1.8] hover:z-30 hover:border-amber-500 hover:shadow-xl hover:shadow-black/60">
                   <div className="aspect-[2/3] bg-gray-800 overflow-hidden relative">
                     {card?.imagePath ? (
                       <img src={card.imagePath} alt={card?.name} className="w-full h-full object-cover" loading="lazy"

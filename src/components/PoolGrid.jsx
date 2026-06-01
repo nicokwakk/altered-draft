@@ -4,7 +4,6 @@ import {
   SET_ABBREV, SET_ABBREV_ICON_CODE,
 } from '../lib/cardData.js'
 import { FACTION_ICONS, RARITY_GEMS, SET_ICONS, setCodeFromRef } from '../lib/assets.js'
-import CardPreview from './CardPreview.jsx'
 
 const TYPE_LABEL = {
   HERO: 'Hero', CHARACTER: 'Character', SPELL: 'Spell',
@@ -143,20 +142,15 @@ export default function PoolGrid({ refs, cardMap, deck, poolCounts, onAdd, onRem
   )
 }
 
-/** Self-contained card grid with its own hover preview (no filter/sort controls). */
+/** Self-contained card grid (no filter/sort controls). */
 export function SimpleCardGrid({ refs, cardMap, loading, deck, poolCounts, onAdd, onRemove }) {
-  const [hoverCard, setHoverCard] = useState(null)
   return (
-    <>
-      <CardGridInner refs={refs} cardMap={cardMap} loading={loading}
-        deck={deck} poolCounts={poolCounts} onAdd={onAdd} onRemove={onRemove} onHover={setHoverCard} />
-      {hoverCard && <CardPreview card={hoverCard} />}
-    </>
+    <CardGridInner refs={refs} cardMap={cardMap} loading={loading}
+      deck={deck} poolCounts={poolCounts} onAdd={onAdd} onRemove={onRemove} />
   )
 }
 
-function CardGridInner({ refs, cardMap, loading, deck, poolCounts, onAdd, onRemove, onHover }) {
-  const hover = onHover ?? (() => {})
+function CardGridInner({ refs, cardMap, loading, deck, poolCounts, onAdd, onRemove }) {
   const seen = new Map()
   for (const ref of refs) seen.set(ref, (seen.get(ref) ?? 0) + 1)
   const unique = [...seen.entries()]
@@ -173,9 +167,8 @@ function CardGridInner({ refs, cardMap, loading, deck, poolCounts, onAdd, onRemo
 
         return (
           <div key={ref}
-            className="relative flex flex-col rounded-lg overflow-hidden border border-gray-700 bg-gray-900 group"
-            onMouseEnter={() => hover(card ?? { reference: ref, name: ref })}
-            onMouseLeave={() => hover(null)}>
+            className="relative flex flex-col rounded-lg overflow-hidden border border-gray-700 bg-gray-900 group
+              transition-transform duration-150 ease-out hover:scale-[1.8] hover:z-30 hover:border-amber-500 hover:shadow-xl hover:shadow-black/60">
             <div className="aspect-[2/3] bg-gray-800 overflow-hidden relative">
               {card?.imagePath ? (
                 <img src={card.imagePath} alt={card?.name} className="w-full h-full object-cover" loading="lazy"
