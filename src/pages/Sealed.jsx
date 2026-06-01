@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase.js'
-import { fetchSet, apiSetCode } from '../lib/cardData.js'
+import { fetchSet, apiSetCode, SET_ABBREV, SET_FULL_NAMES } from '../lib/cardData.js'
+import { SET_ICONS, setCodeFromRef } from '../lib/assets.js'
 import { buildDecklist } from '../lib/exportFormat.js'
 import ExportButton from '../components/ExportButton.jsx'
 import DraftStats from '../components/DraftStats.jsx'
@@ -68,6 +69,15 @@ export default function Sealed() {
   const currentPack = myPacks[packIndex] ?? []
   const allDecklist = buildDecklist(allRefs, cardMap)
 
+  // Each sealed booster is single-set — label it from its cards.
+  function packSet(pack) {
+    const raw = pack?.length ? setCodeFromRef(pack[0]) : null
+    if (!raw) return { name: null, icon: null }
+    const abbrev = SET_ABBREV[raw] ?? raw
+    return { name: SET_FULL_NAMES[abbrev] ?? abbrev, icon: SET_ICONS[raw] ?? null }
+  }
+  const currentSet = packSet(currentPack)
+
   const deckTotal = Object.values(deck).reduce((a, b) => a + b, 0)
   const deckRefs = Object.entries(deck).flatMap(([ref, qty]) => Array(qty).fill(ref))
   const deckDecklist = buildDecklist(deckRefs, cardMap)
@@ -132,19 +142,28 @@ export default function Sealed() {
             <button onClick={() => setPackIndex(i => Math.max(0, i - 1))} disabled={packIndex === 0}
               className="w-8 h-8 rounded-lg bg-gray-800 disabled:opacity-30 flex items-center justify-center text-gray-300 hover:bg-gray-700">‹</button>
             <div className="flex gap-1 flex-1 justify-center flex-wrap">
-              {myPacks.map((_, i) => (
-                <button key={i} onClick={() => setPackIndex(i)}
-                  className={`w-7 h-7 rounded-lg text-xs font-bold transition-colors ${
-                    i === packIndex ? 'bg-amber-500 text-gray-950' : 'bg-gray-800 text-gray-400 hover:bg-gray-700'}`}>
-                  {i + 1}
-                </button>
-              ))}
+              {myPacks.map((pack, i) => {
+                const s = packSet(pack)
+                return (
+                  <button key={i} onClick={() => setPackIndex(i)} title={s.name ?? `Booster ${i + 1}`}
+                    className={`h-7 px-1.5 rounded-lg text-xs font-bold transition-colors flex items-center gap-1 ${
+                      i === packIndex ? 'bg-amber-500 text-gray-950' : 'bg-gray-800 text-gray-400 hover:bg-gray-700'}`}>
+                    {s.icon && <img src={s.icon} alt="" className="w-3.5 h-3.5 object-contain" onError={e => { e.currentTarget.style.display = 'none' }} />}
+                    {i + 1}
+                  </button>
+                )
+              })}
             </div>
             <button onClick={() => setPackIndex(i => Math.min(totalPacks - 1, i + 1))} disabled={packIndex === totalPacks - 1}
               className="w-8 h-8 rounded-lg bg-gray-800 disabled:opacity-30 flex items-center justify-center text-gray-300 hover:bg-gray-700">›</button>
           </div>
           <div className="flex-1 overflow-y-auto px-8 pt-4 pb-40" style={{ scrollbarGutter: 'stable' }}>
-            <h2 className="font-semibold mb-3">Booster {packIndex + 1} <span className="text-gray-500 text-sm font-normal">· {currentPack.length} cards</span></h2>
+            <h2 className="font-semibold mb-3 flex items-center gap-2">
+              {currentSet.icon && <img src={currentSet.icon} alt="" className="w-5 h-5 object-contain" onError={e => { e.currentTarget.style.display = 'none' }} />}
+              <span>Booster {packIndex + 1}</span>
+              {currentSet.name && <span className="text-gray-400 font-normal">· {currentSet.name}</span>}
+              <span className="text-gray-500 text-sm font-normal">· {currentPack.length} cards</span>
+            </h2>
             <SimpleCardGrid refs={currentPack} cardMap={cardMap} loading={loading}
               deck={deck} poolCounts={poolCounts} onAdd={addToDeck} onRemove={removeFromDeck} />
           </div>
