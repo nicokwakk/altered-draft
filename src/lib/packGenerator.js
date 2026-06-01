@@ -31,8 +31,8 @@ function deduplicateByNameFaction(cards) {
   })
 }
 
-export function generateAllPacks(allCards, playerCount, packsPerPlayer = 4, options = {}) {
-  const { includeHeroes = true, cubeMode = false } = options
+/** Split a card list into the four draft pools (deduped, tokens excluded). */
+function splitPools(allCards, includeHeroes) {
   const isDraftable = c => c.cardType !== 'TOKEN'
   const heroes  = includeHeroes
     ? deduplicateByNameFaction(allCards.filter(c => isDraftable(c) && c.cardType === 'HERO' && c.rarity !== 'U'))
@@ -40,6 +40,12 @@ export function generateAllPacks(allCards, playerCount, packsPerPlayer = 4, opti
   const commons = deduplicateByNameFaction(allCards.filter(c => isDraftable(c) && c.rarity === 'C' && c.cardType !== 'HERO'))
   const rares   = deduplicateByNameFaction(allCards.filter(c => isDraftable(c) && (c.rarity === 'R1' || c.rarity === 'R2' || c.rarity === 'EX')))
   const uniques = deduplicateByNameFaction(allCards.filter(c => isDraftable(c) && c.rarity === 'U'))
+  return { heroes, commons, rares, uniques }
+}
+
+export function generateAllPacks(allCards, playerCount, packsPerPlayer = 4, options = {}) {
+  const { includeHeroes = true, cubeMode = false } = options
+  const { heroes, commons, rares, uniques } = splitPools(allCards, includeHeroes)
 
   const totalPacks = playerCount * packsPerPlayer
 
@@ -52,6 +58,29 @@ export function generateAllPacks(allCards, playerCount, packsPerPlayer = 4, opti
     packs.push(generateOnePack(heroes, commons, rares, uniques, i))
   }
   return packs
+}
+
+/**
+ * Chaos / mixed-booster draft: build single-set boosters per set according to
+ * the requested counts, then shuffle ALL boosters together so they are dealt
+ * out at random. Each booster follows normal composition (its own set only).
+ * @param {Object<string, object[]>} cardsBySet - { setCode: normalized cards }
+ * @param {Object<string, number>} packMix - { setCode: number of boosters }
+ * @returns {string[][]} flat, shuffled array of packs
+ */
+export function generateChaosPacks(cardsBySet, packMix, options = {}) {
+  const { includeHeroes = true } = options
+  const allPacks = []
+  for (const [setCode, count] of Object.entries(packMix)) {
+    if (!count || count < 1) continue
+    const cards = cardsBySet[setCode] ?? []
+    if (!cards.length) continue
+    const { heroes, commons, rares, uniques } = splitPools(cards, includeHeroes)
+    for (let i = 0; i < count; i++) {
+      allPacks.push(generateOnePack(heroes, commons, rares, uniques, i))
+    }
+  }
+  return shuffle(allPacks)
 }
 
 /**

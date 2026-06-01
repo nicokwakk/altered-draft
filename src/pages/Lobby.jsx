@@ -5,9 +5,10 @@ import { fetchSet, SETS, apiSetCode } from '../lib/cardData.js'
 import { SET_ASSETS } from '../lib/assets.js'
 import { COMMUNITY_CUBES, setsForCube } from '../lib/cubes.js'
 import CubePreviewModal from '../components/CubePreviewModal.jsx'
-import { generateAllPacks, generatePacksFromPool } from '../lib/packGenerator.js'
+import { generateAllPacks, generatePacksFromPool, generateChaosPacks } from '../lib/packGenerator.js'
 import { buildInitialState } from '../lib/draftLogic.js'
 import SetSelector from '../components/SetSelector.jsx'
+import ChaosSelector from '../components/ChaosSelector.jsx'
 
 const LANGS = ['EN', 'FR', 'ES', 'DE', 'IT']
 
@@ -37,6 +38,7 @@ export default function Lobby() {
   const [selectedCube, setSelectedCube] = useState(null) // cube id
   const [previewCube, setPreviewCube] = useState(null)  // cube being previewed
   const [selectedSets, setSelectedSets] = useState({ CORE: 1 })
+  const [chaosMix, setChaosMix] = useState({}) // { setCode: boosterCount } for chaos draft
   const [lang, setLang] = useState('EN')
   const [includeHeroes, setIncludeHeroes] = useState(true)
   const [timerEnabled, setTimerEnabled] = useState(false)
@@ -189,6 +191,30 @@ export default function Lobby() {
         return
       }
 
+      // Chaos draft — single-set boosters mixed in a bag and dealt at random
+      if (configTab === 'chaos') {
+        const mix = Object.fromEntries(Object.entries(chaosMix).filter(([, n]) => n > 0))
+        const setCodes = Object.keys(mix)
+        if (!setCodes.length) { setStartError('Add some boosters to the bag.'); setLoading(false); return }
+        const totalBoosters = Object.values(mix).reduce((a, b) => a + b, 0)
+        const target = playerCount * 4
+        if (totalBoosters !== target) {
+          setStartError(`Need exactly ${target} boosters (${playerCount} players × 4). You have ${totalBoosters}.`)
+          setLoading(false); return
+        }
+        const fetched = await Promise.all(setCodes.map(async s => [s, await fetchSet(s, lang).catch(() => [])]))
+        const cardsBySet = Object.fromEntries(fetched)
+        if (!Object.values(cardsBySet).some(c => c.length)) { setStartError('No cards loaded. Check set selection.'); setLoading(false); return }
+        const packs = generateChaosPacks(cardsBySet, mix, { includeHeroes })
+        const apiCodes = [...new Set(setCodes.map(apiSetCode))]
+        const state = buildInitialState(
+          { sets: apiCodes, playerCount, lang, includeHeroes, timerEnabled, timerSeconds, chaosMix: mix },
+          shuffledPlayers, packs
+        )
+        await supabase.from('draft_rooms').update({ state }).eq('id', code)
+        return
+      }
+
       // Booster preset / advanced mode
       const setsToUse = resolveConfig(playerCount)
       if (!setsToUse || !Object.keys(setsToUse).filter(k => setsToUse[k] > 0).length) {
@@ -276,7 +302,7 @@ export default function Lobby() {
             <div className="grid grid-cols-2 border-b border-gray-800">
               {[{ id: 'draft', label: 'Draft', desc: 'Pick from passing packs' },
                 { id: 'sealed', label: 'Sealed', desc: '7 boosters, build your pool' }].map(m => (
-                <button key={m.id} onClick={() => setDraftMode(m.id)}
+                <button key={m.id} onClick={() => { setDraftMode(m.id); if (m.id === 'sealed' && configTab === 'chaos') setConfigTab('presets') }}
                   className={`py-3 px-4 text-left transition-colors ${
                     draftMode === m.id ? 'bg-amber-500/10 border-b-2 border-amber-500' : 'hover:bg-gray-800/50'}`}>
                   <p className={`text-sm font-semibold ${draftMode === m.id ? 'text-amber-400' : 'text-gray-400'}`}>{m.label}</p>
@@ -287,7 +313,7 @@ export default function Lobby() {
 
             {/* Config tab bar */}
             <div className="flex border-b border-gray-800">
-              {['presets', 'cubes', 'advanced'].map(t => (
+              {(draftMode === 'draft' ? ['presets', 'cubes', 'advanced', 'chaos'] : ['presets', 'cubes', 'advanced']).map(t => (
                 <button key={t} onClick={() => setConfigTab(t)}
                   className={`flex-1 py-3 text-sm font-medium transition-colors capitalize ${
                     configTab === t
@@ -403,6 +429,16 @@ export default function Lobby() {
                 </div>
               )}
 
+              {/* CHAOS TAB */}
+              {configTab === 'chaos' && (
+                <ChaosSelector
+                  mix={chaosMix}
+                  onChange={setChaosMix}
+                  target={roomState.players.length * 4}
+                  disabled={loading}
+                />
+              )}
+
               {/* Shared settings */}
               <div className="pt-2 border-t border-gray-800 space-y-4">
                 <div>
@@ -463,7 +499,8 @@ export default function Lobby() {
                 || (draftMode === 'draft' && roomState.players.length < 2)
                 || (configTab === 'presets' && draftMode === 'draft' && !selectedPreset)
                 || (configTab === 'presets' && draftMode === 'sealed' && !selectedPreset)
-                || (configTab === 'cubes' && !selectedCube)}
+                || (configTab === 'cubes' && !selectedCube)
+                || (configTab === 'chaos' && Object.values(chaosMix).reduce((a, b) => a + (b || 0), 0) !== roomState.players.length * 4)}
                 className="w-full py-3 bg-amber-500 hover:bg-amber-400 disabled:opacity-40 text-gray-950 font-bold rounded-lg transition-colors"
               >
                 {loading ? 'Generating packs…' : draftMode === 'sealed' ? 'Start sealed' : 'Start draft'}

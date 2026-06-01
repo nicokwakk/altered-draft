@@ -26,7 +26,8 @@ CORE=Beyond the Gates(BTG), COREKS=BTG KS (hidden:true, not a preset), ALIZE=Tri
 Faction icons, rarity gems, set icons/logos all from `https://cdn.alteredcore.org/marketing/...`. No FUGUE logo or Exalted gem available yet (EX reuses rare gem; FUGUE/CORE fall back to text). `setCodeFromRef(ref)` = `ref.split('_')[1]`.
 
 ## Booster composition (`src/lib/packGenerator.js`)
-13 cards: 1 hero + 9 commons (1 per faction + 3 paired draws AX|BR, LY|MU, OR|YZ) + 3 rares (1-in-8 packs swaps last rare for a unique). `generateAllPacks(cards, players, packsPerPlayer, {includeHeroes, cubeMode})`. Cube mode deals each card at most once across ALL packs (no repeats); uniques only in last slot. Pools deduplicated by `name+faction`.
+13 cards: 1 hero + 9 commons (1 per faction + 3 paired draws AX|BR, LY|MU, OR|YZ) + 3 rares (1-in-8 packs swaps last rare for a unique). `generateAllPacks(cards, players, packsPerPlayer, {includeHeroes, cubeMode})`. Cube mode deals each card at most once across ALL packs (no repeats); uniques only in last slot. Pools deduplicated by `name+faction`. `splitPools()` helper shared by all generators.
+**Chaos draft** (`generateChaosPacks(cardsBySet, packMix, {includeHeroes})`): each booster is a single-set pack (normal composition). Host picks any number of boosters per set (NOT a multiple of player count); total must equal players×4. All boosters shuffled together → flat array → `buildInitialState` deals one random pack per seat per round. Draft only. Config tab `chaos` (hidden in sealed). Stored as `config.chaosMix`. UI: `ChaosSelector.jsx`.
 
 ## Draft logic (`src/lib/draftLogic.js`)
 Pure transitions. `applyPick(state, idx, ref)`. Pass left rounds 1&3, right 2&4. `pickDeadline` (timer) format is `"<ISO>|<seconds>"` — MUST split on `|` before `new Date()`. `version` field for optimistic-conflict detection.
