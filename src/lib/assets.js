@@ -20,6 +20,7 @@ export const RARITY_GEMS = {
 // Small set icons for use in decklists and stats
 export const SET_ICONS = {
   CORE:    `${CDN}/sets_logo/BTG-set-icon.png`,
+  COREKS:  `${CDN}/sets_logo/BTG-set-icon.png`,  // Kickstarter cards use the Beyond the Gates logo
   ALIZE:   `${CDN}/sets_logo/ALT_TBF_ICON.png`,
   BISE:    `${CDN}/sets_logo/ALT_WFM_ICON.png`,
   CYCLONE: `${CDN}/sets_logo/ALT_SKY_ICON.png`,
