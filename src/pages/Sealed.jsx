@@ -77,6 +77,10 @@ export default function Sealed() {
     return { name: SET_FULL_NAMES[abbrev] ?? abbrev, icon: SET_ICONS[raw] ?? null }
   }
   const currentSet = packSet(currentPack)
+  // Position of this booster among all boosters of the same set, e.g. 1/2
+  const sameSetIdx = myPacks.map((p, i) => ({ i, name: packSet(p).name })).filter(x => x.name === currentSet.name)
+  const setTotal = sameSetIdx.length
+  const setOrdinal = sameSetIdx.findIndex(x => x.i === packIndex) + 1
 
   const deckTotal = Object.values(deck).reduce((a, b) => a + b, 0)
   const deckRefs = Object.entries(deck).flatMap(([ref, qty]) => Array(qty).fill(ref))
@@ -161,7 +165,12 @@ export default function Sealed() {
             <h2 className="font-semibold mb-3 flex items-center gap-2">
               {currentSet.icon && <img src={currentSet.icon} alt="" className="w-5 h-5 object-contain" onError={e => { e.currentTarget.style.display = 'none' }} />}
               <span>Booster {packIndex + 1}</span>
-              {currentSet.name && <span className="text-gray-400 font-normal">· {currentSet.name}</span>}
+              {currentSet.name && (
+                <span className="text-gray-400 font-normal">
+                  · {currentSet.name}
+                  {setTotal > 1 && <span className="text-gray-500"> {setOrdinal}/{setTotal}</span>}
+                </span>
+              )}
             </h2>
             <SimpleCardGrid refs={currentPack} cardMap={cardMap} loading={loading}
               deck={deck} poolCounts={poolCounts} onAdd={addToDeck} onRemove={removeFromDeck} />
