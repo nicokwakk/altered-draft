@@ -12,9 +12,19 @@ export async function fetchSet(setCode, lang = 'EN') {
 
   const json = await res.json()
   const raw = Array.isArray(json) ? json : (json['hydra:member'] || [])
-  const cards = raw.map(normalizeCard)
+  const cards = raw.map(normalizeCard).filter(isStandardPrinting)
   cache[key] = cards
   return cards
+}
+
+// Reference format: ALT_<SET>_<PRINT>_<FACTION>_<NUM>_<RARITY...>
+// <PRINT> is the printing variant: 'B' = the actual booster set card,
+// 'A' = alternate-art reprint, 'P' = promo. 'A'/'P' are the SAME gameplay
+// card as their 'B' twin, just different art. We keep only 'B' so each card
+// has exactly one canonical printing in the pool/packs/stats (every 'A' has a
+// 'B' twin; the only 'P'-only entries are promo cards that aren't in boosters).
+function isStandardPrinting(card) {
+  return (card.reference.split('_')[2] === 'B')
 }
 
 // Strip #...# formatting markers used in Altered card text fields

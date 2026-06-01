@@ -18,6 +18,7 @@ Multiplayer booster-draft + sealed simulator for the Altered TCG. React (Vite) +
   - `imagePath` is already a full URL (no prefix needed).
   - `elements.MAIN_COST` etc. are wrapped in `#...#` markers — `stripMarkers()` removes them. Heroes have mainCost 0 (ignore for cost curves).
 - `COREKS` (Kickstarter) has its own dataset; `apiSetCode()` is identity (do NOT remap to CORE).
+- **Printing variants:** reference is `ALT_<SET>_<PRINT>_<FACTION>_<NUM>_<RARITY>`. `<PRINT>`: `B` = real booster card, `A` = alternate-art reprint (12–36/set), `P` = promo (0–18). A/P are the same gameplay card as their B twin. `fetchSet` filters to **B only** (`isStandardPrinting`) so each card has one canonical printing — otherwise dedup-by-name could keep the alt-art `A` (e.g. Mechanical Training showed `ALT_CORE_A_AX_22_C` instead of `_B_`). Every A has a B twin; only 2 promo-exclusive P cards (ALIZE OR_48, BISE BR_64, high numbers) lack a B and are intentionally dropped.
 
 ## Sets (`SETS` in cardData.js)
 CORE=Beyond the Gates(BTG), COREKS=BTG KS (hidden:true, not a preset), ALIZE=Trial by Frost(TBF), BISE=Whisper from the Maze(WTM), CYCLONE=Skybound Odyssey(SKY), DUSTER=Seeds of Unity(SDU), EOLE=Roots of Corruption(ROC), FUGUE=Neverending Journey(NEJ). Internal codes hidden from UI; show names/abbreviations. See `SET_ABBREV`, `SET_FULL_NAMES`, `SET_ABBREV_ICON_CODE`.
