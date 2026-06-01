@@ -255,18 +255,27 @@ function GroupedPool({ refs, cardMap, sortBy, loading, favorites, onToggleFavori
       }))
     }
     if (sortBy === 'cost') {
-      const buckets = {}
+      const heroes = [], buckets = {}
       for (const { ref, card } of cards) {
+        if (card?.cardType === 'HERO') { heroes.push(ref); continue }
         const cost = card?.mainCost != null ? String(card.mainCost) : '—'
         ;(buckets[cost] = buckets[cost] ?? []).push(ref)
       }
-      return Object.entries(buckets)
+      const groups = Object.entries(buckets)
         .sort(([a], [b]) => a === '—' ? 1 : b === '—' ? -1 : Number(a) - Number(b))
         .map(([cost, refs]) => ({
           key: cost, label: cost === '—' ? 'No cost' : `Cost ${cost}`, icon: null,
           colorCls: 'text-gray-300 bg-gray-800 border-gray-700',
           refs,
         }))
+      if (heroes.length) {
+        groups.unshift({
+          key: 'HERO', label: 'Hero', icon: null,
+          colorCls: 'text-amber-400 bg-amber-500/10 border-amber-500/30',
+          refs: heroes,
+        })
+      }
+      return groups
     }
     if (sortBy === 'set') {
       const buckets = {}
