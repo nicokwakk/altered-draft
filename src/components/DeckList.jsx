@@ -6,7 +6,7 @@ import { cardSorter } from './PoolGrid.jsx'
  * Deck shown as a grid of card images, grouped by faction
  * (heroes inside their faction, at top). Click − to remove a copy.
  */
-export default function DeckList({ deck, cardMap, onRemove }) {
+export default function DeckList({ deck, cardMap, onRemove, onAdd, poolCounts }) {
   const groups = {}
   for (const [ref, qty] of Object.entries(deck)) {
     const card = cardMap[ref]
@@ -41,25 +41,25 @@ export default function DeckList({ deck, cardMap, onRemove }) {
                         <span className="text-xs text-gray-600 text-center leading-tight">{card?.name ?? ref}</span>
                       </div>
                     )}
-                    {/* Quantity badge */}
-                    {qty > 1 && (
-                      <div className="absolute top-1 left-1 bg-amber-500 text-gray-950 font-bold text-xs px-1.5 py-0.5 rounded">
-                        ×{qty}
-                      </div>
-                    )}
-                    {/* Remove control */}
-                    <div className="absolute bottom-0 left-0 right-0 flex items-center justify-center px-1 py-1.5 bg-black/75 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <button onClick={() => onRemove(ref)}
-                        className="w-7 h-7 rounded bg-gray-700 hover:bg-red-800 text-white font-bold flex items-center justify-center transition-colors">
-                        −
-                      </button>
-                    </div>
                   </div>
+                  {/* Footer: name + qty controls (never overlaps the art) */}
                   <div className="p-1">
                     <p className="text-xs text-gray-300 leading-tight line-clamp-1">{card?.name ?? ''}</p>
-                    <div className="flex items-center gap-1 mt-0.5">
-                      {FACTION_ICONS[card?.faction] && <img src={FACTION_ICONS[card.faction]} alt="" className="w-3 h-3 object-contain" />}
-                      {card?.cardType !== 'HERO' && RARITY_GEMS[card?.rarity] && <img src={RARITY_GEMS[card.rarity]} alt="" className="w-3 h-3 object-contain ml-auto" />}
+                    <div className="flex items-center gap-1 mt-1">
+                      <button onClick={() => onRemove(ref)}
+                        className="w-5 h-5 rounded bg-gray-800 hover:bg-red-800 text-white font-bold flex items-center justify-center text-sm leading-none transition-colors">
+                        −
+                      </button>
+                      <span className="w-4 text-center text-xs font-bold text-amber-400">{qty}</span>
+                      {onAdd && (
+                        <button onClick={() => onAdd(ref)} disabled={poolCounts && qty >= (poolCounts[ref] ?? qty)}
+                          className="w-5 h-5 rounded bg-gray-800 hover:bg-green-800 disabled:opacity-25 text-white font-bold flex items-center justify-center text-sm leading-none transition-colors">
+                          +
+                        </button>
+                      )}
+                      <span className="ml-auto flex items-center gap-1">
+                        {card?.cardType !== 'HERO' && RARITY_GEMS[card?.rarity] && <img src={RARITY_GEMS[card.rarity]} alt="" className="w-3 h-3 object-contain" />}
+                      </span>
                     </div>
                   </div>
                 </div>

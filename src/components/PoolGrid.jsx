@@ -198,25 +198,29 @@ function CardGridInner({ refs, cardMap, loading, deck, poolCounts, onAdd, onRemo
                   ×{poolQty}
                 </div>
               )}
-              <div className={`absolute bottom-0 left-0 right-0 flex items-center justify-center gap-1 px-1 py-1.5 bg-black/75
-                transition-opacity ${inDeck > 0 ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}>
-                <button onClick={() => onRemove(ref)} disabled={!canRemove}
-                  className="w-7 h-7 rounded bg-gray-700 hover:bg-red-800 disabled:opacity-30 text-white font-bold flex items-center justify-center transition-colors">
-                  −
-                </button>
-                <span className={`w-6 text-center text-sm font-bold ${inDeck > 0 ? 'text-amber-400' : 'text-gray-400'}`}>{inDeck}</span>
-                <button onClick={() => onAdd(ref)} disabled={!canAdd}
-                  className="w-7 h-7 rounded bg-gray-700 hover:bg-green-800 disabled:opacity-30 text-white font-bold flex items-center justify-center transition-colors">
-                  +
-                </button>
-              </div>
+              {inDeck > 0 && (
+                <div className="absolute top-1 right-1 bg-amber-500 text-gray-950 font-bold text-xs px-1.5 py-0.5 rounded">
+                  {inDeck} in deck
+                </div>
+              )}
             </div>
+            {/* Footer: name + controls (never overlaps the art) */}
             <div className="p-1">
               <p className="text-xs text-gray-300 leading-tight line-clamp-1">{card?.name ?? ''}</p>
-              <div className="flex items-center gap-1 mt-0.5">
-                {FACTION_ICONS[card?.faction] && <img src={FACTION_ICONS[card.faction]} alt="" className="w-3 h-3 object-contain" />}
-                {card?.cardType !== 'HERO' && RARITY_GEMS[card?.rarity] && <img src={RARITY_GEMS[card.rarity]} alt="" className="w-3 h-3 object-contain" />}
-                {setIcon && <img src={setIcon} alt="" className="w-3 h-3 object-contain ml-auto opacity-50" onError={e => { e.currentTarget.style.display = 'none' }} />}
+              <div className="flex items-center gap-1 mt-1">
+                <button onClick={() => onRemove(ref)} disabled={!canRemove}
+                  className="w-5 h-5 rounded bg-gray-800 hover:bg-red-800 disabled:opacity-25 text-white font-bold flex items-center justify-center text-sm leading-none transition-colors">
+                  −
+                </button>
+                <span className={`w-4 text-center text-xs font-bold ${inDeck > 0 ? 'text-amber-400' : 'text-gray-500'}`}>{inDeck}</span>
+                <button onClick={() => onAdd(ref)} disabled={!canAdd}
+                  className="w-5 h-5 rounded bg-gray-800 hover:bg-green-800 disabled:opacity-25 text-white font-bold flex items-center justify-center text-sm leading-none transition-colors">
+                  +
+                </button>
+                <span className="ml-auto flex items-center gap-1">
+                  {card?.cardType !== 'HERO' && RARITY_GEMS[card?.rarity] && <img src={RARITY_GEMS[card.rarity]} alt="" className="w-3 h-3 object-contain" />}
+                  {setIcon && <img src={setIcon} alt="" className="w-3 h-3 object-contain opacity-50" onError={e => { e.currentTarget.style.display = 'none' }} />}
+                </span>
               </div>
             </div>
           </div>
