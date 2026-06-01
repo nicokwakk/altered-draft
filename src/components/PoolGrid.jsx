@@ -19,7 +19,6 @@ const TYPE_ORDER = ['Hero', 'Character', 'Spell', 'Permanent']
 export default function PoolGrid({ refs, cardMap, deck, poolCounts, onAdd, onRemove, loading }) {
   const [filterFaction, setFilterFaction] = useState('ALL')
   const [sortBy, setSortBy] = useState('faction')
-  const [hoverCard, setHoverCard] = useState(null)
 
   const visibleRefs = filterFaction === 'ALL'
     ? refs
@@ -136,13 +135,10 @@ export default function PoolGrid({ refs, cardMap, deck, poolCounts, onAdd, onRem
               {group.label} <span className="opacity-60">({new Set(group.refs).size})</span>
             </div>
             <CardGridInner refs={group.refs} cardMap={cardMap} loading={loading}
-              deck={deck} poolCounts={poolCounts} onAdd={onAdd} onRemove={onRemove}
-              onHover={setHoverCard} />
+              deck={deck} poolCounts={poolCounts} onAdd={onAdd} onRemove={onRemove} />
           </div>
         ))}
       </div>
-
-      {hoverCard && <CardPreview card={hoverCard} />}
     </div>
   )
 }
@@ -160,12 +156,13 @@ export function SimpleCardGrid({ refs, cardMap, loading, deck, poolCounts, onAdd
 }
 
 function CardGridInner({ refs, cardMap, loading, deck, poolCounts, onAdd, onRemove, onHover }) {
+  const hover = onHover ?? (() => {})
   const seen = new Map()
   for (const ref of refs) seen.set(ref, (seen.get(ref) ?? 0) + 1)
   const unique = [...seen.entries()]
 
   return (
-    <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-2">
+    <div className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-7 lg:grid-cols-9 gap-2">
       {unique.map(([ref, occurrences]) => {
         const card = cardMap[ref]
         const poolQty = poolCounts ? (poolCounts[ref] ?? occurrences) : occurrences
@@ -177,8 +174,8 @@ function CardGridInner({ refs, cardMap, loading, deck, poolCounts, onAdd, onRemo
         return (
           <div key={ref}
             className="relative flex flex-col rounded-lg overflow-hidden border border-gray-700 bg-gray-900 group"
-            onMouseEnter={() => onHover(card ?? { reference: ref, name: ref })}
-            onMouseLeave={() => onHover(null)}>
+            onMouseEnter={() => hover(card ?? { reference: ref, name: ref })}
+            onMouseLeave={() => hover(null)}>
             <div className="aspect-[2/3] bg-gray-800 overflow-hidden relative">
               {card?.imagePath ? (
                 <img src={card.imagePath} alt={card?.name} className="w-full h-full object-cover" loading="lazy"
