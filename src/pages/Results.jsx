@@ -9,7 +9,6 @@ import ExportButton from '../components/ExportButton.jsx'
 import DraftStats from '../components/DraftStats.jsx'
 import PoolGrid from '../components/PoolGrid.jsx'
 import DeckList from '../components/DeckList.jsx'
-import { useCardFlags } from '../lib/useCardFlags.js'
 
 export default function Results() {
   const { code } = useParams()
@@ -21,7 +20,6 @@ export default function Results() {
   const [tab, setTab] = useState('picks') // 'picks' | 'deck' | 'stats' | 'players'
   const [statsScope, setStatsScope] = useState('all') // 'all' | 'deck'
   const [deck, setDeck] = useState({})
-  const { flags, toggleFlag } = useCardFlags(code, me?.id)
 
   useEffect(() => {
     const stored = localStorage.getItem(`player_${code}`)
@@ -133,8 +131,7 @@ export default function Results() {
       {/* ALL PICKS — shared PoolGrid with filter/sort/hover/+- */}
       {tab === 'picks' && (
         <PoolGrid refs={myPicks} cardMap={cardMap} deck={deck} poolCounts={poolCounts}
-          onAdd={addToDeck} onRemove={removeFromDeck}
-          flags={flags} onToggleFlag={toggleFlag} />
+          onAdd={addToDeck} onRemove={removeFromDeck} />
       )}
 
       {/* DECK TAB */}
