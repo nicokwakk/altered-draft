@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import {
   FACTIONS, FACTION_NAMES, FACTION_COLORS,
   SET_ABBREV, SET_ABBREV_ICON_CODE,
@@ -28,6 +28,30 @@ export function cardSorter(cardMap) {
     if (ar !== br) return ar - br
     return (a?.name ?? '').localeCompare(b?.name ?? '')
   }
+}
+
+// Hover-zoom origin: anchor the scale to whichever viewport edge the card is
+// near so the enlarged card never spills off-screen. Works at any breakpoint /
+// column count because it measures the card's real position on mouseenter.
+export const HOVER_SCALE = 1.6
+export function useZoomOrigin(scale = HOVER_SCALE) {
+  const ref = useRef(null)
+  const [origin, setOrigin] = useState('top')
+  function onMouseEnter() {
+    const el = ref.current
+    if (!el) return
+    const r = el.getBoundingClientRect()
+    const growX = (r.width * (scale - 1)) / 2   // overflow each side when centered
+    const growY = r.height * (scale - 1)         // overflow below when top-anchored
+    const vw = window.innerWidth, vh = window.innerHeight
+    let x = ''
+    if (r.left - growX < 8) x = 'left'
+    else if (r.right + growX > vw - 8) x = 'right'
+    let y = 'top'
+    if (r.bottom + growY > vh - 8 && r.top - growY > 8) y = 'bottom'
+    setOrigin(`${y}${x ? ' ' + x : ''}`)
+  }
+  return { ref, origin, onMouseEnter }
 }
 
 /**
@@ -172,60 +196,65 @@ function CardGridInner({ refs, cardMap, loading, deck, poolCounts, onAdd, onRemo
 
   return (
     <div className="grid grid-cols-5 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-10 gap-2">
-      {unique.map(([ref, occurrences]) => {
-        const card = cardMap[ref]
-        const poolQty = poolCounts ? (poolCounts[ref] ?? occurrences) : occurrences
-        const inDeck = deck[ref] ?? 0
-        const canAdd = inDeck < poolQty
-        const canRemove = inDeck > 0
-        const setIcon = SET_ICONS[setCodeFromRef(ref)]
+      {unique.map(([ref, occurrences]) => (
+        <PoolCard key={ref} ref_={ref} occurrences={occurrences} card={cardMap[ref]}
+          loading={loading} deck={deck} poolCounts={poolCounts} onAdd={onAdd} onRemove={onRemove} />
+      ))}
+    </div>
+  )
+}
 
-        return (
-          <div key={ref}
-            className="relative flex flex-col rounded-lg border border-gray-700 bg-gray-900">
-            <div className="aspect-[2/3] bg-gray-800 overflow-hidden rounded-t-lg relative cursor-zoom-in
-              transition-transform duration-150 ease-out origin-top hover:scale-[1.6] hover:z-30 hover:shadow-xl hover:shadow-black/70">
-              {card?.imagePath ? (
-                <img src={card.imagePath} alt={card?.name} className="w-full h-full object-cover" loading="lazy"
-                  onError={e => { e.currentTarget.style.display = 'none' }} />
-              ) : (
-                <div className="w-full h-full flex items-center justify-center p-1">
-                  <span className="text-xs text-gray-600 text-center leading-tight">{loading ? '…' : (card?.name ?? ref)}</span>
-                </div>
-              )}
-              {poolQty > 1 && (
-                <div className="absolute top-1 left-1 bg-gray-900/90 text-gray-300 font-bold text-xs px-1.5 py-0.5 rounded border border-gray-600">
-                  ×{poolQty}
-                </div>
-              )}
-              {inDeck > 0 && (
-                <div className="absolute top-1 right-1 bg-amber-500 text-gray-950 font-bold text-xs px-1.5 py-0.5 rounded">
-                  {inDeck} in deck
-                </div>
-              )}
-            </div>
-            {/* Footer: name + controls (never overlaps the art) */}
-            <div className="p-1">
-              <p className="text-xs text-gray-300 leading-tight line-clamp-1">{card?.name ?? ''}</p>
-              <div className="flex items-center gap-1 mt-1">
-                <button onClick={() => onRemove(ref)} disabled={!canRemove}
-                  className="w-5 h-5 rounded bg-gray-800 hover:bg-red-800 disabled:opacity-25 text-white font-bold flex items-center justify-center text-sm leading-none transition-colors">
-                  −
-                </button>
-                <span className={`w-4 text-center text-xs font-bold ${inDeck > 0 ? 'text-amber-400' : 'text-gray-500'}`}>{inDeck}</span>
-                <button onClick={() => onAdd(ref)} disabled={!canAdd}
-                  className="w-5 h-5 rounded bg-gray-800 hover:bg-green-800 disabled:opacity-25 text-white font-bold flex items-center justify-center text-sm leading-none transition-colors">
-                  +
-                </button>
-                <span className="ml-auto flex items-center gap-1">
-                  {card?.cardType !== 'HERO' && RARITY_GEMS[card?.rarity] && <img src={RARITY_GEMS[card.rarity]} alt="" className="w-3 h-3 object-contain" />}
-                  {setIcon && <img src={setIcon} alt="" className="w-3 h-3 object-contain opacity-50" onError={e => { e.currentTarget.style.display = 'none' }} />}
-                </span>
-              </div>
-            </div>
+function PoolCard({ ref_, occurrences, card, loading, deck, poolCounts, onAdd, onRemove }) {
+  const { ref, origin, onMouseEnter } = useZoomOrigin()
+  const poolQty = poolCounts ? (poolCounts[ref_] ?? occurrences) : occurrences
+  const inDeck = deck?.[ref_] ?? 0
+  const canAdd = inDeck < poolQty
+  const canRemove = inDeck > 0
+  const setIcon = SET_ICONS[setCodeFromRef(ref_)]
+
+  return (
+    <div className="relative flex flex-col rounded-lg border border-gray-700 bg-gray-900">
+      <div ref={ref} onMouseEnter={onMouseEnter} style={{ transformOrigin: origin }}
+        className="aspect-[2/3] bg-gray-800 overflow-hidden rounded-t-lg relative cursor-zoom-in
+        transition-transform duration-150 ease-out hover:scale-[1.6] hover:z-30 hover:shadow-xl hover:shadow-black/70">
+        {card?.imagePath ? (
+          <img src={card.imagePath} alt={card?.name} className="w-full h-full object-cover" loading="lazy"
+            onError={e => { e.currentTarget.style.display = 'none' }} />
+        ) : (
+          <div className="w-full h-full flex items-center justify-center p-1">
+            <span className="text-xs text-gray-600 text-center leading-tight">{loading ? '…' : (card?.name ?? ref_)}</span>
           </div>
-        )
-      })}
+        )}
+        {poolQty > 1 && (
+          <div className="absolute top-1 left-1 bg-gray-900/90 text-gray-300 font-bold text-xs px-1.5 py-0.5 rounded border border-gray-600">
+            ×{poolQty}
+          </div>
+        )}
+        {inDeck > 0 && (
+          <div className="absolute top-1 right-1 bg-amber-500 text-gray-950 font-bold text-xs px-1.5 py-0.5 rounded">
+            {inDeck} in deck
+          </div>
+        )}
+      </div>
+      {/* Footer: name + controls (never overlaps the art) */}
+      <div className="p-1">
+        <p className="text-xs text-gray-300 leading-tight line-clamp-1">{card?.name ?? ''}</p>
+        <div className="flex items-center gap-1 mt-1">
+          <button onClick={() => onRemove(ref_)} disabled={!canRemove}
+            className="w-5 h-5 rounded bg-gray-800 hover:bg-red-800 disabled:opacity-25 text-white font-bold flex items-center justify-center text-sm leading-none transition-colors">
+            −
+          </button>
+          <span className={`w-4 text-center text-xs font-bold ${inDeck > 0 ? 'text-amber-400' : 'text-gray-500'}`}>{inDeck}</span>
+          <button onClick={() => onAdd(ref_)} disabled={!canAdd}
+            className="w-5 h-5 rounded bg-gray-800 hover:bg-green-800 disabled:opacity-25 text-white font-bold flex items-center justify-center text-sm leading-none transition-colors">
+            +
+          </button>
+          <span className="ml-auto flex items-center gap-1">
+            {card?.cardType !== 'HERO' && RARITY_GEMS[card?.rarity] && <img src={RARITY_GEMS[card.rarity]} alt="" className="w-3 h-3 object-contain" />}
+            {setIcon && <img src={setIcon} alt="" className="w-3 h-3 object-contain opacity-50" onError={e => { e.currentTarget.style.display = 'none' }} />}
+          </span>
+        </div>
+      </div>
     </div>
   )
 }

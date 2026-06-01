@@ -1,5 +1,5 @@
 import { RARITY_GEMS } from '../lib/assets.js'
-import { cardSorter } from './PoolGrid.jsx'
+import { cardSorter, useZoomOrigin } from './PoolGrid.jsx'
 
 /**
  * Deck shown as a single flat grid of card images — hero first,
@@ -26,10 +26,12 @@ export default function DeckList({ deck, cardMap, onRemove, onAdd, poolCounts })
 
 function Cell({ ref_, qty, card, onRemove, onAdd, poolCounts }) {
   const isHero = card?.cardType === 'HERO'
+  const { ref, origin, onMouseEnter } = useZoomOrigin()
   return (
     <div className={`relative flex flex-col rounded-lg border bg-gray-900 ${isHero ? 'border-amber-500/60' : 'border-gray-700'}`}>
-      <div className="aspect-[2/3] bg-gray-800 overflow-hidden rounded-t-lg relative cursor-zoom-in
-        transition-transform duration-150 ease-out origin-top hover:scale-[1.6] hover:z-30 hover:shadow-xl hover:shadow-black/70">
+      <div ref={ref} onMouseEnter={onMouseEnter} style={{ transformOrigin: origin }}
+        className="aspect-[2/3] bg-gray-800 overflow-hidden rounded-t-lg relative cursor-zoom-in
+        transition-transform duration-150 ease-out hover:scale-[1.6] hover:z-30 hover:shadow-xl hover:shadow-black/70">
         {card?.imagePath ? (
           <img src={card.imagePath} alt={card?.name} className="w-full h-full object-cover" loading="lazy"
             onError={e => { e.currentTarget.style.display = 'none' }} />
