@@ -11,6 +11,25 @@ const TYPE_LABEL = {
 }
 const TYPE_ORDER = ['Hero', 'Character', 'Spell', 'Permanent']
 
+// Default card ordering: heroes first, then Character > Spell > Permanent,
+// then hand cost asc, then reserve (recall) cost asc, then name.
+const TYPE_RANK = { CHARACTER: 0, SPELL: 1, PERMANENT: 2, LANDMARK_PERMANENT: 2, EXPEDITION_PERMANENT: 2 }
+export function cardSorter(cardMap) {
+  return (ra, rb) => {
+    const a = cardMap[ra], b = cardMap[rb]
+    const ah = a?.cardType === 'HERO' ? 0 : 1
+    const bh = b?.cardType === 'HERO' ? 0 : 1
+    if (ah !== bh) return ah - bh
+    const at = TYPE_RANK[a?.cardType] ?? 3, bt = TYPE_RANK[b?.cardType] ?? 3
+    if (at !== bt) return at - bt
+    const ac = a?.mainCost ?? 99, bc = b?.mainCost ?? 99
+    if (ac !== bc) return ac - bc
+    const ar = a?.recallCost ?? 99, br = b?.recallCost ?? 99
+    if (ar !== br) return ar - br
+    return (a?.name ?? '').localeCompare(b?.name ?? '')
+  }
+}
+
 /**
  * Shared pool browser with faction filter, sort/group, +/- deck controls,
  * and a large hover preview. Heroes are grouped inside their own faction.
@@ -38,12 +57,7 @@ export default function PoolGrid({ refs, cardMap, deck, poolCounts, onAdd, onRem
         key, label: FACTION_NAMES[key] ?? key,
         icon: FACTION_ICONS[key] ?? null,
         colorCls: FACTION_COLORS[key] ?? 'text-gray-400 bg-gray-800 border-gray-700',
-        // heroes first within their faction
-        refs: [...refs].sort((a, b) => {
-          const ah = cardMap[a]?.cardType === 'HERO' ? 0 : 1
-          const bh = cardMap[b]?.cardType === 'HERO' ? 0 : 1
-          return ah - bh
-        }),
+        refs,
       }))
     }
     if (sortBy === 'type') {
@@ -90,7 +104,8 @@ export default function PoolGrid({ refs, cardMap, deck, poolCounts, onAdd, onRem
     return []
   }
 
-  const groups = buildGroups()
+  const cmp = cardSorter(cardMap)
+  const groups = buildGroups().map(g => ({ ...g, refs: [...g.refs].sort(cmp) }))
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
@@ -125,8 +140,8 @@ export default function PoolGrid({ refs, cardMap, deck, poolCounts, onAdd, onRem
         ))}
       </div>
 
-      {/* Grouped grid */}
-      <div className="overflow-y-auto flex-1 p-4 space-y-5">
+      {/* Grouped grid — generous padding so zoomed cards stay on screen */}
+      <div className="overflow-y-auto flex-1 px-8 py-8 space-y-6">
         {groups.map(group => (
           <div key={group.key}>
             <div className={`inline-flex items-center gap-1.5 text-xs px-2 py-0.5 rounded border mb-2 ${group.colorCls}`}>
@@ -156,7 +171,7 @@ function CardGridInner({ refs, cardMap, loading, deck, poolCounts, onAdd, onRemo
   const unique = [...seen.entries()]
 
   return (
-    <div className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-7 lg:grid-cols-9 gap-2">
+    <div className="grid grid-cols-5 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-10 gap-2">
       {unique.map(([ref, occurrences]) => {
         const card = cardMap[ref]
         const poolQty = poolCounts ? (poolCounts[ref] ?? occurrences) : occurrences
@@ -168,7 +183,7 @@ function CardGridInner({ refs, cardMap, loading, deck, poolCounts, onAdd, onRemo
         return (
           <div key={ref}
             className="relative flex flex-col rounded-lg overflow-hidden border border-gray-700 bg-gray-900 group
-              transition-transform duration-150 ease-out hover:scale-[1.8] hover:z-30 hover:border-amber-500 hover:shadow-xl hover:shadow-black/60">
+              transition-transform duration-150 ease-out hover:scale-[1.6] hover:z-30 hover:border-amber-500 hover:shadow-xl hover:shadow-black/60">
             <div className="aspect-[2/3] bg-gray-800 overflow-hidden relative">
               {card?.imagePath ? (
                 <img src={card.imagePath} alt={card?.name} className="w-full h-full object-cover" loading="lazy"
