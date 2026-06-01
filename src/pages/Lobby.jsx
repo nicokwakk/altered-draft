@@ -107,46 +107,50 @@ export default function Lobby() {
       const playerCount = shuffledPlayers.length
       const SEALED_PACKS = 7
 
-      // Sealed mode — generate 7 boosters per player, stored as array of arrays
+      // Sealed mode — each player gets a set of boosters (array of arrays)
       if (draftMode === 'sealed') {
         const SEALED_PACKS = 7
-        const { generateAllPacks: genPacks } = await import('../lib/packGenerator.js')
 
-        let allCards = [], apiCodes = []
-
+        // Cube sealed — curated pool; boosters drawn from the whole cube
         if (configTab === 'cubes' && selectedCube) {
-          // Cube sealed: filter to cube refs only
           const cube = COMMUNITY_CUBES.find(c => c.id === selectedCube)
           if (!cube) { setStartError('Cube not found.'); setLoading(false); return }
           const rawCodes = [...new Set(setsForCube(cube.refs))]
-          apiCodes = [...new Set(rawCodes.map(apiSetCode))]
           const results = await Promise.all(rawCodes.map(s => fetchSet(s, lang).catch(() => [])))
           const cubeRefSet = new Set(cube.refs)
-          allCards = results.flat().filter(c => cubeRefSet.has(c.reference))
-        } else {
-          const setCodes = configTab === 'presets' && selectedPreset
-            ? [selectedPreset]
-            : Object.keys(selectedSets).filter(k => selectedSets[k] > 0)
-          if (!setCodes.length) { setStartError('Select a set.'); setLoading(false); return }
-          apiCodes = setCodes
-          const results = await Promise.all(setCodes.map(s => fetchSet(s, lang)))
-          allCards = results.flat()
+          const allCards = results.flat().filter(c => cubeRefSet.has(c.reference))
+          if (!allCards.length) { setStartError('Could not load cube card data.'); setLoading(false); return }
+          const apiCodes = [...new Set(rawCodes.map(apiSetCode))]
+          const sealedPacks = {}
+          for (let i = 0; i < playerCount; i++) {
+            sealedPacks[String(i)] = generateAllPacks(allCards, 1, SEALED_PACKS, { includeHeroes })
+          }
+          const state = {
+            config: { sets: apiCodes, playerCount, lang, includeHeroes, cubeId: cube.id, mode: 'sealed' },
+            players: shuffledPlayers, phase: 'sealed', sealedPacks, version: 0,
+          }
+          await supabase.from('draft_rooms').update({ state }).eq('id', code)
+          return
         }
 
-        if (!allCards.length) { setStartError('No cards loaded.'); setLoading(false); return }
-
-        // Store packs as array of arrays (7 packs per player) for booster-by-booster reveal
+        // Presets / advanced — single-set boosters (a booster never mixes sets).
+        // Preset = 7 boosters of the one set; advanced = per-set booster counts.
+        const mix = configTab === 'presets' && selectedPreset
+          ? { [selectedPreset]: SEALED_PACKS }
+          : Object.fromEntries(Object.entries(selectedSets).filter(([, n]) => n > 0))
+        const setCodes = Object.keys(mix)
+        if (!setCodes.length) { setStartError('Select a set.'); setLoading(false); return }
+        const fetched = await Promise.all(setCodes.map(async s => [s, await fetchSet(s, lang).catch(() => [])]))
+        const cardsBySet = Object.fromEntries(fetched)
+        if (!Object.values(cardsBySet).some(c => c.length)) { setStartError('No cards loaded.'); setLoading(false); return }
+        const apiCodes = [...new Set(setCodes.map(apiSetCode))]
         const sealedPacks = {}
         for (let i = 0; i < playerCount; i++) {
-          const playerPacks = genPacks(allCards, 1, SEALED_PACKS, { includeHeroes })
-          sealedPacks[String(i)] = playerPacks // array of 7 packs
+          sealedPacks[String(i)] = generateChaosPacks(cardsBySet, mix, { includeHeroes })
         }
         const state = {
-          config: { sets: apiCodes, playerCount, lang, includeHeroes, mode: 'sealed' },
-          players: shuffledPlayers,
-          phase: 'sealed',
-          sealedPacks,
-          version: 0,
+          config: { sets: apiCodes, playerCount, lang, includeHeroes, mode: 'sealed', packMix: mix },
+          players: shuffledPlayers, phase: 'sealed', sealedPacks, version: 0,
         }
         await supabase.from('draft_rooms').update({ state }).eq('id', code)
         return
