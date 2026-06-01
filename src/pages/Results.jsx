@@ -67,12 +67,13 @@ export default function Results() {
 
   const deckTotal = Object.values(deck).reduce((a, b) => a + b, 0)
   const deckRefs = Object.entries(deck).flatMap(([ref, qty]) => Array(qty).fill(ref))
-  const deckNonHero = deckRefs.filter(r => cardMap[r]?.cardType !== 'HERO')
-  const deckFactions = new Set(deckNonHero.map(r => cardMap[r]?.faction).filter(Boolean))
+  // Hero counts toward both card total and faction limit
+  const deckFactions = new Set(deckRefs.map(r => cardMap[r]?.faction).filter(Boolean))
   const deckHeroCount = deckRefs.filter(r => cardMap[r]?.cardType === 'HERO').length
-  const isEnough = deckNonHero.length >= 30
+  const isEnough = deckRefs.length >= 30
   const isValidFactions = deckFactions.size <= 3
-  const isValid = isEnough && isValidFactions
+  const isValidHero = deckHeroCount <= 1
+  const isValid = isEnough && isValidFactions && isValidHero
 
   const allDecklist = buildDecklist(myPicks, cardMap)
   const deckDecklist = buildDecklist(deckRefs, cardMap)
@@ -138,9 +139,9 @@ export default function Results() {
         <div className="flex-1 flex flex-col overflow-hidden">
           <div className={`px-4 py-2 border-b shrink-0 flex flex-wrap gap-3 items-center text-sm ${
             isValid ? 'border-green-800 bg-green-900/20' : 'border-gray-800 bg-gray-900'}`}>
-            <span className={isEnough ? 'text-green-400' : 'text-red-400'}>{isEnough ? '✓' : '✗'} {deckNonHero.length}/30 cards</span>
+            <span className={isEnough ? 'text-green-400' : 'text-red-400'}>{isEnough ? '✓' : '✗'} {deckRefs.length}/30 cards</span>
             <span className={isValidFactions ? 'text-green-400' : 'text-red-400'}>{isValidFactions ? '✓' : '✗'} {deckFactions.size}/3 factions</span>
-            {deckHeroCount > 0 && <span className="text-amber-400">⚔ {deckHeroCount} hero{deckHeroCount > 1 ? 'es' : ''}</span>}
+            <span className={isValidHero ? (deckHeroCount === 1 ? 'text-green-400' : 'text-gray-500') : 'text-red-400'}>{isValidHero ? '✓' : '✗'} {deckHeroCount}/1 hero</span>
             {isValid && <span className="text-green-400 font-semibold ml-auto">Deck is valid ✓</span>}
           </div>
           {deckTotal === 0
