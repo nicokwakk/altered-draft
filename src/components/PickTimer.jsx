@@ -7,7 +7,8 @@ export default function PickTimer({ deadline, isMyTurn, onTimeout }) {
     if (!deadline) { setRemaining(null); return }
 
     function tick() {
-      const ms = new Date(deadline).getTime() - Date.now()
+      const isoStr = String(deadline).split('|')[0]
+      const ms = new Date(isoStr).getTime() - Date.now()
       setRemaining(Math.max(0, Math.ceil(ms / 1000)))
       if (ms <= 0 && isMyTurn) onTimeout()
     }
