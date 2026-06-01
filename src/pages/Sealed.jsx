@@ -161,7 +161,10 @@ export default function Sealed() {
 
           {/* Row 2: sort + count */}
           <div className="px-4 py-2 border-b border-gray-800 flex items-center gap-2 shrink-0 bg-gray-950">
-            <span className="text-xs text-gray-500 mr-auto">{poolRefs.length} cards</span>
+            <span className="text-xs text-gray-500 mr-auto">
+              {new Set(poolRefs).size} unique
+              {poolRefs.length !== new Set(poolRefs).size && ` · ${poolRefs.length} total`}
+            </span>
             <span className="text-xs text-gray-500">Group by:</span>
             {['faction', 'type', 'cost', 'set'].map(s => (
               <button key={s} onClick={() => setSortBy(s)}
@@ -222,6 +225,7 @@ const TYPE_ORDER = ['Hero', 'Character', 'Spell', 'Permanent']
 
 // Groups a flat list of refs by sortBy and renders labeled sections
 function GroupedPool({ refs, cardMap, sortBy, loading, favorites, onToggleFavorite }) {
+  // Keep duplicates in the list so CardPool can show the ×N badge correctly
   const cards = refs.map(r => ({ ref: r, card: cardMap[r] }))
 
   function buildGroups() {
@@ -322,11 +326,18 @@ function GroupedPool({ refs, cardMap, sortBy, loading, favorites, onToggleFavori
   )
 }
 
-// Reusable card pool grid with favorite toggle
+// Reusable card pool grid with favorite toggle — deduplicates by ref, shows qty badge
 function CardPool({ refs, cardMap, loading, favorites, onToggleFavorite }) {
+  // Count occurrences, preserve first-seen order
+  const seen = new Map()
+  for (const ref of refs) {
+    seen.set(ref, (seen.get(ref) ?? 0) + 1)
+  }
+  const unique = [...seen.entries()] // [[ref, qty], ...]
+
   return (
     <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-2">
-      {refs.map(ref => {
+      {unique.map(([ref, qty]) => {
         const card = cardMap[ref]
         const isFav = favorites.has(ref)
         return (
@@ -343,6 +354,13 @@ function CardPool({ refs, cardMap, loading, favorites, onToggleFavorite }) {
                 </div>
               )}
             </div>
+
+            {/* Quantity badge */}
+            {qty > 1 && (
+              <div className="absolute top-1 left-1 bg-gray-900/90 text-amber-400 font-bold text-xs px-1.5 py-0.5 rounded-md border border-amber-500/50">
+                ×{qty}
+              </div>
+            )}
 
             {/* Favorite button */}
             <button
