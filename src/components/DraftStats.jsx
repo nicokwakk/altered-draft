@@ -1,6 +1,8 @@
 import { useState } from 'react'
-import { FACTIONS, FACTION_NAMES, FACTION_COLORS } from '../lib/cardData.js'
+import { FACTIONS, FACTION_NAMES, FACTION_COLORS, SET_ABBREV, SET_ABBREV_ICON_CODE } from '../lib/cardData.js'
 import { FACTION_ICONS, RARITY_GEMS, SET_ICONS, setCodeFromRef } from '../lib/assets.js'
+
+const SET_ORDER = ['BTG', 'TBF', 'WTM', 'SKY', 'SDU', 'ROC', 'NEJ']
 
 const TYPE_GROUPS = {
   HERO:                 { label: 'Hero',       color: 'text-amber-400' },
@@ -83,11 +85,12 @@ export default function DraftStats({ pickedRefs, cardMap }) {
     typeCounts[group] = (typeCounts[group] ?? 0) + 1
   }
 
-  // Set breakdown
+  // Set breakdown — merged by abbreviation (CORE+COREKS → BTG)
   const setCounts = {}
   for (const c of cards) {
-    const s = setCodeFromRef(c.reference)
-    if (s) setCounts[s] = (setCounts[s] ?? 0) + 1
+    const raw = setCodeFromRef(c.reference)
+    const abbrev = SET_ABBREV[raw] ?? raw
+    if (abbrev) setCounts[abbrev] = (setCounts[abbrev] ?? 0) + 1
   }
 
   // Rarity breakdown (exclude heroes)
@@ -145,12 +148,14 @@ export default function DraftStats({ pickedRefs, cardMap }) {
         <section>
           <h4 className="text-xs uppercase tracking-widest text-gray-500 mb-2">Sets</h4>
           <div className="space-y-1.5">
-            {Object.entries(setCounts).sort((a, b) => b[1] - a[1]).map(([s, count]) => {
-              const icon = SET_ICONS[s]
+            {SET_ORDER.filter(s => setCounts[s]).map(s => {
+              const count = setCounts[s]
+              const iconCode = SET_ABBREV_ICON_CODE[s]
+              const icon = iconCode ? SET_ICONS[iconCode] : null
               const pct = total > 0 ? Math.round((count / total) * 100) : 0
               return (
                 <div key={s} className="flex items-center gap-2">
-                  <div className="w-5 h-5 shrink-0 flex items-center justify-center">
+                  <div className="w-5 h-5 shrink-0 flex items-center justify-center" title={s}>
                     {icon
                       ? <img src={icon} alt={s} className="w-5 h-5 object-contain" onError={e => { e.currentTarget.style.display = 'none' }} />
                       : <span className="text-xs text-gray-500">{s}</span>}

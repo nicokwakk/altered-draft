@@ -110,7 +110,7 @@ export default function Sealed() {
       <div className="bg-gray-900 border-b border-gray-800 flex shrink-0">
         {[
           { id: 'booster', label: `Boosters (${totalPacks})` },
-          { id: 'pool',    label: `Full Pool (${new Set(allRefs).size})` },
+          { id: 'pool',    label: `Full Pool (${allRefs.length})` },
           { id: 'deck',    label: `Deck (${deckTotal})`, highlight: isValid },
           { id: 'stats',   label: 'Stats' },
         ].map(t => (
