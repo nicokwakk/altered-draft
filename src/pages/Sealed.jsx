@@ -143,7 +143,7 @@ export default function Sealed() {
             <button onClick={() => setPackIndex(i => Math.min(totalPacks - 1, i + 1))} disabled={packIndex === totalPacks - 1}
               className="w-8 h-8 rounded-lg bg-gray-800 disabled:opacity-30 flex items-center justify-center text-gray-300 hover:bg-gray-700">›</button>
           </div>
-          <div className="flex-1 overflow-y-auto p-4">
+          <div className="flex-1 overflow-y-auto px-8 pt-4 pb-40" style={{ scrollbarGutter: 'stable' }}>
             <h2 className="font-semibold mb-3">Booster {packIndex + 1} <span className="text-gray-500 text-sm font-normal">· {currentPack.length} cards</span></h2>
             <SimpleCardGrid refs={currentPack} cardMap={cardMap} loading={loading}
               deck={deck} poolCounts={poolCounts} onAdd={addToDeck} onRemove={removeFromDeck} />
