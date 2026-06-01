@@ -60,5 +60,9 @@ Player identity in **localStorage** (`player_{code}`) — survives refresh. Draf
 - Tailwind dark theme, amber accent (`amber-500`), faction colors in `tailwind.config.js` + `FACTION_COLORS`/bar colors.
 - Mobile: `md:` breakpoint splits desktop/mobile layouts. Responsive grids `grid-cols-3 sm:4 md:5 lg:6`.
 
+## Card flagging
+Personal "mark for later review" flags. `useCardFlags(code, playerId)` hook (`src/lib/useCardFlags.js`) → `{flags:Set, toggleFlag, clearFlags}`, persisted in localStorage `flags_{code}_{playerId}` (NOT synced). `PoolGrid`/`SimpleCardGrid`/`PoolCard` take `flags`+`onToggleFlag`: flag glyph (⚑/⚐) in card footer, amber ring on flagged cards, "⚑ Flagged (N)" filter toggle in the sort bar. Wired in Sealed (boosters + full pool) and Results (all picks). Live draft pack (CardGrid.jsx) intentionally not flagged — whole card is a pick button.
+
 ## Roadmap (remaining)
-Sprint 4: bot players (greedy faction strategy), card flagging, asymmetric pack distribution. Sprint 5: spectator mode, saved personal cubes, more community cubes. Waiting on assets: FUGUE logo, Exalted gem.
+Saved personal cubes (cube builder UI), more community cubes (just data). Waiting on assets: FUGUE logo, Exalted gem.
+Dropped (do not implement): bot players, asymmetric pack distribution (superseded by Chaos), spectator mode.

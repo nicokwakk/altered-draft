@@ -58,13 +58,17 @@ export function useZoomOrigin(scale = HOVER_SCALE) {
  * Shared pool browser with faction filter, sort/group, +/- deck controls,
  * and a large hover preview. Heroes are grouped inside their own faction.
  */
-export default function PoolGrid({ refs, cardMap, deck, poolCounts, onAdd, onRemove, loading }) {
+export default function PoolGrid({ refs, cardMap, deck, poolCounts, onAdd, onRemove, loading, flags, onToggleFlag }) {
   const [filterFaction, setFilterFaction] = useState('ALL')
   const [sortBy, setSortBy] = useState('faction')
+  const [flaggedOnly, setFlaggedOnly] = useState(false)
 
-  const visibleRefs = filterFaction === 'ALL'
+  const flagCount = flags ? refs.filter(r => flags.has(r)).length : 0
+
+  let visibleRefs = filterFaction === 'ALL'
     ? refs
     : refs.filter(r => cardMap[r]?.faction === filterFaction)
+  if (flaggedOnly && flags) visibleRefs = visibleRefs.filter(r => flags.has(r))
 
   const cards = visibleRefs.map(r => ({ ref: r, card: cardMap[r] }))
 
@@ -155,6 +159,13 @@ export default function PoolGrid({ refs, cardMap, deck, poolCounts, onAdd, onRem
         <span className="text-xs text-gray-500 mr-auto">
           {new Set(visibleRefs).size} unique{visibleRefs.length !== new Set(visibleRefs).size && ` · ${visibleRefs.length} total`}
         </span>
+        {onToggleFlag && (
+          <button onClick={() => setFlaggedOnly(v => !v)} disabled={!flagCount && !flaggedOnly}
+            className={`px-2.5 py-1 rounded text-xs transition-colors flex items-center gap-1 ${
+              flaggedOnly ? 'bg-amber-500 text-gray-950 font-bold' : 'bg-gray-800 text-gray-400 hover:text-gray-200 disabled:opacity-40'}`}>
+            ⚑ Flagged{flagCount ? ` (${flagCount})` : ''}
+          </button>
+        )}
         <span className="text-xs text-gray-500">Group by:</span>
         {['faction', 'type', 'cost', 'set'].map(s => (
           <button key={s} onClick={() => setSortBy(s)}
@@ -173,7 +184,8 @@ export default function PoolGrid({ refs, cardMap, deck, poolCounts, onAdd, onRem
               {group.label} <span className="opacity-60">({new Set(group.refs).size})</span>
             </div>
             <CardGridInner refs={group.refs} cardMap={cardMap} loading={loading}
-              deck={deck} poolCounts={poolCounts} onAdd={onAdd} onRemove={onRemove} />
+              deck={deck} poolCounts={poolCounts} onAdd={onAdd} onRemove={onRemove}
+              flags={flags} onToggleFlag={onToggleFlag} />
           </div>
         ))}
       </div>
@@ -182,14 +194,15 @@ export default function PoolGrid({ refs, cardMap, deck, poolCounts, onAdd, onRem
 }
 
 /** Self-contained card grid (no filter/sort controls). */
-export function SimpleCardGrid({ refs, cardMap, loading, deck, poolCounts, onAdd, onRemove }) {
+export function SimpleCardGrid({ refs, cardMap, loading, deck, poolCounts, onAdd, onRemove, flags, onToggleFlag }) {
   return (
     <CardGridInner refs={refs} cardMap={cardMap} loading={loading}
-      deck={deck} poolCounts={poolCounts} onAdd={onAdd} onRemove={onRemove} />
+      deck={deck} poolCounts={poolCounts} onAdd={onAdd} onRemove={onRemove}
+      flags={flags} onToggleFlag={onToggleFlag} />
   )
 }
 
-function CardGridInner({ refs, cardMap, loading, deck, poolCounts, onAdd, onRemove }) {
+function CardGridInner({ refs, cardMap, loading, deck, poolCounts, onAdd, onRemove, flags, onToggleFlag }) {
   const seen = new Map()
   for (const ref of refs) seen.set(ref, (seen.get(ref) ?? 0) + 1)
   const unique = [...seen.entries()]
@@ -198,13 +211,14 @@ function CardGridInner({ refs, cardMap, loading, deck, poolCounts, onAdd, onRemo
     <div className="grid grid-cols-5 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-10 gap-2">
       {unique.map(([ref, occurrences]) => (
         <PoolCard key={ref} ref_={ref} occurrences={occurrences} card={cardMap[ref]}
-          loading={loading} deck={deck} poolCounts={poolCounts} onAdd={onAdd} onRemove={onRemove} />
+          loading={loading} deck={deck} poolCounts={poolCounts} onAdd={onAdd} onRemove={onRemove}
+          flagged={flags?.has(ref)} onToggleFlag={onToggleFlag} />
       ))}
     </div>
   )
 }
 
-function PoolCard({ ref_, occurrences, card, loading, deck, poolCounts, onAdd, onRemove }) {
+function PoolCard({ ref_, occurrences, card, loading, deck, poolCounts, onAdd, onRemove, flagged, onToggleFlag }) {
   const { ref, origin, onMouseEnter } = useZoomOrigin()
   const poolQty = poolCounts ? (poolCounts[ref_] ?? occurrences) : occurrences
   const inDeck = deck?.[ref_] ?? 0
@@ -213,7 +227,7 @@ function PoolCard({ ref_, occurrences, card, loading, deck, poolCounts, onAdd, o
   const setIcon = SET_ICONS[setCodeFromRef(ref_)]
 
   return (
-    <div className="relative flex flex-col rounded-lg border border-gray-700 bg-gray-900">
+    <div className={`relative flex flex-col rounded-lg border bg-gray-900 ${flagged ? 'border-amber-400 ring-1 ring-amber-400/60' : 'border-gray-700'}`}>
       <div ref={ref} onMouseEnter={onMouseEnter} style={{ transformOrigin: origin }}
         className="aspect-[2/3] bg-gray-800 overflow-hidden rounded-t-lg relative cursor-zoom-in
         transition-transform duration-150 ease-out hover:scale-[1.6] hover:z-30 hover:shadow-xl hover:shadow-black/70">
@@ -249,9 +263,15 @@ function PoolCard({ ref_, occurrences, card, loading, deck, poolCounts, onAdd, o
             className="w-5 h-5 rounded bg-gray-800 hover:bg-green-800 disabled:opacity-25 text-white font-bold flex items-center justify-center text-sm leading-none transition-colors">
             +
           </button>
-          <span className="ml-auto flex items-center gap-1">
+          <span className="ml-auto flex items-center gap-1.5">
             {card?.cardType !== 'HERO' && RARITY_GEMS[card?.rarity] && <img src={RARITY_GEMS[card.rarity]} alt="" className="w-3 h-3 object-contain" />}
             {setIcon && <img src={setIcon} alt="" className="w-3 h-3 object-contain opacity-50" onError={e => { e.currentTarget.style.display = 'none' }} />}
+            {onToggleFlag && (
+              <button onClick={() => onToggleFlag(ref_)} title={flagged ? 'Unflag' : 'Flag for later'}
+                className={`text-sm leading-none transition-colors ${flagged ? 'text-amber-400' : 'text-gray-600 hover:text-gray-300'}`}>
+                {flagged ? '⚑' : '⚐'}
+              </button>
+            )}
           </span>
         </div>
       </div>

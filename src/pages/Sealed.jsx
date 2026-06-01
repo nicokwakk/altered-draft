@@ -7,6 +7,7 @@ import ExportButton from '../components/ExportButton.jsx'
 import DraftStats from '../components/DraftStats.jsx'
 import PoolGrid, { SimpleCardGrid } from '../components/PoolGrid.jsx'
 import DeckList from '../components/DeckList.jsx'
+import { useCardFlags } from '../lib/useCardFlags.js'
 
 export default function Sealed() {
   const { code } = useParams()
@@ -20,6 +21,7 @@ export default function Sealed() {
   const [statsScope, setStatsScope] = useState('pool') // 'pool' | 'deck'
   const [deck, setDeck] = useState({})
   const [loading, setLoading] = useState(true)
+  const { flags, toggleFlag } = useCardFlags(code, me?.id)
 
   useEffect(() => {
     const stored = localStorage.getItem(`player_${code}`)
@@ -146,7 +148,8 @@ export default function Sealed() {
           <div className="flex-1 overflow-y-auto px-8 pt-4 pb-40" style={{ scrollbarGutter: 'stable' }}>
             <h2 className="font-semibold mb-3">Booster {packIndex + 1} <span className="text-gray-500 text-sm font-normal">· {currentPack.length} cards</span></h2>
             <SimpleCardGrid refs={currentPack} cardMap={cardMap} loading={loading}
-              deck={deck} poolCounts={poolCounts} onAdd={addToDeck} onRemove={removeFromDeck} />
+              deck={deck} poolCounts={poolCounts} onAdd={addToDeck} onRemove={removeFromDeck}
+              flags={flags} onToggleFlag={toggleFlag} />
           </div>
         </div>
       )}
@@ -154,7 +157,8 @@ export default function Sealed() {
       {/* FULL POOL TAB — shared PoolGrid */}
       {tab === 'pool' && (
         <PoolGrid refs={allRefs} cardMap={cardMap} deck={deck} poolCounts={poolCounts}
-          onAdd={addToDeck} onRemove={removeFromDeck} loading={loading} />
+          onAdd={addToDeck} onRemove={removeFromDeck} loading={loading}
+          flags={flags} onToggleFlag={toggleFlag} />
       )}
 
       {/* DECK TAB */}
