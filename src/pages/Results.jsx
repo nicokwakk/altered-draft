@@ -9,6 +9,8 @@ import ExportButton from '../components/ExportButton.jsx'
 import DraftStats from '../components/DraftStats.jsx'
 import PoolGrid from '../components/PoolGrid.jsx'
 import DeckList from '../components/DeckList.jsx'
+import HeroDraftInfo from '../components/HeroDraftInfo.jsx'
+import { COMMUNITY_CUBES } from '../lib/cubes.js'
 
 export default function Results() {
   const { code } = useParams()
@@ -61,6 +63,11 @@ export default function Results() {
 
   const myIndex = roomState.players.findIndex(p => p.id === me.id)
   const myPicks = roomState.picks[String(myIndex)] ?? []
+
+  // Cubes with a manual hero snake-draft show the hero pool + rules here too
+  // (the final hero pick happens at the end of the draft).
+  const activeCube = COMMUNITY_CUBES.find(c => c.id === roomState.config?.cubeId)
+  const heroDraftHeroes = activeCube?.heroDraft ? activeCube.heroes : null
 
   const poolCounts = {}
   for (const ref of myPicks) poolCounts[ref] = (poolCounts[ref] ?? 0) + 1
@@ -127,6 +134,12 @@ export default function Results() {
           </button>
         ))}
       </div>
+
+      {heroDraftHeroes && (
+        <div className="px-4 pt-3 shrink-0">
+          <HeroDraftInfo heroes={heroDraftHeroes} cardMap={cardMap} />
+        </div>
+      )}
 
       {/* ALL PICKS — shared PoolGrid with filter/sort/hover/+- */}
       {tab === 'picks' && (

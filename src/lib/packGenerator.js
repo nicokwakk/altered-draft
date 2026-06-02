@@ -84,6 +84,28 @@ export function generateChaosPacks(cardsBySet, packMix, options = {}) {
 }
 
 /**
+ * Cube DRAFT from a multiset of card OBJECTS (preserves duplicate copies — a cube
+ * may intentionally run multiple copies of a card, so we do NOT dedupe). Deals
+ * equal-size packs (unequal packs deadlock the pass-and-pick rotation); heroes are
+ * not included here (this cube drafts them separately). 4 players → 16 packs of 12.
+ * @param {object[]} cardObjects - normalized cards, with duplicates preserved
+ * @param {number} totalPacks - players × 4
+ */
+export function generateCubeDraftPacks(cardObjects, totalPacks) {
+  if (totalPacks < 1) return []
+  const body = shuffle(cardObjects)
+  const perPack = Math.min(13, Math.floor(body.length / totalPacks))
+  const packs = []
+  let b = 0
+  for (let i = 0; i < totalPacks; i++) {
+    const pack = []
+    for (let s = 0; s < perPack; s++) pack.push(body[b++].reference)
+    packs.push(pack)
+  }
+  return packs
+}
+
+/**
  * Cube mode: each card appears at most once across ALL packs, and EVERY pack is
  * the same size (critical — unequal packs deadlock the pass-and-pick rotation).
  *

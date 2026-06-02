@@ -5,7 +5,7 @@ import { fetchSet, SETS, apiSetCode } from '../lib/cardData.js'
 import { SET_ASSETS } from '../lib/assets.js'
 import { COMMUNITY_CUBES, setsForCube } from '../lib/cubes.js'
 import CubePreviewModal from '../components/CubePreviewModal.jsx'
-import { generateAllPacks, generatePacksFromPool, generateChaosPacks } from '../lib/packGenerator.js'
+import { generateAllPacks, generatePacksFromPool, generateChaosPacks, generateCubeDraftPacks } from '../lib/packGenerator.js'
 import { buildInitialState } from '../lib/draftLogic.js'
 import SetSelector from '../components/SetSelector.jsx'
 import ChaosSelector from '../components/ChaosSelector.jsx'
@@ -166,13 +166,26 @@ export default function Lobby() {
       if (configTab === 'cubes' && selectedCube) {
         const cube = COMMUNITY_CUBES.find(c => c.id === selectedCube)
         if (!cube) { setStartError('Cube not found.'); setLoading(false); return }
+        if (cube.heroDraft && (playerCount < 2 || playerCount > 4)) {
+          setStartError('This cube supports 2-4 players.'); setLoading(false); return
+        }
         const setCodes = [...new Set(setsForCube(cube.refs))]
         const results = await Promise.all(setCodes.map(s => fetchSet(s, lang).catch(() => [])))
-        const cubeRefSet = new Set(cube.refs)
-        const allCards = results.flat().filter(c => cubeRefSet.has(c.reference))
-        if (!allCards.length) { setStartError('Could not load cube card data.'); setLoading(false); return }
-        const packs = generateAllPacks(allCards, playerCount, 4, { includeHeroes, cubeMode: true })
         const apiCodes = [...new Set(setCodes.map(apiSetCode))]
+        let packs
+        if (cube.heroDraft) {
+          // Multi-copy cube: preserve duplicate refs (mapping each to its card object),
+          // deal equal packs. Heroes are not in the packs (drafted manually).
+          const byRef = new Map(results.flat().map(c => [c.reference, c]))
+          const allCards = cube.refs.map(r => byRef.get(r)).filter(Boolean)
+          if (!allCards.length) { setStartError('Could not load cube card data.'); setLoading(false); return }
+          packs = generateCubeDraftPacks(allCards, playerCount * 4)
+        } else {
+          const cubeRefSet = new Set(cube.refs)
+          const allCards = results.flat().filter(c => cubeRefSet.has(c.reference))
+          if (!allCards.length) { setStartError('Could not load cube card data.'); setLoading(false); return }
+          packs = generateAllPacks(allCards, playerCount, 4, { includeHeroes, cubeMode: true })
+        }
         const state = buildInitialState(
           { sets: apiCodes, playerCount, lang, cubeId: cube.id, includeHeroes, timerEnabled, timerSeconds },
           shuffledPlayers, packs

@@ -10,6 +10,8 @@ import CardPreview from '../components/CardPreview.jsx'
 import PickTimer from '../components/PickTimer.jsx'
 import MobileTabBar from '../components/MobileTabBar.jsx'
 import DraftStats from '../components/DraftStats.jsx'
+import HeroDraftInfo from '../components/HeroDraftInfo.jsx'
+import { COMMUNITY_CUBES } from '../lib/cubes.js'
 
 export default function Draft() {
   const { code } = useParams()
@@ -194,6 +196,10 @@ export default function Draft() {
   const fullPack = roomState.round ? Math.round((myPicks.length + packSize) / roomState.round) : packSize
   const currentPickNum = Math.max(1, fullPack - packSize + 1)
 
+  // Cubes that snake-draft heroes manually show a reference panel of the hero pool + rules.
+  const activeCube = COMMUNITY_CUBES.find(c => c.id === roomState.config?.cubeId)
+  const heroDraftHeroes = activeCube?.heroDraft ? activeCube.heroes : null
+
   return (
     <div className="min-h-screen flex flex-col pb-16 md:pb-0">
       {reconnecting && <div className="bg-yellow-600 text-yellow-100 text-center text-sm py-2">Reconnecting…</div>}
@@ -224,6 +230,7 @@ export default function Draft() {
             <h2 className="font-semibold text-lg">Pack {roomState.round}</h2>
             <span className="text-sm text-gray-500">Pick {currentPickNum}</span>
           </div>
+          {heroDraftHeroes && <HeroDraftInfo heroes={heroDraftHeroes} cardMap={cardMap} />}
           {roomState.config?.timerEnabled && roomState.pickDeadline && (
             <PickTimer deadline={roomState.pickDeadline} isMyTurn={isMyTurn} onTimeout={handleTimeout} />
           )}
@@ -247,6 +254,7 @@ export default function Draft() {
               <h2 className="font-semibold">Pack {roomState.round}</h2>
               <span className="text-xs text-gray-500">Pick {currentPickNum}</span>
             </div>
+            {heroDraftHeroes && <HeroDraftInfo heroes={heroDraftHeroes} cardMap={cardMap} />}
             {roomState.config?.timerEnabled && roomState.pickDeadline && (
               <PickTimer deadline={roomState.pickDeadline} isMyTurn={isMyTurn} onTimeout={handleTimeout} />
             )}

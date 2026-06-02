@@ -229,8 +229,8 @@ export default function CubePreviewModal({ cube, onClose }) {
 
                   {viewMode === 'grid' ? (
                     <div className="grid grid-cols-6 gap-2">
-                      {group.cards.map(c => (
-                        <div key={c.ref}
+                      {group.cards.map((c, i) => (
+                        <div key={`${c.ref}-${i}`}
                           className="relative rounded-lg overflow-hidden border border-gray-700 bg-gray-800 cursor-default"
                           onMouseEnter={() => setHoverCard(c)}
                           onMouseLeave={() => setHoverCard(null)}>
@@ -257,8 +257,8 @@ export default function CubePreviewModal({ cube, onClose }) {
                     </div>
                   ) : (
                     <div className="grid grid-cols-2 gap-x-4 gap-y-0.5">
-                      {group.cards.map(c => (
-                        <div key={c.ref} className="flex items-center gap-1.5 py-0.5 text-xs group">
+                      {group.cards.map((c, i) => (
+                        <div key={`${c.ref}-${i}`} className="flex items-center gap-1.5 py-0.5 text-xs group">
                           {FACTION_ICONS[c.faction] && (
                             <img src={FACTION_ICONS[c.faction]} alt={c.faction} className="w-3 h-3 object-contain shrink-0" />
                           )}
