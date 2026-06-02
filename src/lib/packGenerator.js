@@ -84,48 +84,35 @@ export function generateChaosPacks(cardsBySet, packMix, options = {}) {
 }
 
 /**
- * Cube mode: each card appears at most once across ALL packs.
- * Pools are shuffled and dealt sequentially — no card repeats between packs.
- * Uniques may only appear in the last (3rd) rare slot of a pack.
+ * Cube mode: each card appears at most once across ALL packs, and EVERY pack is
+ * the same size (critical — unequal packs deadlock the pass-and-pick rotation).
+ *
+ * The pool is curated and arbitrarily sized, so we don't force a fixed
+ * common/rare structure (that depletes pools unevenly and breaks the draft).
+ * Instead: deal 1 hero per pack when there are enough heroes for every pack,
+ * then fill each pack with an equal number of body cards (commons/rares/uniques
+ * shuffled together). Leftover cards are simply not used this draft.
  */
 function generateCubePacks(heroes, commons, rares, uniques, totalPacks, includeHeroes) {
-  const heroPool   = shuffle(heroes)
-  const commonPool = shuffle(commons)
-  const rarePool   = shuffle(rares)   // R1, R2, EX only
-  const uniquePool = shuffle(uniques) // U only — last slot only
-  let hIdx = 0, cIdx = 0, rIdx = 0, uIdx = 0
+  if (totalPacks < 1) return []
+  const heroPool = shuffle(includeHeroes ? heroes : [])
+  // Only dedicate a hero slot if there's one for every pack (keeps packs equal).
+  const dedicatedHeroes = heroPool.length >= totalPacks
+  const body = shuffle([
+    ...(dedicatedHeroes ? [] : heroPool), // not enough heroes to slot → draft them as body
+    ...commons, ...rares, ...uniques,
+  ])
 
-  function takeHero()   { return hIdx < heroPool.length   ? heroPool[hIdx++].reference   : null }
-  function takeCommon() { return cIdx < commonPool.length ? commonPool[cIdx++].reference : null }
-  function takeRare()   { return rIdx < rarePool.length   ? rarePool[rIdx++].reference   : null }
-  function takeUnique() { return uIdx < uniquePool.length ? uniquePool[uIdx++].reference : null }
+  const heroPerPack = dedicatedHeroes ? 1 : 0
+  // Cap pack size at 13 for huge cubes; otherwise split the body evenly.
+  const bodyPerPack = Math.min(13 - heroPerPack, Math.floor(body.length / totalPacks))
 
   const packs = []
+  let hIdx = 0, bIdx = 0
   for (let i = 0; i < totalPacks; i++) {
     const pack = []
-
-    // 1 hero slot
-    if (includeHeroes) {
-      const h = takeHero()
-      if (h) pack.push(h)
-    }
-
-    // 9 common slots (sequential from shuffled pool)
-    for (let s = 0; s < 9; s++) {
-      const c = takeCommon()
-      if (c) pack.push(c)
-    }
-
-    // 2 regular rare slots
-    for (let s = 0; s < 2; s++) {
-      const r = takeRare()
-      if (r) pack.push(r)
-    }
-
-    // Last slot: unique if available, otherwise a rare
-    const lastCard = takeUnique() ?? takeRare()
-    if (lastCard) pack.push(lastCard)
-
+    if (heroPerPack) pack.push(heroPool[hIdx++].reference)
+    for (let s = 0; s < bodyPerPack; s++) pack.push(body[bIdx++].reference)
     packs.push(pack)
   }
   return packs
