@@ -149,6 +149,7 @@ export function buildInitialState(config, players, allPacks) {
     waitingFor: allPlayerIndices(playerCount),
     remainingPacks,
     pickDeadline: null,
+    version: 0,
   }
   state.pickDeadline = freshDeadline(state)
   return state

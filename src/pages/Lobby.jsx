@@ -129,7 +129,10 @@ export default function Lobby() {
             config: { sets: apiCodes, playerCount, lang, includeHeroes, cubeId: cube.id, mode: 'sealed' },
             players: shuffledPlayers, phase: 'sealed', sealedPacks, version: 0,
           }
-          await supabase.from('draft_rooms').update({ state }).eq('id', code)
+          {
+            const { error: upErr } = await supabase.from('draft_rooms').update({ state }).eq('id', code)
+            if (upErr) { setStartError('Could not start: ' + upErr.message); setLoading(false); return }
+          }
           return
         }
 
@@ -152,7 +155,10 @@ export default function Lobby() {
           config: { sets: apiCodes, playerCount, lang, includeHeroes, mode: 'sealed', packMix: mix },
           players: shuffledPlayers, phase: 'sealed', sealedPacks, version: 0,
         }
-        await supabase.from('draft_rooms').update({ state }).eq('id', code)
+        {
+          const { error: upErr } = await supabase.from('draft_rooms').update({ state }).eq('id', code)
+          if (upErr) { setStartError('Could not start: ' + upErr.message); setLoading(false); return }
+        }
         return
       }
 
@@ -171,7 +177,10 @@ export default function Lobby() {
           { sets: apiCodes, playerCount, lang, cubeId: cube.id, includeHeroes, timerEnabled, timerSeconds },
           shuffledPlayers, packs
         )
-        await supabase.from('draft_rooms').update({ state }).eq('id', code)
+        {
+          const { error: upErr } = await supabase.from('draft_rooms').update({ state }).eq('id', code)
+          if (upErr) { setStartError('Could not start: ' + upErr.message); setLoading(false); return }
+        }
         return
       }
 
@@ -191,7 +200,10 @@ export default function Lobby() {
           { sets: apiCodes, playerCount, lang, customPool: true, includeHeroes, timerEnabled, timerSeconds },
           shuffledPlayers, packs
         )
-        await supabase.from('draft_rooms').update({ state }).eq('id', code)
+        {
+          const { error: upErr } = await supabase.from('draft_rooms').update({ state }).eq('id', code)
+          if (upErr) { setStartError('Could not start: ' + upErr.message); setLoading(false); return }
+        }
         return
       }
 
@@ -215,7 +227,10 @@ export default function Lobby() {
           { sets: apiCodes, playerCount, lang, includeHeroes, timerEnabled, timerSeconds, chaosMix: mix },
           shuffledPlayers, packs
         )
-        await supabase.from('draft_rooms').update({ state }).eq('id', code)
+        {
+          const { error: upErr } = await supabase.from('draft_rooms').update({ state }).eq('id', code)
+          if (upErr) { setStartError('Could not start: ' + upErr.message); setLoading(false); return }
+        }
         return
       }
 
@@ -237,7 +252,8 @@ export default function Lobby() {
         { sets: setCodes, playerCount, lang, includeHeroes, timerEnabled, timerSeconds },
         shuffledPlayers, packs
       )
-      await supabase.from('draft_rooms').update({ state }).eq('id', code)
+      const { error: upErr } = await supabase.from('draft_rooms').update({ state }).eq('id', code)
+      if (upErr) { setStartError('Could not start: ' + upErr.message); setLoading(false); return }
     } catch (err) {
       setStartError('Error starting draft: ' + err.message)
       setLoading(false)

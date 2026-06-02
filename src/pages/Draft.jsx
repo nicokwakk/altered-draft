@@ -33,6 +33,9 @@ export default function Draft() {
   stateRef.current = roomState
   const pickingRef = useRef(false)
   pickingRef.current = picking
+  // Hard lock against overlapping doPick invocations (timer + click, or retries).
+  // Independent of the `picking` UI flag, which realtime clears on every update.
+  const inFlightRef = useRef(false)
 
   useEffect(() => {
     const stored = localStorage.getItem(`player_${code}`)
@@ -90,18 +93,52 @@ export default function Draft() {
   const myPicks = (myIndex !== -1 && roomState) ? (roomState.picks[String(myIndex)] ?? []) : []
 
   const doPick = useCallback(async (ref) => {
-    if (!stateRef.current || pickingRef.current) return
-    const state = stateRef.current
-    const idx = state.players.findIndex(p => p.id === me?.id)
-    if (idx === -1 || !state.waitingFor?.includes(idx)) return
+    if (inFlightRef.current) return
+    let state = stateRef.current
+    if (!state || !me) return
+    const idx0 = state.players.findIndex(p => p.id === me.id)
+    if (idx0 === -1 || !state.waitingFor?.includes(idx0)) return
+
+    inFlightRef.current = true
     setPicking(true)
-    const newState = applyPick(state, idx, ref)
-    newState.version = (state.version ?? 0) + 1
-    const { error } = await supabase.from('draft_rooms').update({ state: newState }).eq('id', code)
-    if (error) {
-      const { data } = await supabase.from('draft_rooms').select('state').eq('id', code).single()
-      if (data) setRoomState(data.state)
-      setPicking(false)
+    try {
+      // Optimistic concurrency: only commit if the row is still at the version we
+      // read. Multiple players pick from their own packs at the same time, so a
+      // blind write would clobber a concurrent pick. On conflict, re-sync and retry.
+      for (let attempt = 0; attempt < 12; attempt++) {
+        const idx = state.players.findIndex(p => p.id === me.id)
+        if (idx === -1 || !state.waitingFor?.includes(idx)) { setPicking(false); return }
+        if (!(state.packs[String(idx)] ?? []).includes(ref)) { setPicking(false); return } // card no longer available
+
+        const expectedVersion = state.version ?? 0
+        const newState = applyPick(state, idx, ref)
+        newState.version = expectedVersion + 1
+
+        const { data, error } = await supabase
+          .from('draft_rooms')
+          .update({ state: newState })
+          .eq('id', code)
+          .eq('state->>version', expectedVersion)
+          .select('id')
+
+        if (error) { // transient/network — drop this attempt, let the user retry
+          const { data: fresh } = await supabase.from('draft_rooms').select('state').eq('id', code).single()
+          if (fresh) setRoomState(fresh.state)
+          setPicking(false)
+          return
+        }
+        if (data && data.length > 0) return // committed; realtime will broadcast + clear `picking`
+
+        // Version conflict: someone wrote first. Re-sync to the latest state and retry.
+        const { data: fresh } = await supabase.from('draft_rooms').select('state').eq('id', code).single()
+        if (!fresh) { setPicking(false); return }
+        state = fresh.state
+        setRoomState(fresh.state)
+        await new Promise(r => setTimeout(r, 30 + Math.random() * 70)) // jitter to avoid livelock
+      }
+      setPicking(false) // exhausted retries — release so the user can try again
+    } finally {
+      inFlightRef.current = false
     }
   }, [me, code])
 
@@ -151,7 +188,11 @@ export default function Draft() {
   )
 
   const packSize = myPack.length
-  const currentPickNum = (12 - packSize) + 1
+  // Pick number within the round. A full pack's size isn't fixed (hero toggle,
+  // set composition), so derive it: picks made this round = fullPack - packSize,
+  // and across `round` rounds, myPicks + packSize == round * fullPack.
+  const fullPack = roomState.round ? Math.round((myPicks.length + packSize) / roomState.round) : packSize
+  const currentPickNum = Math.max(1, fullPack - packSize + 1)
 
   return (
     <div className="min-h-screen flex flex-col pb-16 md:pb-0">
