@@ -12,12 +12,13 @@ import MobileTabBar from '../components/MobileTabBar.jsx'
 import DraftStats from '../components/DraftStats.jsx'
 import { COMMUNITY_CUBES } from '../lib/cubes.js'
 
-// Compact read-only strip of the heroes you drafted, shown during the card draft.
-function MyHeroes({ heroes, cardMap }) {
+// Compact read-only strip of the heroes you've drafted (during the hero phase, and
+// as a reminder afterward). `label` lets callers relabel it per phase.
+function MyHeroes({ heroes, cardMap, label = 'Your heroes' }) {
   if (!heroes?.length) return null
   return (
     <div className="mb-4 border border-amber-500/30 bg-amber-500/5 rounded-lg px-3 py-2">
-      <p className="text-xs font-semibold text-amber-400 mb-2">Your heroes ({heroes.length})</p>
+      <p className="text-xs font-semibold text-amber-400 mb-2">{label} ({heroes.length})</p>
       <div className="flex flex-wrap gap-2">
         {heroes.map((ref, i) => {
           const card = cardMap?.[ref]
@@ -125,42 +126,44 @@ export default function Draft() {
 
   const isHeroPhase = roomState?.phase === 'heroDraft'
   const myIndex = roomState && me ? roomState.players.findIndex(p => p.id === me.id) : -1
-  // During the hero-draft phase, the active pack/waiting list live on the parallel
-  // hero fields; otherwise they're the normal card-draft ones.
-  const myWaiting = isHeroPhase ? (roomState?.heroWaitingFor ?? []) : (roomState?.waitingFor ?? [])
-  const isMyTurn = myIndex !== -1 && myWaiting.includes(myIndex)
+  // Card draft: simultaneous — each seat has its own pack and is in waitingFor.
+  // Hero draft (after the cards): turn-based — ONE shared booster picked in snake
+  // order, so only the seat at heroOrder[heroTurnPos] can pick.
+  const heroTurnIdx = isHeroPhase ? (roomState.heroOrder?.[roomState.heroTurnPos] ?? -1) : -1
+  const isMyTurn = isHeroPhase
+    ? (myIndex !== -1 && myIndex === heroTurnIdx)
+    : (myIndex !== -1 && (roomState?.waitingFor?.includes(myIndex) ?? false))
   const myCardPack = (myIndex !== -1 && roomState) ? (roomState.packs[String(myIndex)] ?? []) : []
   const myPicks = (myIndex !== -1 && roomState) ? (roomState.picks[String(myIndex)] ?? []) : []
-  const myHeroPack = (myIndex !== -1 && roomState) ? (roomState.heroPacks?.[String(myIndex)] ?? []) : []
   const myHeroPicks = (myIndex !== -1 && roomState) ? (roomState.heroPicks?.[String(myIndex)] ?? []) : []
-  const myPack = isHeroPhase ? myHeroPack : myCardPack
+  const myPack = isHeroPhase ? (roomState?.heroCurrent ?? []) : myCardPack
 
   const doPick = useCallback(async (ref) => {
     if (inFlightRef.current) return
     let state = stateRef.current
     if (!state || !me) return
-    // Hero-draft and card-draft picks share the same optimistic-concurrency machinery,
-    // just on different state fields. Pick the right ones based on the current phase.
-    const fields = (s) => s.phase === 'heroDraft'
-      ? { packs: 'heroPacks', waiting: 'heroWaitingFor', apply: applyHeroPick }
-      : { packs: 'packs', waiting: 'waitingFor', apply: applyPick }
+    // Whether this seat may pick `ref` right now — differs by phase. Card draft: it's
+    // in your waitingFor and the card is in your pack. Hero draft: it's your turn in
+    // the snake order and the card is in the shared booster.
+    const canPick = (s, idx) => s.phase === 'heroDraft'
+      ? (s.heroOrder?.[s.heroTurnPos] === idx && (s.heroCurrent ?? []).includes(ref))
+      : ((s.waitingFor?.includes(idx) ?? false) && (s.packs[String(idx)] ?? []).includes(ref))
     const idx0 = state.players.findIndex(p => p.id === me.id)
-    if (idx0 === -1 || !state[fields(state).waiting]?.includes(idx0)) return
+    if (idx0 === -1 || !canPick(state, idx0)) return
 
     inFlightRef.current = true
     setPicking(true)
     try {
-      // Optimistic concurrency: only commit if the row is still at the version we
-      // read. Multiple players pick from their own packs at the same time, so a
-      // blind write would clobber a concurrent pick. On conflict, re-sync and retry.
+      // Optimistic concurrency: only commit if the row is still at the version we read.
+      // Concurrent picks (card draft) or a moved turn (hero draft) → re-sync and retry.
       for (let attempt = 0; attempt < 12; attempt++) {
-        const f = fields(state)
         const idx = state.players.findIndex(p => p.id === me.id)
-        if (idx === -1 || !state[f.waiting]?.includes(idx)) { setPicking(false); return }
-        if (!(state[f.packs][String(idx)] ?? []).includes(ref)) { setPicking(false); return } // card no longer available
+        if (idx === -1 || !canPick(state, idx)) { setPicking(false); return }
 
         const expectedVersion = state.version ?? 0
-        const newState = f.apply(state, idx, ref)
+        const newState = state.phase === 'heroDraft'
+          ? applyHeroPick(state, idx, ref)
+          : applyPick(state, idx, ref)
         newState.version = expectedVersion + 1
 
         const { data, error } = await supabase
@@ -238,14 +241,15 @@ export default function Draft() {
 
   const packSize = myPack.length
   const activePicks = isHeroPhase ? myHeroPicks : myPicks
-  // Pick number within the current phase. For heroes it's simply how many you've
-  // taken; for cards a full pack's size isn't fixed (hero toggle, set composition),
-  // so derive it: picks made this round = fullPack - packSize, and across `round`
-  // rounds, myPicks + packSize == round * fullPack.
+  const heroesPerPlayer = isHeroPhase ? (roomState.heroBoosters?.length ?? 0) : 0
+  const heroPickerName = (isHeroPhase && heroTurnIdx >= 0) ? (roomState.players[heroTurnIdx]?.name ?? '') : ''
+  // Progress within the current phase. Hero draft is turn-based across N shared
+  // boosters → show booster progress. Card draft: a full pack's size isn't fixed
+  // (hero toggle, set composition), so derive it from picks made this round.
   let currentPickNum, totalPicks
   if (isHeroPhase) {
-    currentPickNum = myHeroPicks.length + 1
-    totalPicks = myHeroPicks.length + myHeroPack.length // equals heroes-per-booster
+    currentPickNum = (roomState.heroBoosterIndex ?? 0) + 1
+    totalPicks = roomState.heroBoosters?.length ?? 0
   } else {
     const fullPack = roomState.round ? Math.round((myPicks.length + packSize) / roomState.round) : packSize
     currentPickNum = Math.max(1, fullPack - packSize + 1)
@@ -275,7 +279,7 @@ export default function Draft() {
       {/* Player status — compact on mobile */}
       <PlayerStatus players={roomState.players}
         picks={isHeroPhase ? (roomState.heroPicks ?? {}) : roomState.picks}
-        waitingFor={isHeroPhase ? (roomState.heroWaitingFor ?? []) : roomState.waitingFor}
+        waitingFor={isHeroPhase ? (heroTurnIdx >= 0 ? [heroTurnIdx] : []) : roomState.waitingFor}
         meId={me.id} />
 
       {/* Desktop: side-by-side layout */}
@@ -285,7 +289,7 @@ export default function Draft() {
             {isHeroPhase ? (
               <>
                 <h2 className="font-semibold text-lg text-amber-400">Hero Draft</h2>
-                <span className="text-sm text-gray-500">Pick {currentPickNum} / {totalPicks}</span>
+                <span className="text-sm text-gray-500">Booster {currentPickNum} / {totalPicks}</span>
               </>
             ) : (
               <>
@@ -296,16 +300,19 @@ export default function Draft() {
           </div>
           {isHeroPhase && (
             <p className="mb-3 text-sm text-gray-400">
-              Draft your heroes — pick one, the rest pass around. You'll end with {totalPicks} {totalPicks === 1 ? 'hero' : 'heroes'} to choose from when building your deck.
+              Heroes are drafted last, one at a time. On your turn, take a hero from the shared booster — you'll end up with {heroesPerPlayer} to choose from, and no two come from the same booster.
             </p>
           )}
+          {isHeroPhase && myHeroPicks.length > 0 && <MyHeroes heroes={myHeroPicks} cardMap={cardMap} label="Heroes you've taken" />}
           {!isHeroPhase && myHeroPicks.length > 0 && <MyHeroes heroes={myHeroPicks} cardMap={cardMap} />}
           {roomState.config?.timerEnabled && roomState.pickDeadline && (
             <PickTimer deadline={roomState.pickDeadline} isMyTurn={isMyTurn} onTimeout={handleTimeout} />
           )}
           {!isMyTurn && (
             <div className="mb-4 bg-gray-900 border border-gray-800 rounded-lg px-4 py-3 text-sm text-gray-400">
-              Waiting for other players to pick…
+              {isHeroPhase
+                ? <>Waiting for <span className="text-gray-200">{heroPickerName}</span> to pick a hero…</>
+                : 'Waiting for other players to pick…'}
             </div>
           )}
           <CardGrid packRefs={myPack} cardMap={cardMap} onPick={doPick} onHover={setHoverCard} disabled={!isMyTurn || picking} />
@@ -321,15 +328,17 @@ export default function Draft() {
           <div className="p-3">
             <div className="flex items-baseline gap-2 mb-2">
               <h2 className="font-semibold">{isHeroPhase ? <span className="text-amber-400">Hero Draft</span> : `Pack ${roomState.round}`}</h2>
-              <span className="text-xs text-gray-500">Pick {currentPickNum}{isHeroPhase ? ` / ${totalPicks}` : ''}</span>
+              <span className="text-xs text-gray-500">{isHeroPhase ? `Booster ${currentPickNum} / ${totalPicks}` : `Pick ${currentPickNum}`}</span>
             </div>
-            {!isHeroPhase && myHeroPicks.length > 0 && <MyHeroes heroes={myHeroPicks} cardMap={cardMap} />}
+            {myHeroPicks.length > 0 && <MyHeroes heroes={myHeroPicks} cardMap={cardMap} label={isHeroPhase ? "Heroes you've taken" : undefined} />}
             {roomState.config?.timerEnabled && roomState.pickDeadline && (
               <PickTimer deadline={roomState.pickDeadline} isMyTurn={isMyTurn} onTimeout={handleTimeout} />
             )}
             {!isMyTurn && (
               <div className="mb-3 bg-gray-900 border border-gray-800 rounded-lg px-3 py-2 text-sm text-gray-400">
-                Waiting for other players…
+                {isHeroPhase
+                  ? <>Waiting for <span className="text-gray-200">{heroPickerName}</span> to pick a hero…</>
+                  : 'Waiting for other players…'}
               </div>
             )}
             <CardGrid packRefs={myPack} cardMap={cardMap} onPick={(ref) => { doPick(ref); setMobileTab('pack') }}

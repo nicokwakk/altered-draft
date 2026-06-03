@@ -15,27 +15,28 @@ function pickRandom(pool) {
 }
 
 /**
- * Hero draft for cubes that draft their heroes in-app. Partition the hero pool
- * into ONE equal booster per player (disjoint, no duplicates) and let them rotate
- * like card packs. If the hero count isn't divisible by the player count, the
- * remainder is dropped at random (pool is shuffled first) so every booster is the
- * same size — e.g. 12 heroes, 5 players → drop 2 → five boosters of 2; 4 players →
- * four of 3; 2 players → two of 6. Each player ends with `floor(heroes/players)`.
+ * Hero draft for cubes that draft their heroes in-app (AFTER the card draft).
+ * Build N SHARED boosters, each sized to the table (`playerCount` heroes), where
+ * N = the number of heroes each player ends with = min(3, floor(heroes/players)).
+ * The boosters are drafted turn-based, one pick per player per booster (snake
+ * order), so nobody ever drafts twice from the same booster. Capped at 3 heroes;
+ * drops to 2 once a booster of `playerCount` can't fit 3× the heroes (5-6 players),
+ * etc. e.g. 12 heroes: 2-4 players → 3 boosters (3 each), 5-6 players → 2 boosters
+ * (2 each). Leftover heroes (12 − N×players) are simply unused this draft.
  * @param {string[]} heroRefs
  * @param {number} playerCount
- * @returns {string[][]} one hero booster per seat (length === playerCount), or [] if too few heroes
+ * @returns {string[][]} N boosters, each with `playerCount` heroes (or [] if too few heroes)
  */
 export function generateHeroDraftPacks(heroRefs, playerCount) {
   if (playerCount < 1 || !heroRefs?.length) return []
+  const perPlayer = Math.min(3, Math.floor(heroRefs.length / playerCount))
+  if (perPlayer < 1) return [] // fewer heroes than players — can't give everyone one
   const shuffled = shuffle(heroRefs)
-  const perBooster = Math.floor(shuffled.length / playerCount)
-  if (perBooster < 1) return [] // fewer heroes than players — can't give everyone one
-  const used = shuffled.slice(0, perBooster * playerCount) // drop the random remainder
-  const packs = []
-  for (let i = 0; i < playerCount; i++) {
-    packs.push(used.slice(i * perBooster, (i + 1) * perBooster))
+  const boosters = []
+  for (let b = 0; b < perPlayer; b++) {
+    boosters.push(shuffled.slice(b * playerCount, (b + 1) * playerCount))
   }
-  return packs
+  return boosters
 }
 
 /**

@@ -79,7 +79,21 @@ export function applyPick(state, playerIndex, cardReference) {
     if (packsEmpty) {
       // End of a round
       if (state.round >= 4) {
-        nextState.phase = 'done'
+        // Card draft finished. If this cube also drafts heroes, start the hero
+        // phase now (heroes are drafted AFTER the cards — see applyHeroPick).
+        if (state.heroBoosters && state.heroBoosters.length) {
+          nextState = {
+            ...nextState,
+            phase: 'heroDraft',
+            heroBoosterIndex: 0,
+            heroCurrent: [...state.heroBoosters[0]],
+            heroOrder: heroOrderFor(state.players.length, 0),
+            heroTurnPos: 0,
+            pickDeadline: freshDeadline(nextState),
+          }
+        } else {
+          nextState.phase = 'done'
+        }
       } else {
         const nextRound = state.round + 1
         const remaining = state.remainingPacks ?? []
@@ -109,51 +123,55 @@ export function applyPick(state, playerIndex, cardReference) {
 }
 
 /**
- * Apply a HERO pick during the in-app hero-draft phase. Mirrors `applyPick` but on
- * the parallel hero fields (`heroPacks`/`heroPicks`/`heroWaitingFor`/`heroRound`).
- * Hero boosters are equal-size and rotate just like card packs; when they're all
- * empty the hero draft is over and we hand off to the (already-seeded) card draft.
+ * Snake pick order for a hero booster: seat order, reversed on odd boosters so the
+ * first/last pick rotates fairly from one booster to the next.
+ */
+export function heroOrderFor(playerCount, boosterIndex) {
+  const base = allPlayerIndices(playerCount)
+  return boosterIndex % 2 === 0 ? base : base.reverse()
+}
+
+/**
+ * Apply a HERO pick during the (post-card) hero-draft phase. Heroes are drafted
+ * TURN-BASED from shared boosters sized to the table: each booster holds exactly
+ * `players` heroes and is drafted one pick per player in snake order, so nobody
+ * ever picks twice from the same booster. Only the player whose turn it is
+ * (heroOrder[heroTurnPos]) may pick. When the last booster empties, the draft is
+ * done. State: heroBoosters[] (all boosters), heroBoosterIndex (which one is live),
+ * heroCurrent (its remaining heroes), heroOrder + heroTurnPos (whose turn), heroPicks.
  */
 export function applyHeroPick(state, playerIndex, heroReference) {
-  const pi = String(playerIndex)
-  const currentPack = [...(state.heroPacks?.[pi] ?? [])]
-  const cardIdx = currentPack.indexOf(heroReference)
-  if (cardIdx === -1) return state // stale pick, ignore
+  const order = state.heroOrder ?? []
+  if (order[state.heroTurnPos] !== playerIndex) return state // not this player's turn
+  const current = [...(state.heroCurrent ?? [])]
+  const ci = current.indexOf(heroReference)
+  if (ci === -1) return state // stale / no longer available
 
-  currentPack.splice(cardIdx, 1)
-  const newHeroPacks = { ...state.heroPacks, [pi]: currentPack }
+  current.splice(ci, 1)
+  const pi = String(playerIndex)
   const newHeroPicks = {
     ...state.heroPicks,
     [pi]: [...(state.heroPicks?.[pi] ?? []), heroReference],
   }
-  const newWaiting = (state.heroWaitingFor ?? []).filter(idx => idx !== playerIndex)
 
-  let nextState = {
-    ...state,
-    heroPacks: newHeroPacks,
-    heroPicks: newHeroPicks,
-    heroWaitingFor: newWaiting,
-  }
+  let nextState = { ...state, heroCurrent: current, heroPicks: newHeroPicks }
 
-  if (newWaiting.length === 0) {
-    const packsEmpty = Object.values(newHeroPacks).every(p => p.length === 0)
-    if (packsEmpty) {
-      // Hero draft complete → start the card draft. Round 1 packs were seeded by
-      // buildInitialState and have sat dormant; just flip the phase and arm it.
-      nextState = {
-        ...nextState,
-        phase: 'drafting',
-        heroWaitingFor: [],
-        waitingFor: allPlayerIndices(state.players.length),
-        pickDeadline: freshDeadline(nextState),
-      }
+  const nextPos = state.heroTurnPos + 1
+  if (nextPos < state.players.length) {
+    // Same booster, next player in the snake order.
+    nextState = { ...nextState, heroTurnPos: nextPos, pickDeadline: freshDeadline(nextState) }
+  } else {
+    // Booster exhausted (everyone picked once) → next booster, or finish.
+    const nextBooster = (state.heroBoosterIndex ?? 0) + 1
+    if (nextBooster >= (state.heroBoosters?.length ?? 0)) {
+      nextState = { ...nextState, phase: 'done', heroTurnPos: 0, pickDeadline: null }
     } else {
-      const rotated = rotatePacks(newHeroPacks, state.players.length, state.heroRound ?? 1)
       nextState = {
         ...nextState,
-        heroPacks: rotated,
-        heroRound: (state.heroRound ?? 1) + 1,
-        heroWaitingFor: allPlayerIndices(state.players.length),
+        heroBoosterIndex: nextBooster,
+        heroCurrent: [...state.heroBoosters[nextBooster]],
+        heroOrder: heroOrderFor(state.players.length, nextBooster),
+        heroTurnPos: 0,
         pickDeadline: freshDeadline(nextState),
       }
     }
@@ -171,11 +189,12 @@ export function allPlayerIndices(count) {
  * @param {object} config
  * @param {object[]} players
  * @param {string[][]} allPacks - flat array, first playerCount packs go to round 1
- * @param {string[][]} [heroPacks] - optional: one hero booster per seat. When given,
- *   the draft opens in a `heroDraft` phase (heroes are drafted first, like cards);
- *   the card-draft fields below are seeded but stay dormant until heroes are done.
+ * @param {string[][]} [heroBoosters] - optional: N shared hero boosters (each sized to
+ *   the table). When given, the heroes are drafted turn-based AFTER the 4 card packs:
+ *   the card draft runs normally, then `applyPick`'s end-of-draft switches into the
+ *   `heroDraft` phase instead of `done` (see applyHeroPick).
  */
-export function buildInitialState(config, players, allPacks, heroPacks = null) {
+export function buildInitialState(config, players, allPacks, heroBoosters = null) {
   const playerCount = players.length
   const initialPacks = {}
   for (let i = 0; i < playerCount; i++) {
@@ -209,19 +228,14 @@ export function buildInitialState(config, players, allPacks, heroPacks = null) {
     version: 0,
   }
 
-  // Optional in-app hero draft: runs BEFORE the card draft. Each seat gets one
-  // hero booster; they rotate and are picked like cards until empty, then the
-  // phase flips to 'drafting' (applyHeroPick handles the hand-off).
-  if (heroPacks && heroPacks.length) {
-    state.phase = 'heroDraft'
-    state.heroRound = 1
-    state.heroPacks = {}
+  // Optional in-app hero draft, drafted AFTER the card draft. Stash the shared hero
+  // boosters and an empty heroPicks map now; the card draft runs first (phase stays
+  // 'drafting'), then applyPick switches to the turn-based 'heroDraft' phase once the
+  // 4th pack is done (applyHeroPick takes over from there).
+  if (heroBoosters && heroBoosters.length) {
+    state.heroBoosters = heroBoosters
     state.heroPicks = {}
-    for (let i = 0; i < playerCount; i++) {
-      state.heroPacks[String(i)] = heroPacks[i] ?? []
-      state.heroPicks[String(i)] = []
-    }
-    state.heroWaitingFor = allPlayerIndices(playerCount)
+    for (let i = 0; i < playerCount; i++) state.heroPicks[String(i)] = []
   }
 
   state.pickDeadline = freshDeadline(state)
