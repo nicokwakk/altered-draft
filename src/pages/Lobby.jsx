@@ -180,15 +180,7 @@ export default function Lobby() {
           // Uniques aren't in set data — fetch them from the Altered API and merge.
           const uniqueCards = await fetchUniques(cube.refs.filter(isUniqueRef), lang)
           for (const c of uniqueCards) byRef.set(c.reference, c)
-          // Tag each copy with its assigned faction column ("<ref>@<FACTION>") so a card
-          // listed in two columns is dealt as two distinguishable copies (see Draft.jsx).
-          const allCards = cube.refs.map((r, i) => {
-            const c = byRef.get(r)
-            if (!c) return null
-            return cube.factions
-              ? { ...c, faction: cube.factions[i], _token: `${r}@${cube.factions[i]}` }
-              : c
-          }).filter(Boolean)
+          const allCards = cube.refs.map(r => byRef.get(r)).filter(Boolean)
           if (!allCards.length) { setStartError('Could not load cube card data.'); setLoading(false); return }
           packs = generateCubeDraftPacks(allCards, playerCount * 4)
         } else {

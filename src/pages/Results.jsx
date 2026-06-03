@@ -45,12 +45,6 @@ export default function Results() {
           if (cube?.refs) {
             const uCards = await fetchUniques(cube.refs.filter(isUniqueRef), data.state.config.lang || 'EN')
             for (const c of uCards) maps[c.reference] = c
-            // Per-copy faction tokens ("<ref>@<FACTION>") — one cardMap entry each so a
-            // card placed in two columns shows the right faction in either. Base-ref
-            // entries remain for hero lookups. (Mirrors Draft.jsx.)
-            if (cube.factions) cube.refs.forEach((r, i) => {
-              if (maps[r]) maps[`${r}@${cube.factions[i]}`] = { ...maps[r], faction: cube.factions[i] }
-            })
           }
           setCardMap(maps)
         }

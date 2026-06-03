@@ -1,14 +1,12 @@
-import { FACTIONS, cardBaseRef } from './cardData.js'
+import { FACTIONS } from './cardData.js'
 
 /**
  * Build the altered.re export string from a player's picks and the card map.
- * Hero goes first, then sorted by faction then name. Faction-tagged copies of the
- * same card (multi-copy cube) collapse to one line keyed by the real card reference.
+ * Hero goes first, then sorted by faction then name.
  */
 export function buildDecklist(pickedRefs, cardMap) {
   const counts = {}
-  for (const token of pickedRefs) {
-    const ref = cardBaseRef(token)
+  for (const ref of pickedRefs) {
     counts[ref] = (counts[ref] ?? 0) + 1
   }
 

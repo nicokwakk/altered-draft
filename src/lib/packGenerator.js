@@ -113,18 +113,14 @@ export function generateCubeDraftPacks(cardObjects, totalPacks) {
   const usedU = uCount.reduce((a, b) => a + b, 0)
   const cCount = spread(commons.length, totalSlots - usedU)
 
-  // A copy may be dealt as a faction-tagged token (set by the caller via `_token`) so
-  // the same card can occupy two different faction columns; fall back to the bare ref.
-  const tok = c => c._token ?? c.reference
-
   let ci = 0, ri = 0, ui = 0
   const packs = []
   for (let i = 0; i < totalPacks; i++) {
     const nC = cCount[i], nU = uCount[i], nR = perPack - nC - nU
     const pack = []
-    for (let k = 0; k < nC && ci < commons.length; k++) pack.push(tok(commons[ci++])) // commons first
-    for (let k = 0; k < nR && ri < rares.length;  k++) pack.push(tok(rares[ri++]))    // rares middle
-    for (let k = 0; k < nU && ui < uniques.length; k++) pack.push(tok(uniques[ui++]))  // unique(s) last
+    for (let k = 0; k < nC && ci < commons.length; k++) pack.push(commons[ci++].reference) // commons first
+    for (let k = 0; k < nR && ri < rares.length;  k++) pack.push(rares[ri++].reference)    // rares middle
+    for (let k = 0; k < nU && ui < uniques.length; k++) pack.push(uniques[ui++].reference)  // unique(s) last
     packs.push(pack)
   }
   return packs

@@ -51,14 +51,18 @@ export default function CubePreviewModal({ cube, onClose }) {
       })
   }, [cube])
 
-  // For cubes that reassign cards to a faction (e.g. OOF picks), the per-entry
-  // `factions` array overrides the card's intrinsic faction in this list.
-  const parsedCards = useMemo(() => cube.refs.map((ref, i) =>
-    cube.factions?.[i] ? { ...parseRef(ref), faction: cube.factions[i] } : parseRef(ref)
-  ), [cube])
+  // Offline parse (faction from the ref string) — refined to the real mainFaction in
+  // `enriched` once card data loads, which matters for out-of-faction R2 prints.
+  const parsedCards = useMemo(() => cube.refs.map(ref => parseRef(ref)), [cube])
 
+  // Prefer the real card's faction over the ref-string parse: an out-of-faction (R2)
+  // print keeps its home-faction letters in the ref but is natively the other faction
+  // (e.g. ALT_ALIZE_B_YZ_45_R2 reads "YZ" but is an Axiom card).
   const enriched = useMemo(() =>
-    parsedCards.map(p => ({ ...p, card: cardMap[p.ref] ?? null })),
+    parsedCards.map(p => {
+      const card = cardMap[p.ref] ?? null
+      return { ...p, card, faction: card?.faction ?? p.faction }
+    }),
   [parsedCards, cardMap])
 
   const filtered = useMemo(() => {
@@ -75,7 +79,7 @@ export default function CubePreviewModal({ cube, onClose }) {
 
   // Stats — sets merged by abbreviation (CORE+COREKS → BTG)
   const factionCounts = {}, rarityCounts = { C: 0, R1: 0, R2: 0, EX: 0, U: 0 }, setCounts = {}
-  for (const c of parsedCards) {
+  for (const c of enriched) {
     factionCounts[c.faction] = (factionCounts[c.faction] ?? 0) + 1
     if (c.rarity in rarityCounts) rarityCounts[c.rarity]++
     setCounts[c.abbrev] = (setCounts[c.abbrev] ?? 0) + 1
