@@ -53,7 +53,12 @@ export default function CubePreviewModal({ cube, onClose }) {
 
   // Offline parse (faction from the ref string) — refined to the real mainFaction in
   // `enriched` once card data loads, which matters for out-of-faction R2 prints.
-  const parsedCards = useMemo(() => cube.refs.map(ref => parseRef(ref)), [cube])
+  // Recipe cubes count Exalted as a rare (it fills a rare slot in the booster).
+  const exAsRare = !!cube.booster
+  const parsedCards = useMemo(() => cube.refs.map(ref => {
+    const p = parseRef(ref)
+    return exAsRare && p.rarity === 'EX' ? { ...p, rarity: 'R1' } : p
+  }), [cube, exAsRare])
 
   // Prefer the real card's faction over the ref-string parse: an out-of-faction (R2)
   // print keeps its home-faction letters in the ref but is natively the other faction

@@ -117,13 +117,26 @@ export default function Lobby() {
           if (!cube) { setStartError('Cube not found.'); setLoading(false); return }
           const rawCodes = [...new Set(setsForCube(cube.refs))]
           const results = await Promise.all(rawCodes.map(s => fetchSet(s, lang).catch(() => [])))
-          const cubeRefSet = new Set(cube.refs)
-          const allCards = results.flat().filter(c => cubeRefSet.has(c.reference))
-          if (!allCards.length) { setStartError('Could not load cube card data.'); setLoading(false); return }
           const apiCodes = [...new Set(rawCodes.map(apiSetCode))]
           const sealedPacks = {}
-          for (let i = 0; i < playerCount; i++) {
-            sealedPacks[String(i)] = generateAllPacks(allCards, 1, SEALED_PACKS, { includeHeroes })
+          if (cube.booster) {
+            // Recipe cube (e.g. LuigiNico's): SAME fixed booster as draft. Use the
+            // multiset pool incl. uniques (which aren't in set data — fetch them).
+            const byRef = new Map(results.flat().map(c => [c.reference, c]))
+            const uniqueCards = await fetchUniques(cube.refs.filter(isUniqueRef), lang)
+            for (const c of uniqueCards) byRef.set(c.reference, c)
+            const allCards = cube.refs.map(r => byRef.get(r)).filter(Boolean)
+            if (!allCards.length) { setStartError('Could not load cube card data.'); setLoading(false); return }
+            for (let i = 0; i < playerCount; i++) {
+              sealedPacks[String(i)] = generateCubeRecipePacks(allCards, SEALED_PACKS, cube.booster)
+            }
+          } else {
+            const cubeRefSet = new Set(cube.refs)
+            const allCards = results.flat().filter(c => cubeRefSet.has(c.reference))
+            if (!allCards.length) { setStartError('Could not load cube card data.'); setLoading(false); return }
+            for (let i = 0; i < playerCount; i++) {
+              sealedPacks[String(i)] = generateAllPacks(allCards, 1, SEALED_PACKS, { includeHeroes })
+            }
           }
           const state = {
             config: { sets: apiCodes, playerCount, lang, includeHeroes, cubeId: cube.id, mode: 'sealed' },

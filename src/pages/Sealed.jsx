@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase.js'
-import { fetchSet, apiSetCode, SET_ABBREV, SET_FULL_NAMES } from '../lib/cardData.js'
+import { fetchSet, apiSetCode, SET_ABBREV, SET_FULL_NAMES, fetchUniques, isUniqueRef } from '../lib/cardData.js'
+import { COMMUNITY_CUBES } from '../lib/cubes.js'
 import { SET_ICONS, setCodeFromRef } from '../lib/assets.js'
 import { buildDecklist } from '../lib/exportFormat.js'
 import ExportButton from '../components/ExportButton.jsx'
@@ -39,6 +40,12 @@ export default function Sealed() {
           const cards = await fetchSet(s, data.state.config.lang || 'EN').catch(() => [])
           for (const c of cards) maps[c.reference] = c
         }))
+        // Cube uniques aren't in set data — pull them so the unique slot renders.
+        const cube = COMMUNITY_CUBES.find(c => c.id === data.state.config.cubeId)
+        if (cube?.refs) {
+          const uCards = await fetchUniques(cube.refs.filter(isUniqueRef), data.state.config.lang || 'EN')
+          for (const c of uCards) maps[c.reference] = c
+        }
         setCardMap(maps)
         setLoading(false)
       })
