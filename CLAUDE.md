@@ -71,5 +71,5 @@ Player identity in **localStorage** (`player_{code}`) — survives refresh. Draf
 - Mobile: `md:` breakpoint splits desktop/mobile layouts. Responsive grids `grid-cols-3 sm:4 md:5 lg:6`.
 
 ## Roadmap (remaining)
-Saved personal cubes (cube builder UI), more community cubes (just data). Waiting on assets: FUGUE logo, Exalted gem.
+See **`ROADMAP.md`** (repo root) for the full, current roadmap. Planned: import Marcus' cube (data-only), merge the Advanced + Chaos draft tabs behind a "same type of packs" toggle, automate in-app hero drafting, and a Winston 2-player draft mode.
 Dropped (do not implement): bot players, asymmetric pack distribution (superseded by Chaos), spectator mode, card flagging (built then reverted — user didn't want it).
