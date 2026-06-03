@@ -5,7 +5,7 @@ import { fetchSet, SETS, apiSetCode, fetchUniques, isUniqueRef } from '../lib/ca
 import { SET_ASSETS } from '../lib/assets.js'
 import { COMMUNITY_CUBES, setsForCube } from '../lib/cubes.js'
 import CubePreviewModal from '../components/CubePreviewModal.jsx'
-import { generateAllPacks, generatePacksFromPool, generateChaosPacks, generateCubeDraftPacks } from '../lib/packGenerator.js'
+import { generateAllPacks, generatePacksFromPool, generateChaosPacks, generateCubeDraftPacks, generateCubeRecipePacks } from '../lib/packGenerator.js'
 import { buildInitialState } from '../lib/draftLogic.js'
 import SetSelector from '../components/SetSelector.jsx'
 import ChaosSelector from '../components/ChaosSelector.jsx'
@@ -182,7 +182,9 @@ export default function Lobby() {
           for (const c of uniqueCards) byRef.set(c.reference, c)
           const allCards = cube.refs.map(r => byRef.get(r)).filter(Boolean)
           if (!allCards.length) { setStartError('Could not load cube card data.'); setLoading(false); return }
-          packs = generateCubeDraftPacks(allCards, playerCount * 4)
+          packs = cube.booster
+            ? generateCubeRecipePacks(allCards, playerCount * 4, cube.booster)
+            : generateCubeDraftPacks(allCards, playerCount * 4)
         } else {
           const cubeRefSet = new Set(cube.refs)
           const allCards = results.flat().filter(c => cubeRefSet.has(c.reference))

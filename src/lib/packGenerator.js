@@ -127,6 +127,52 @@ export function generateCubeDraftPacks(cardObjects, totalPacks) {
 }
 
 /**
+ * Cube DRAFT with a FIXED per-booster rarity recipe `{ commons, rares, uniques }`
+ * (e.g. LuigiNico's: 3 commons + 8 rares + 1 unique = 12 cards). Every pack is the
+ * same size (required by the pass rotation). Pools are drawn without replacement so
+ * the cube's intentional duplicate rares are preserved; when a pool is exhausted it
+ * is reshuffled and drawn again — so a scarce pool (the 27 commons) RECYCLES across
+ * boosters to always hit the target. A card never repeats within a single booster.
+ * Heroes are not included (drafted manually).
+ * @param {object[]} cardObjects - normalized cards, duplicates preserved
+ * @param {number} totalPacks - players × 4
+ * @param {{commons:number, rares:number, uniques:number}} recipe
+ */
+export function generateCubeRecipePacks(cardObjects, totalPacks, recipe) {
+  if (totalPacks < 1) return []
+  const { commons = 0, rares = 0, uniques = 0 } = recipe
+  const pools = {
+    C: cardObjects.filter(c => c.rarity === 'C'),
+    U: cardObjects.filter(c => c.rarity === 'U'),
+    R: cardObjects.filter(c => c.rarity !== 'C' && c.rarity !== 'U'), // R1/R2/EX
+  }
+  // Returns draw(n): n distinct-by-ref refs, popped without replacement; the bag is
+  // reshuffled from the full pool once emptied (that's how commons recycle).
+  const makeDrawer = pool => {
+    const cap = new Set(pool.map(c => c.reference)).size
+    let bag = []
+    return n => {
+      const take = Math.min(n, cap)
+      const out = [], used = new Set()
+      while (out.length < take) {
+        if (!bag.length) bag = shuffle(pool)
+        let idx = bag.findIndex(c => !used.has(c.reference))
+        if (idx === -1) { bag = shuffle(pool); idx = bag.findIndex(c => !used.has(c.reference)); if (idx === -1) break }
+        const [c] = bag.splice(idx, 1)
+        used.add(c.reference); out.push(c.reference)
+      }
+      return out
+    }
+  }
+  const drawC = makeDrawer(pools.C), drawR = makeDrawer(pools.R), drawU = makeDrawer(pools.U)
+  const packs = []
+  for (let i = 0; i < totalPacks; i++) {
+    packs.push([...drawC(commons), ...drawR(rares), ...drawU(uniques)])
+  }
+  return packs
+}
+
+/**
  * Cube mode: each card appears at most once across ALL packs, and EVERY pack is
  * the same size (critical — unequal packs deadlock the pass-and-pick rotation).
  *

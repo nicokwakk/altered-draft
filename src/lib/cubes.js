@@ -104,6 +104,10 @@ export const COMMUNITY_CUBES = [
     description: 'A 2-4 player cube spanning sets 1-5, with out-of-faction tech and unique staples. 192 cards with intentional multiples. Heroes are snake-drafted manually — the in-app panel shows the 12 heroes and the rules.',
     cardCount: 192,
     heroDraft: true,
+    // Fixed per-booster recipe (rare-heavy cube can't use classic 9C+3R). 12 cards:
+    // 3 commons + 8 rares + 1 unique. The 27 commons recycle when exhausted; rares
+    // (141) and uniques (24) cover all packs without repeating at ≤4 players.
+    booster: { commons: 3, rares: 8, uniques: 1 },
     heroes: [
       'ALT_CORE_B_AX_01_C','ALT_CYCLONE_B_AX_65_C','ALT_CYCLONE_B_BR_65_C','ALT_CORE_B_BR_03_C','ALT_CORE_B_LY_02_C','ALT_CYCLONE_B_LY_65_C',
       'ALT_DUSTER_B_MU_85_C','ALT_CORE_B_MU_01_C','ALT_DUSTER_B_OR_85_C','ALT_CORE_B_OR_03_C','ALT_CYCLONE_B_YZ_65_C','ALT_CORE_B_YZ_01_C',
