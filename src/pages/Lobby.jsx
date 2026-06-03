@@ -5,7 +5,7 @@ import { fetchSet, SETS, apiSetCode, fetchUniques, isUniqueRef } from '../lib/ca
 import { SET_ASSETS } from '../lib/assets.js'
 import { COMMUNITY_CUBES, setsForCube } from '../lib/cubes.js'
 import CubePreviewModal from '../components/CubePreviewModal.jsx'
-import { generateAllPacks, generatePacksFromPool, generateChaosPacks, generateCubeDraftPacks, generateCubeRecipePacks } from '../lib/packGenerator.js'
+import { generateAllPacks, generatePacksFromPool, generateChaosPacks, generateCubeDraftPacks, generateCubeRecipePacks, generateHeroDraftPacks } from '../lib/packGenerator.js'
 import { buildInitialState } from '../lib/draftLogic.js'
 import SetSelector from '../components/SetSelector.jsx'
 import ChaosSelector from '../components/ChaosSelector.jsx'
@@ -60,7 +60,7 @@ export default function Lobby() {
       .then(({ data, error }) => {
         if (error || !data) { navigate('/'); return }
         setRoomState(data.state)
-        if (data.state.phase === 'drafting') navigate(`/room/${code}/draft`)
+        if (data.state.phase === 'drafting' || data.state.phase === 'heroDraft') navigate(`/room/${code}/draft`)
         else if (data.state.phase === 'sealed') navigate(`/room/${code}/sealed`)
         else if (data.state.phase === 'done') navigate(`/room/${code}/results`)
       })
@@ -73,7 +73,7 @@ export default function Lobby() {
         payload => {
           const state = payload.new.state
           setRoomState(state)
-          if (state.phase === 'drafting') navigate(`/room/${code}/draft`)
+          if (state.phase === 'drafting' || state.phase === 'heroDraft') navigate(`/room/${code}/draft`)
           else if (state.phase === 'sealed') navigate(`/room/${code}/sealed`)
         })
       .subscribe()
@@ -179,16 +179,19 @@ export default function Lobby() {
       if (configTab === 'cubes' && selectedCube) {
         const cube = COMMUNITY_CUBES.find(c => c.id === selectedCube)
         if (!cube) { setStartError('Cube not found.'); setLoading(false); return }
-        if (cube.heroDraft && (playerCount < 2 || playerCount > 4)) {
-          setStartError('This cube supports 2-4 players.'); setLoading(false); return
+        const maxPlayers = cube.maxPlayers ?? 4
+        if (cube.heroDraft && (playerCount < 2 || playerCount > maxPlayers)) {
+          setStartError(`This cube supports 2-${maxPlayers} players.`); setLoading(false); return
         }
-        const setCodes = [...new Set(setsForCube(cube.refs))]
+        // Include the hero refs so their sets load too (heroes are drafted in-app).
+        const setCodes = [...new Set(setsForCube([...cube.refs, ...(cube.heroes ?? [])]))]
         const results = await Promise.all(setCodes.map(s => fetchSet(s, lang).catch(() => [])))
         const apiCodes = [...new Set(setCodes.map(apiSetCode))]
         let packs
         if (cube.heroDraft) {
           // Multi-copy cube: preserve duplicate refs (mapping each to its card object),
-          // deal equal packs. Heroes are not in the packs (drafted manually).
+          // deal equal packs. Heroes are not in these packs — they're drafted in-app
+          // first (see generateHeroDraftPacks below).
           const byRef = new Map(results.flat().map(c => [c.reference, c]))
           // Uniques aren't in set data — fetch them from the Altered API and merge.
           const uniqueCards = await fetchUniques(cube.refs.filter(isUniqueRef), lang)
@@ -204,9 +207,13 @@ export default function Lobby() {
           if (!allCards.length) { setStartError('Could not load cube card data.'); setLoading(false); return }
           packs = generateAllPacks(allCards, playerCount, 4, { includeHeroes, cubeMode: true })
         }
+        // Hero-draft cubes draft heroes in-app first: one equal booster per seat.
+        const heroPacks = cube.heroDraft && cube.heroes?.length
+          ? generateHeroDraftPacks(cube.heroes, playerCount)
+          : null
         const state = buildInitialState(
           { sets: apiCodes, playerCount, lang, cubeId: cube.id, includeHeroes, timerEnabled, timerSeconds },
-          shuffledPlayers, packs
+          shuffledPlayers, packs, heroPacks
         )
         {
           const { error: upErr } = await supabase.from('draft_rooms').update({ state }).eq('id', code)

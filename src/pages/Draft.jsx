@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase.js'
 import { fetchSet, apiSetCode, fetchUniques, isUniqueRef } from '../lib/cardData.js'
-import { applyPick } from '../lib/draftLogic.js'
+import { applyPick, applyHeroPick } from '../lib/draftLogic.js'
 import CardGrid from '../components/CardGrid.jsx'
 import DraftSidebar from '../components/DraftSidebar.jsx'
 import PlayerStatus from '../components/PlayerStatus.jsx'
@@ -10,8 +10,36 @@ import CardPreview from '../components/CardPreview.jsx'
 import PickTimer from '../components/PickTimer.jsx'
 import MobileTabBar from '../components/MobileTabBar.jsx'
 import DraftStats from '../components/DraftStats.jsx'
-import HeroDraftInfo from '../components/HeroDraftInfo.jsx'
 import { COMMUNITY_CUBES } from '../lib/cubes.js'
+
+// Compact read-only strip of the heroes you drafted, shown during the card draft.
+function MyHeroes({ heroes, cardMap }) {
+  if (!heroes?.length) return null
+  return (
+    <div className="mb-4 border border-amber-500/30 bg-amber-500/5 rounded-lg px-3 py-2">
+      <p className="text-xs font-semibold text-amber-400 mb-2">Your heroes ({heroes.length})</p>
+      <div className="flex flex-wrap gap-2">
+        {heroes.map((ref, i) => {
+          const card = cardMap?.[ref]
+          return (
+            <div key={`${ref}-${i}`} className="w-12 rounded overflow-hidden border border-gray-700 bg-gray-800 shrink-0"
+              title={card?.name ?? ref}>
+              {card?.imagePath ? (
+                <img src={card.imagePath} alt={card?.name ?? ''} loading="lazy"
+                  className="w-full aspect-[2/3] object-cover"
+                  onError={e => { e.currentTarget.style.display = 'none' }} />
+              ) : (
+                <div className="aspect-[2/3] flex items-center justify-center p-0.5 text-[8px] text-gray-500 text-center leading-tight">
+                  {card?.name ?? ref}
+                </div>
+              )}
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
 
 export default function Draft() {
   const { code } = useParams()
@@ -95,17 +123,29 @@ export default function Draft() {
     return () => supabase.removeChannel(channel)
   }, [code, navigate])
 
+  const isHeroPhase = roomState?.phase === 'heroDraft'
   const myIndex = roomState && me ? roomState.players.findIndex(p => p.id === me.id) : -1
-  const isMyTurn = myIndex !== -1 && (roomState?.waitingFor?.includes(myIndex) ?? false)
-  const myPack = (myIndex !== -1 && roomState) ? (roomState.packs[String(myIndex)] ?? []) : []
+  // During the hero-draft phase, the active pack/waiting list live on the parallel
+  // hero fields; otherwise they're the normal card-draft ones.
+  const myWaiting = isHeroPhase ? (roomState?.heroWaitingFor ?? []) : (roomState?.waitingFor ?? [])
+  const isMyTurn = myIndex !== -1 && myWaiting.includes(myIndex)
+  const myCardPack = (myIndex !== -1 && roomState) ? (roomState.packs[String(myIndex)] ?? []) : []
   const myPicks = (myIndex !== -1 && roomState) ? (roomState.picks[String(myIndex)] ?? []) : []
+  const myHeroPack = (myIndex !== -1 && roomState) ? (roomState.heroPacks?.[String(myIndex)] ?? []) : []
+  const myHeroPicks = (myIndex !== -1 && roomState) ? (roomState.heroPicks?.[String(myIndex)] ?? []) : []
+  const myPack = isHeroPhase ? myHeroPack : myCardPack
 
   const doPick = useCallback(async (ref) => {
     if (inFlightRef.current) return
     let state = stateRef.current
     if (!state || !me) return
+    // Hero-draft and card-draft picks share the same optimistic-concurrency machinery,
+    // just on different state fields. Pick the right ones based on the current phase.
+    const fields = (s) => s.phase === 'heroDraft'
+      ? { packs: 'heroPacks', waiting: 'heroWaitingFor', apply: applyHeroPick }
+      : { packs: 'packs', waiting: 'waitingFor', apply: applyPick }
     const idx0 = state.players.findIndex(p => p.id === me.id)
-    if (idx0 === -1 || !state.waitingFor?.includes(idx0)) return
+    if (idx0 === -1 || !state[fields(state).waiting]?.includes(idx0)) return
 
     inFlightRef.current = true
     setPicking(true)
@@ -114,12 +154,13 @@ export default function Draft() {
       // read. Multiple players pick from their own packs at the same time, so a
       // blind write would clobber a concurrent pick. On conflict, re-sync and retry.
       for (let attempt = 0; attempt < 12; attempt++) {
+        const f = fields(state)
         const idx = state.players.findIndex(p => p.id === me.id)
-        if (idx === -1 || !state.waitingFor?.includes(idx)) { setPicking(false); return }
-        if (!(state.packs[String(idx)] ?? []).includes(ref)) { setPicking(false); return } // card no longer available
+        if (idx === -1 || !state[f.waiting]?.includes(idx)) { setPicking(false); return }
+        if (!(state[f.packs][String(idx)] ?? []).includes(ref)) { setPicking(false); return } // card no longer available
 
         const expectedVersion = state.version ?? 0
-        const newState = applyPick(state, idx, ref)
+        const newState = f.apply(state, idx, ref)
         newState.version = expectedVersion + 1
 
         const { data, error } = await supabase
@@ -196,15 +237,20 @@ export default function Draft() {
   )
 
   const packSize = myPack.length
-  // Pick number within the round. A full pack's size isn't fixed (hero toggle,
-  // set composition), so derive it: picks made this round = fullPack - packSize,
-  // and across `round` rounds, myPicks + packSize == round * fullPack.
-  const fullPack = roomState.round ? Math.round((myPicks.length + packSize) / roomState.round) : packSize
-  const currentPickNum = Math.max(1, fullPack - packSize + 1)
-
-  // Cubes that snake-draft heroes manually show a reference panel of the hero pool + rules.
-  const activeCube = COMMUNITY_CUBES.find(c => c.id === roomState.config?.cubeId)
-  const heroDraftHeroes = activeCube?.heroDraft ? activeCube.heroes : null
+  const activePicks = isHeroPhase ? myHeroPicks : myPicks
+  // Pick number within the current phase. For heroes it's simply how many you've
+  // taken; for cards a full pack's size isn't fixed (hero toggle, set composition),
+  // so derive it: picks made this round = fullPack - packSize, and across `round`
+  // rounds, myPicks + packSize == round * fullPack.
+  let currentPickNum, totalPicks
+  if (isHeroPhase) {
+    currentPickNum = myHeroPicks.length + 1
+    totalPicks = myHeroPicks.length + myHeroPack.length // equals heroes-per-booster
+  } else {
+    const fullPack = roomState.round ? Math.round((myPicks.length + packSize) / roomState.round) : packSize
+    currentPickNum = Math.max(1, fullPack - packSize + 1)
+    totalPicks = fullPack
+  }
 
   return (
     <div className="min-h-screen flex flex-col pb-16 md:pb-0">
@@ -218,7 +264,7 @@ export default function Draft() {
       {/* Top bar */}
       <div className="bg-gray-900 border-b border-gray-800 px-4 py-2 flex items-center gap-3 shrink-0">
         <span className="font-mono text-amber-400 font-bold text-sm">{code}</span>
-        <span className="text-gray-500 text-xs">Round {roomState.round}/4</span>
+        <span className="text-gray-500 text-xs">{isHeroPhase ? 'Hero Draft' : `Round ${roomState.round}/4`}</span>
         <span className="ml-auto text-sm">
           {isMyTurn
             ? <span className="text-green-400 font-medium text-sm">Your turn</span>
@@ -227,16 +273,33 @@ export default function Draft() {
       </div>
 
       {/* Player status — compact on mobile */}
-      <PlayerStatus players={roomState.players} picks={roomState.picks} waitingFor={roomState.waitingFor} meId={me.id} />
+      <PlayerStatus players={roomState.players}
+        picks={isHeroPhase ? (roomState.heroPicks ?? {}) : roomState.picks}
+        waitingFor={isHeroPhase ? (roomState.heroWaitingFor ?? []) : roomState.waitingFor}
+        meId={me.id} />
 
       {/* Desktop: side-by-side layout */}
       <div className="hidden md:flex flex-1 overflow-hidden">
         <div className="flex-1 p-6 overflow-y-auto">
           <div className="flex items-baseline gap-3 mb-3">
-            <h2 className="font-semibold text-lg">Pack {roomState.round}</h2>
-            <span className="text-sm text-gray-500">Pick {currentPickNum}</span>
+            {isHeroPhase ? (
+              <>
+                <h2 className="font-semibold text-lg text-amber-400">Hero Draft</h2>
+                <span className="text-sm text-gray-500">Pick {currentPickNum} / {totalPicks}</span>
+              </>
+            ) : (
+              <>
+                <h2 className="font-semibold text-lg">Pack {roomState.round}</h2>
+                <span className="text-sm text-gray-500">Pick {currentPickNum}</span>
+              </>
+            )}
           </div>
-          {heroDraftHeroes && <HeroDraftInfo heroes={heroDraftHeroes} cardMap={cardMap} />}
+          {isHeroPhase && (
+            <p className="mb-3 text-sm text-gray-400">
+              Draft your heroes — pick one, the rest pass around. You'll end with {totalPicks} {totalPicks === 1 ? 'hero' : 'heroes'} to choose from when building your deck.
+            </p>
+          )}
+          {!isHeroPhase && myHeroPicks.length > 0 && <MyHeroes heroes={myHeroPicks} cardMap={cardMap} />}
           {roomState.config?.timerEnabled && roomState.pickDeadline && (
             <PickTimer deadline={roomState.pickDeadline} isMyTurn={isMyTurn} onTimeout={handleTimeout} />
           )}
@@ -248,7 +311,7 @@ export default function Draft() {
           <CardGrid packRefs={myPack} cardMap={cardMap} onPick={doPick} onHover={setHoverCard} disabled={!isMyTurn || picking} />
         </div>
         <div className="w-80 border-l border-gray-800 flex flex-col">
-          <DraftSidebar pickedRefs={myPicks} cardMap={cardMap} round={roomState.round} code={code} />
+          <DraftSidebar pickedRefs={activePicks} cardMap={cardMap} round={roomState.round} code={code} />
         </div>
       </div>
 
@@ -257,10 +320,10 @@ export default function Draft() {
         {mobileTab === 'pack' && (
           <div className="p-3">
             <div className="flex items-baseline gap-2 mb-2">
-              <h2 className="font-semibold">Pack {roomState.round}</h2>
-              <span className="text-xs text-gray-500">Pick {currentPickNum}</span>
+              <h2 className="font-semibold">{isHeroPhase ? <span className="text-amber-400">Hero Draft</span> : `Pack ${roomState.round}`}</h2>
+              <span className="text-xs text-gray-500">Pick {currentPickNum}{isHeroPhase ? ` / ${totalPicks}` : ''}</span>
             </div>
-            {heroDraftHeroes && <HeroDraftInfo heroes={heroDraftHeroes} cardMap={cardMap} />}
+            {!isHeroPhase && myHeroPicks.length > 0 && <MyHeroes heroes={myHeroPicks} cardMap={cardMap} />}
             {roomState.config?.timerEnabled && roomState.pickDeadline && (
               <PickTimer deadline={roomState.pickDeadline} isMyTurn={isMyTurn} onTimeout={handleTimeout} />
             )}
@@ -274,17 +337,17 @@ export default function Draft() {
           </div>
         )}
         {mobileTab === 'picks' && (
-          <DraftSidebar pickedRefs={myPicks} cardMap={cardMap} round={roomState.round} code={code} />
+          <DraftSidebar pickedRefs={activePicks} cardMap={cardMap} round={roomState.round} code={code} />
         )}
         {mobileTab === 'stats' && (
           <div className="p-3">
-            <DraftStats pickedRefs={myPicks} cardMap={cardMap} />
+            <DraftStats pickedRefs={activePicks} cardMap={cardMap} />
           </div>
         )}
       </div>
 
       {hoverCard && <CardPreview card={hoverCard} />}
-      <MobileTabBar tab={mobileTab} setTab={setMobileTab} pickCount={myPicks.length} />
+      <MobileTabBar tab={mobileTab} setTab={setMobileTab} pickCount={activePicks.length} />
     </div>
   )
 }

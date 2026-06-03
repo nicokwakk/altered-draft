@@ -9,7 +9,6 @@ import ExportButton from '../components/ExportButton.jsx'
 import DraftStats from '../components/DraftStats.jsx'
 import PoolGrid from '../components/PoolGrid.jsx'
 import DeckList from '../components/DeckList.jsx'
-import HeroDraftInfo from '../components/HeroDraftInfo.jsx'
 import { COMMUNITY_CUBES } from '../lib/cubes.js'
 
 export default function Results() {
@@ -67,12 +66,10 @@ export default function Results() {
   }
 
   const myIndex = roomState.players.findIndex(p => p.id === me.id)
-  const myPicks = roomState.picks[String(myIndex)] ?? []
-
-  // Cubes with a manual hero snake-draft show the hero pool + rules here too
-  // (the final hero pick happens at the end of the draft).
-  const activeCube = COMMUNITY_CUBES.find(c => c.id === roomState.config?.cubeId)
-  const heroDraftHeroes = activeCube?.heroDraft ? activeCube.heroes : null
+  // In-app hero-draft cubes seed each player's pool with the heroes they drafted
+  // (heroes first), so they show up in All Picks / deck / export like any other card.
+  const myHeroPicks = roomState.heroPicks?.[String(myIndex)] ?? []
+  const myPicks = [...myHeroPicks, ...(roomState.picks[String(myIndex)] ?? [])]
 
   const poolCounts = {}
   for (const ref of myPicks) poolCounts[ref] = (poolCounts[ref] ?? 0) + 1
@@ -140,12 +137,6 @@ export default function Results() {
         ))}
       </div>
 
-      {heroDraftHeroes && (
-        <div className="px-4 pt-3 shrink-0">
-          <HeroDraftInfo heroes={heroDraftHeroes} cardMap={cardMap} />
-        </div>
-      )}
-
       {/* ALL PICKS — shared PoolGrid with filter/sort/hover/+- */}
       {tab === 'picks' && (
         <PoolGrid refs={myPicks} cardMap={cardMap} deck={deck} poolCounts={poolCounts}
@@ -192,7 +183,7 @@ export default function Results() {
         <div className="flex-1 overflow-y-auto p-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-3xl mx-auto">
             {roomState.players.map((player, i) => {
-              const picks = roomState.picks[String(i)] ?? []
+              const picks = [...(roomState.heroPicks?.[String(i)] ?? []), ...(roomState.picks[String(i)] ?? [])]
               const factionCounts = {}
               for (const ref of picks) {
                 const card = cardMap[ref]

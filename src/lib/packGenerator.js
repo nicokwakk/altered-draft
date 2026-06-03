@@ -15,6 +15,30 @@ function pickRandom(pool) {
 }
 
 /**
+ * Hero draft for cubes that draft their heroes in-app. Partition the hero pool
+ * into ONE equal booster per player (disjoint, no duplicates) and let them rotate
+ * like card packs. If the hero count isn't divisible by the player count, the
+ * remainder is dropped at random (pool is shuffled first) so every booster is the
+ * same size — e.g. 12 heroes, 5 players → drop 2 → five boosters of 2; 4 players →
+ * four of 3; 2 players → two of 6. Each player ends with `floor(heroes/players)`.
+ * @param {string[]} heroRefs
+ * @param {number} playerCount
+ * @returns {string[][]} one hero booster per seat (length === playerCount), or [] if too few heroes
+ */
+export function generateHeroDraftPacks(heroRefs, playerCount) {
+  if (playerCount < 1 || !heroRefs?.length) return []
+  const shuffled = shuffle(heroRefs)
+  const perBooster = Math.floor(shuffled.length / playerCount)
+  if (perBooster < 1) return [] // fewer heroes than players — can't give everyone one
+  const used = shuffled.slice(0, perBooster * playerCount) // drop the random remainder
+  const packs = []
+  for (let i = 0; i < playerCount; i++) {
+    packs.push(used.slice(i * perBooster, (i + 1) * perBooster))
+  }
+  return packs
+}
+
+/**
  * Generate all packs for a draft session.
  * @param {object[]} allCards - normalized card objects from fetchSet
  * @param {number} playerCount
