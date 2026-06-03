@@ -45,6 +45,10 @@ export default function Results() {
           if (cube?.refs) {
             const uCards = await fetchUniques(cube.refs.filter(isUniqueRef), data.state.config.lang || 'EN')
             for (const c of uCards) maps[c.reference] = c
+            // Relabel cube-reassigned cards (clone to avoid mutating the cache).
+            if (cube.factions) cube.refs.forEach((r, i) => {
+              if (maps[r]) maps[r] = { ...maps[r], faction: cube.factions[i] }
+            })
           }
           setCardMap(maps)
         }

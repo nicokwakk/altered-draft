@@ -93,13 +93,34 @@ export function generateChaosPacks(cardsBySet, packMix, options = {}) {
  */
 export function generateCubeDraftPacks(cardObjects, totalPacks) {
   if (totalPacks < 1) return []
-  const body = shuffle(cardObjects)
-  const perPack = Math.min(13, Math.floor(body.length / totalPacks))
+  const commons = shuffle(cardObjects.filter(c => c.rarity === 'C'))
+  const uniques = shuffle(cardObjects.filter(c => c.rarity === 'U'))
+  const rares   = shuffle(cardObjects.filter(c => c.rarity !== 'C' && c.rarity !== 'U')) // R1/R2/EX
+
+  const perPack = Math.min(13, Math.floor(cardObjects.length / totalPacks))
+  const totalSlots = perPack * totalPacks
+
+  // Spread `count` items as evenly as possible across the packs (capped at `cap`).
+  const spread = (count, cap) => {
+    const use = Math.min(count, cap)
+    const base = Math.floor(use / totalPacks), extra = use % totalPacks
+    return Array.from({ length: totalPacks }, (_, i) => base + (i < extra ? 1 : 0))
+  }
+  // 1 (or more) unique per pack at the end, commons toward the front, rares fill
+  // the middle. Counts are derived so every pack is exactly `perPack` cards (unequal
+  // packs deadlock the pass rotation) and the rare pool always covers the remainder.
+  const uCount = spread(uniques.length, totalSlots)
+  const usedU = uCount.reduce((a, b) => a + b, 0)
+  const cCount = spread(commons.length, totalSlots - usedU)
+
+  let ci = 0, ri = 0, ui = 0
   const packs = []
-  let b = 0
   for (let i = 0; i < totalPacks; i++) {
+    const nC = cCount[i], nU = uCount[i], nR = perPack - nC - nU
     const pack = []
-    for (let s = 0; s < perPack; s++) pack.push(body[b++].reference)
+    for (let k = 0; k < nC && ci < commons.length; k++) pack.push(commons[ci++].reference) // commons first
+    for (let k = 0; k < nR && ri < rares.length;  k++) pack.push(rares[ri++].reference)    // rares middle
+    for (let k = 0; k < nU && ui < uniques.length; k++) pack.push(uniques[ui++].reference)  // unique(s) last
     packs.push(pack)
   }
   return packs

@@ -70,6 +70,11 @@ export default function Draft() {
           if (cube?.refs) {
             const uCards = await fetchUniques(cube.refs.filter(isUniqueRef), state.config.lang || 'EN')
             for (const c of uCards) maps[c.reference] = c
+            // Cube reassigns some cards to a faction (OOF picks) — relabel for display.
+            // Clone so the shared fetchSet cache isn't mutated.
+            if (cube.factions) cube.refs.forEach((r, i) => {
+              if (maps[r]) maps[r] = { ...maps[r], faction: cube.factions[i] }
+            })
           }
           setCardMap(maps)
         }
