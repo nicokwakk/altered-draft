@@ -1,3 +1,5 @@
+import { UNIQUES_EN } from './uniquesData.js'
+
 const BASE_URL = 'https://raw.githubusercontent.com/PolluxTroy0/Altered-TCG-Card-Database/main/SETS'
 
 const cache = {}
@@ -34,17 +36,32 @@ export function isUniqueRef(ref) {
 const LOCALE = { EN: 'en-us', FR: 'fr-fr', ES: 'es-es', DE: 'de-de', IT: 'it-it' }
 const uniqueCache = {}
 
-// Unique cards (…_U_<serial>) don't exist in the community set files, so fetch
-// them one-by-one from Altered's own API (CORS-open) and normalize like set cards.
+// Unique cards (…_U_<serial>) don't exist in the community set files. The 24 cube
+// uniques are bundled locally (data in uniquesData.js, images in /public/uniques) so
+// the cube keeps working after Altered's API is retired. We serve the bundled EN copy
+// first; any other unique (or non-EN locale) still fetches live from the API while it's
+// up, then falls back to the bundled EN snapshot if the request fails.
 export async function fetchUnique(reference, lang = 'EN') {
   const key = `${reference}_${lang}`
   if (uniqueCache[key]) return uniqueCache[key]
+  const snapshot = UNIQUES_EN[reference]
+  // EN: prefer the bundled snapshot (no network — future-proof).
+  if (snapshot && lang === 'EN') {
+    uniqueCache[key] = snapshot
+    return snapshot
+  }
   const locale = LOCALE[lang] ?? 'en-us'
-  const res = await fetch(`https://api.altered.gg/cards/${reference}?locale=${locale}`, { headers: { Accept: 'application/json' } })
-  if (!res.ok) throw new Error(`Failed to fetch unique ${reference}: ${res.status}`)
-  const card = normalizeCard(await res.json())
-  uniqueCache[key] = card
-  return card
+  try {
+    const res = await fetch(`https://api.altered.gg/cards/${reference}?locale=${locale}`, { headers: { Accept: 'application/json' } })
+    if (!res.ok) throw new Error(`Failed to fetch unique ${reference}: ${res.status}`)
+    const card = normalizeCard(await res.json())
+    uniqueCache[key] = card
+    return card
+  } catch (err) {
+    // API down / not found → fall back to the bundled EN snapshot if we have one.
+    if (snapshot) { uniqueCache[key] = snapshot; return snapshot }
+    throw err
+  }
 }
 
 // Fetch many uniques; failures are skipped (the card simply won't appear).
