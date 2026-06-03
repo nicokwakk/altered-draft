@@ -71,5 +71,5 @@ Player identity in **localStorage** (`player_{code}`) — survives refresh. Draf
 - Mobile: `md:` breakpoint splits desktop/mobile layouts. Responsive grids `grid-cols-3 sm:4 md:5 lg:6`.
 
 ## Roadmap (remaining)
-See **`ROADMAP.md`** (repo root) for the full, current roadmap. Planned: import Marcus' cube (data-only), merge the Advanced + Chaos draft tabs behind a "same type of packs" toggle, automate in-app hero drafting, and a Winston 2-player draft mode.
-Dropped (do not implement): bot players, asymmetric pack distribution (superseded by Chaos), spectator mode, card flagging (built then reverted — user didn't want it).
+See **`ROADMAP.md`** (repo root) for the full, current roadmap. Planned: import Marcus' cube (data-only); **personal cubes via pasted decklist — NO accounts** (carry the cube inline in room state, not a `cubeId`); automate in-app hero drafting (12-hero cubes: partition the 12 heroes into X equal boosters, X=players, 12/X each, rotation-draft like cards → each player gets 12/X; replaces the manual `HeroDraftInfo` panel); merge the Advanced + Chaos draft tabs behind a "same type of packs" toggle; and a Winston 2-player draft mode.
+Dropped (do not implement): **accounts/logins of any kind** (personal cubes are paste-based), bot players, asymmetric pack distribution (superseded by Chaos), spectator mode, card flagging (built then reverted — user didn't want it).
