@@ -3,9 +3,11 @@
 Multiplayer booster-draft + sealed simulator for the Altered TCG. React (Vite) + Tailwind + Supabase Realtime. No backend. Deployed on Vercel at https://altered-draft.vercel.app
 
 ## Environment / workflow
-- Node is NOT on PATH; cannot run `npm`/build locally. Verify changes by reasoning + pushing to Vercel (auto-deploys on push to `main`).
-- Use **PowerShell** tool for git (bash has no `npm`). `git push 2>&1` prints to stderr and shows a red error wrapper even on success — that's normal, check the last line for `main -> main`.
-- Commit + push after each change so Vercel redeploys. Repo: github.com/nicokwakk/altered-draft. Commit author already configured.
+- Developed on **both Windows and macOS** — check which you're on first.
+  - **macOS:** bash; Node available (`/opt/homebrew/bin/node`). On a fresh checkout `node_modules` may be absent — run `npm install` once, then verify with `npm run build` (vite) before pushing.
+  - **Windows:** use the **PowerShell** tool for git. Node may NOT be on PATH there — if `npm`/build is unavailable, verify by reasoning and rely on the Vercel deploy.
+- `git push 2>&1` may print to stderr / show a red wrapper even on success — that's normal, check the last line for `main -> main`.
+- Commit + push after each change so Vercel auto-deploys (push to `main`). Repo: github.com/nicokwakk/altered-draft. Commit author already configured.
 - GitHub blocks pushes exposing the private email — user's noreply email is already set in repo config.
 
 ## Card data
