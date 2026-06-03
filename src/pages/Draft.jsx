@@ -300,7 +300,7 @@ export default function Draft() {
           </div>
           {isHeroPhase && (
             <p className="mb-3 text-sm text-gray-400">
-              Heroes are drafted last, one at a time. On your turn, take a hero from the shared booster — you'll end up with {heroesPerPlayer} to choose from, and no two come from the same booster.
+              Heroes are drafted between packs, one at a time. On your turn, take a hero from the shared booster — {heroesPerPlayer} in total, no two from the same booster.
             </p>
           )}
           {isHeroPhase && myHeroPicks.length > 0 && <MyHeroes heroes={myHeroPicks} cardMap={cardMap} label="Heroes you've taken" />}

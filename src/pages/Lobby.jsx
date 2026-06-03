@@ -207,14 +207,16 @@ export default function Lobby() {
           if (!allCards.length) { setStartError('Could not load cube card data.'); setLoading(false); return }
           packs = generateAllPacks(allCards, playerCount, 4, { includeHeroes, cubeMode: true })
         }
-        // Hero-draft cubes draft heroes in-app AFTER the card draft: N shared boosters
-        // (each sized to the table), drafted turn-based. min(3, …) heroes per player.
-        const heroBoosters = cube.heroDraft && cube.heroes?.length
+        // Hero-draft cubes draft heroes in-app, turn-based, interleaved between card
+        // rounds per cube.heroRules.schedule (e.g. 1 after round 1, the rest after
+        // round 2). N shared boosters sized to the table; min(3, …) heroes per player.
+        const boosters = cube.heroDraft && cube.heroes?.length
           ? generateHeroDraftPacks(cube.heroes, playerCount)
           : null
+        const heroDraft = boosters ? { boosters, schedule: cube.heroRules?.schedule } : null
         const state = buildInitialState(
           { sets: apiCodes, playerCount, lang, cubeId: cube.id, includeHeroes, timerEnabled, timerSeconds },
-          shuffledPlayers, packs, heroBoosters
+          shuffledPlayers, packs, heroDraft
         )
         {
           const { error: upErr } = await supabase.from('draft_rooms').update({ state }).eq('id', code)

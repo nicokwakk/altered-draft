@@ -101,10 +101,13 @@ export const COMMUNITY_CUBES = [
     id: 'luiginico-cube-v2',
     name: "LuigiNico's Cube",
     author: 'LuigiNico',
-    description: 'A 2-4 player cube spanning sets 1-5 — Axiom / Bravos / Lyra / Muna only, with out-of-faction tech. Its 192 cards (27 commons, 141 rares, 24 uniques) make exactly 4 packs per player at a full table of 4. Heroes are drafted in-app after the cards: players take turns picking from shared hero boosters and end with 3 heroes each, never two from the same booster.',
+    description: 'A 2-4 player cube spanning sets 1-5 — Axiom / Bravos / Lyra / Muna only, with out-of-faction tech. Its 192 cards (27 commons, 141 rares, 24 uniques) make exactly 4 packs per player at a full table of 4. Heroes are drafted in-app between packs (1 after round 1, the rest after round 2): players take turns picking from shared hero boosters, 3 heroes each, never two from the same booster.',
     cardCount: 192,
     heroDraft: true,
     maxPlayers: 4,
+    // When to draft heroes, relative to the card rounds: 1 hero after round 1, the
+    // rest after round 2. (Each "booster" = 1 hero per player; total = min(3, …).)
+    heroRules: { schedule: [{ afterRound: 1, boosters: 1 }, { afterRound: 2, boosters: 'rest' }] },
     // Fixed per-booster recipe (rare-heavy cube can't use classic 9C+3R). 12 cards:
     // 3 commons + 8 rares + 1 unique. The 27 commons recycle when exhausted; rares
     // (141) and uniques (24) cover all packs without repeating at ≤4 players.
