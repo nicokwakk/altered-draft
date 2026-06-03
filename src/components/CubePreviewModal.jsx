@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from 'react'
 import { createPortal } from 'react-dom'
-import { FACTIONS, FACTION_NAMES, FACTION_COLORS, SET_ABBREV, SET_FULL_NAMES, SET_ABBREV_ICON_CODE, fetchSet, apiSetCode } from '../lib/cardData.js'
+import { FACTIONS, FACTION_NAMES, FACTION_COLORS, SET_ABBREV, SET_FULL_NAMES, SET_ABBREV_ICON_CODE, fetchSet, apiSetCode, fetchUniques, isUniqueRef } from '../lib/cardData.js'
 import { FACTION_ICONS, RARITY_GEMS, SET_ICONS } from '../lib/assets.js'
 import { setsForCube } from '../lib/cubes.js'
 
@@ -10,6 +10,7 @@ function parseRef(ref) {
   const knownFactions = new Set(['AX', 'BR', 'LY', 'MU', 'OR', 'YZ'])
   const rawSet = parts[1] === 'CORE' && parts[2] === 'KS' ? 'COREKS' : parts[1]
   const abbrev = SET_ABBREV[rawSet] ?? rawSet  // CORE/COREKS → BTG etc.
+  const uniq = isUniqueRef(ref)  // ALT_..._U_<serial>
   let faction = '??', rarity = 'C'
   for (let i = 2; i < parts.length; i++) {
     if (knownFactions.has(parts[i])) {
@@ -18,7 +19,8 @@ function parseRef(ref) {
       break
     }
   }
-  if (rarity === 'E') rarity = 'EX'
+  if (uniq) rarity = 'U'
+  else if (rarity === 'E') rarity = 'EX'
   return { set: rawSet, abbrev, faction, rarity, ref }
 }
 
@@ -37,17 +39,23 @@ export default function CubePreviewModal({ cube, onClose }) {
   useEffect(() => {
     const setCodes = [...new Set(setsForCube(cube.refs).map(apiSetCode))]
     Promise.all(setCodes.map(s => fetchSet(s, 'EN').catch(() => [])))
-      .then(results => {
+      .then(async results => {
         const map = {}
         for (const cards of results) {
           for (const c of cards) map[c.reference] = c
         }
+        const uCards = await fetchUniques(cube.refs.filter(isUniqueRef), 'EN')
+        for (const c of uCards) map[c.reference] = c
         setCardMap(map)
         setLoadingCards(false)
       })
   }, [cube])
 
-  const parsedCards = useMemo(() => cube.refs.map(parseRef), [cube])
+  // For cubes that reassign cards to a faction (e.g. OOF picks), the per-entry
+  // `factions` array overrides the card's intrinsic faction in this list.
+  const parsedCards = useMemo(() => cube.refs.map((ref, i) =>
+    cube.factions?.[i] ? { ...parseRef(ref), faction: cube.factions[i] } : parseRef(ref)
+  ), [cube])
 
   const enriched = useMemo(() =>
     parsedCards.map(p => ({ ...p, card: cardMap[p.ref] ?? null })),
