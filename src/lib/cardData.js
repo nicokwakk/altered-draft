@@ -27,6 +27,35 @@ function isStandardPrinting(card) {
   return (card.reference.split('_')[2] === 'B')
 }
 
+export function isUniqueRef(ref) {
+  return /_U_\d+$/.test(ref ?? '')
+}
+
+const LOCALE = { EN: 'en-us', FR: 'fr-fr', ES: 'es-es', DE: 'de-de', IT: 'it-it' }
+const uniqueCache = {}
+
+// Unique cards (…_U_<serial>) don't exist in the community set files, so fetch
+// them one-by-one from Altered's own API (CORS-open) and normalize like set cards.
+export async function fetchUnique(reference, lang = 'EN') {
+  const key = `${reference}_${lang}`
+  if (uniqueCache[key]) return uniqueCache[key]
+  const locale = LOCALE[lang] ?? 'en-us'
+  const res = await fetch(`https://api.altered.gg/cards/${reference}?locale=${locale}`, { headers: { Accept: 'application/json' } })
+  if (!res.ok) throw new Error(`Failed to fetch unique ${reference}: ${res.status}`)
+  const card = normalizeCard(await res.json())
+  uniqueCache[key] = card
+  return card
+}
+
+// Fetch many uniques; failures are skipped (the card simply won't appear).
+export async function fetchUniques(references, lang = 'EN') {
+  const out = []
+  await Promise.all([...new Set(references)].map(async r => {
+    try { out.push(await fetchUnique(r, lang)) } catch { /* skip */ }
+  }))
+  return out
+}
+
 // Strip #...# formatting markers used in Altered card text fields
 function stripMarkers(val) {
   if (val == null) return null

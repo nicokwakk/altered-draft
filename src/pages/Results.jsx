@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase.js'
-import { fetchSet, apiSetCode } from '../lib/cardData.js'
+import { fetchSet, apiSetCode, fetchUniques, isUniqueRef } from '../lib/cardData.js'
 import { buildDecklist } from '../lib/exportFormat.js'
 import { FACTIONS, FACTION_NAMES, FACTION_COLORS } from '../lib/cardData.js'
 import { FACTION_ICONS } from '../lib/assets.js'
@@ -41,6 +41,11 @@ export default function Results() {
             const cards = await fetchSet(s, data.state.config.lang || 'EN').catch(() => [])
             for (const c of cards) maps[c.reference] = c
           }))
+          const cube = COMMUNITY_CUBES.find(c => c.id === data.state.config.cubeId)
+          if (cube?.refs) {
+            const uCards = await fetchUniques(cube.refs.filter(isUniqueRef), data.state.config.lang || 'EN')
+            for (const c of uCards) maps[c.reference] = c
+          }
           setCardMap(maps)
         }
       })

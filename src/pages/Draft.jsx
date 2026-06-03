@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase.js'
-import { fetchSet, apiSetCode } from '../lib/cardData.js'
+import { fetchSet, apiSetCode, fetchUniques, isUniqueRef } from '../lib/cardData.js'
 import { applyPick } from '../lib/draftLogic.js'
 import CardGrid from '../components/CardGrid.jsx'
 import DraftSidebar from '../components/DraftSidebar.jsx'
@@ -65,6 +65,12 @@ export default function Draft() {
             } catch (e) { errors.push(`${s}: ${e.message}`) }
           }))
           if (errors.length) setFetchErrors(errors)
+          // Cube uniques aren't in set data — pull them from the Altered API.
+          const cube = COMMUNITY_CUBES.find(c => c.id === state.config.cubeId)
+          if (cube?.refs) {
+            const uCards = await fetchUniques(cube.refs.filter(isUniqueRef), state.config.lang || 'EN')
+            for (const c of uCards) maps[c.reference] = c
+          }
           setCardMap(maps)
         }
       })

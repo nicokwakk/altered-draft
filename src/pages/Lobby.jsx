@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase.js'
-import { fetchSet, SETS, apiSetCode } from '../lib/cardData.js'
+import { fetchSet, SETS, apiSetCode, fetchUniques, isUniqueRef } from '../lib/cardData.js'
 import { SET_ASSETS } from '../lib/assets.js'
 import { COMMUNITY_CUBES, setsForCube } from '../lib/cubes.js'
 import CubePreviewModal from '../components/CubePreviewModal.jsx'
@@ -177,6 +177,9 @@ export default function Lobby() {
           // Multi-copy cube: preserve duplicate refs (mapping each to its card object),
           // deal equal packs. Heroes are not in the packs (drafted manually).
           const byRef = new Map(results.flat().map(c => [c.reference, c]))
+          // Uniques aren't in set data — fetch them from the Altered API and merge.
+          const uniqueCards = await fetchUniques(cube.refs.filter(isUniqueRef), lang)
+          for (const c of uniqueCards) byRef.set(c.reference, c)
           const allCards = cube.refs.map(r => byRef.get(r)).filter(Boolean)
           if (!allCards.length) { setStartError('Could not load cube card data.'); setLoading(false); return }
           packs = generateCubeDraftPacks(allCards, playerCount * 4)
