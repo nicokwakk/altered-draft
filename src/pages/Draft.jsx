@@ -70,10 +70,12 @@ export default function Draft() {
           if (cube?.refs) {
             const uCards = await fetchUniques(cube.refs.filter(isUniqueRef), state.config.lang || 'EN')
             for (const c of uCards) maps[c.reference] = c
-            // Cube reassigns some cards to a faction (OOF picks) — relabel for display.
-            // Clone so the shared fetchSet cache isn't mutated.
+            // The cube reassigns cards to faction columns, and a card may sit in TWO
+            // columns at once. Packs deal each copy as a faction-tagged token
+            // ("<ref>@<FACTION>"); add a cardMap entry per token carrying that faction
+            // (real art/name/cost preserved). Base-ref entries stay for hero lookups.
             if (cube.factions) cube.refs.forEach((r, i) => {
-              if (maps[r]) maps[r] = { ...maps[r], faction: cube.factions[i] }
+              if (maps[r]) maps[`${r}@${cube.factions[i]}`] = { ...maps[r], faction: cube.factions[i] }
             })
           }
           setCardMap(maps)

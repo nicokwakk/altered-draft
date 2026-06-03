@@ -33,6 +33,16 @@ export function isUniqueRef(ref) {
   return /_U_\d+$/.test(ref ?? '')
 }
 
+// A dealt card "token" is normally just its reference, but the multi-copy cube draft
+// tags each copy with the faction column it was placed in: "<ref>@<FACTION>". This lets
+// the same card appear in two faction columns at once. Strip the tag to get the real ref
+// (for set/rarity parsing, decklist export, and looking up the canonical card data).
+export function cardBaseRef(token) {
+  if (!token) return token
+  const at = token.indexOf('@')
+  return at === -1 ? token : token.slice(0, at)
+}
+
 const LOCALE = { EN: 'en-us', FR: 'fr-fr', ES: 'es-es', DE: 'de-de', IT: 'it-it' }
 const uniqueCache = {}
 
