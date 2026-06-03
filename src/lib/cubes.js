@@ -101,7 +101,7 @@ export const COMMUNITY_CUBES = [
     id: 'luiginico-cube-v2',
     name: "LuigiNico's Cube",
     author: 'LuigiNico',
-    description: 'A 2-6 player cube spanning sets 1-5, Axiom / Bravos / Lyra / Muna only (with out-of-faction tech). Rare-heavy: of its 192 cards, 27 are commons, 141 rares and 24 uniques. Heroes are drafted in-app first: the 12 heroes split into one equal booster per player, drafted like cards.',
+    description: 'A 2-6 player cube spanning sets 1-5 — Axiom / Bravos / Lyra / Muna only, with out-of-faction tech. Rare-heavy: of its 192 cards, 27 are commons, 141 rares and 24 uniques. Heroes are drafted in-app before the cards: the 12 heroes split into one equal booster per player and are drafted like cards (extras dropped when 12 doesn\'t divide evenly), so everyone ends with the same number of heroes to build from.',
     cardCount: 192,
     heroDraft: true,
     maxPlayers: 6,
