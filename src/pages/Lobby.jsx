@@ -205,8 +205,7 @@ export default function Lobby() {
           packs = generateAllPacks(allCards, playerCount, 4, { includeHeroes, cubeMode: true })
         }
         const state = buildInitialState(
-          // Cubes never use the pick timer.
-          { sets: apiCodes, playerCount, lang, cubeId: cube.id, includeHeroes, timerEnabled: false },
+          { sets: apiCodes, playerCount, lang, cubeId: cube.id, includeHeroes, timerEnabled, timerSeconds },
           shuffledPlayers, packs
         )
         {
@@ -516,8 +515,8 @@ export default function Lobby() {
                   </label>
                 </div>
 
-                {/* Pick timer — not offered for cubes */}
-                {configTab !== 'cubes' && (
+                {/* Pick timer — draft only (sealed has no pick passing) */}
+                {draftMode === 'draft' && (
                   <div className="space-y-2">
                     <div className="flex items-center gap-3">
                       <input type="checkbox" id="timer-enabled" checked={timerEnabled}
