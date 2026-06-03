@@ -205,7 +205,8 @@ export default function Lobby() {
           packs = generateAllPacks(allCards, playerCount, 4, { includeHeroes, cubeMode: true })
         }
         const state = buildInitialState(
-          { sets: apiCodes, playerCount, lang, cubeId: cube.id, includeHeroes, timerEnabled, timerSeconds },
+          // Cubes never use the pick timer.
+          { sets: apiCodes, playerCount, lang, cubeId: cube.id, includeHeroes, timerEnabled: false },
           shuffledPlayers, packs
         )
         {
@@ -515,31 +516,34 @@ export default function Lobby() {
                   </label>
                 </div>
 
-                <div className="space-y-2">
-                  <div className="flex items-center gap-3">
-                    <input type="checkbox" id="timer-enabled" checked={timerEnabled}
-                      onChange={e => setTimerEnabled(e.target.checked)}
-                      className="accent-amber-500 w-4 h-4" />
-                    <label htmlFor="timer-enabled" className="text-sm text-gray-300 cursor-pointer">
-                      Pick timer
-                    </label>
-                  </div>
-                  {timerEnabled && (
-                    <div className="flex items-center gap-3 pl-7">
-                      <span className="text-sm text-gray-400">Time per pick:</span>
-                      <div className="flex gap-2">
-                        {[30, 60, 90, 120].map(s => (
-                          <button key={s} onClick={() => setTimerSeconds(s)}
-                            className={`px-2.5 py-1 rounded text-sm transition-colors ${timerSeconds === s
-                              ? 'bg-amber-500 text-gray-950 font-bold'
-                              : 'bg-gray-800 hover:bg-gray-700 text-gray-300'}`}>
-                            {s}s
-                          </button>
-                        ))}
-                      </div>
+                {/* Pick timer — not offered for cubes */}
+                {configTab !== 'cubes' && (
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-3">
+                      <input type="checkbox" id="timer-enabled" checked={timerEnabled}
+                        onChange={e => setTimerEnabled(e.target.checked)}
+                        className="accent-amber-500 w-4 h-4" />
+                      <label htmlFor="timer-enabled" className="text-sm text-gray-300 cursor-pointer">
+                        Pick timer
+                      </label>
                     </div>
-                  )}
-                </div>
+                    {timerEnabled && (
+                      <div className="flex items-center gap-3 pl-7">
+                        <span className="text-sm text-gray-400">Time per pick:</span>
+                        <div className="flex gap-2">
+                          {[30, 60, 90, 120].map(s => (
+                            <button key={s} onClick={() => setTimerSeconds(s)}
+                              className={`px-2.5 py-1 rounded text-sm transition-colors ${timerSeconds === s
+                                ? 'bg-amber-500 text-gray-950 font-bold'
+                                : 'bg-gray-800 hover:bg-gray-700 text-gray-300'}`}>
+                              {s}s
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
 
               {startError && <p className="text-red-400 text-sm">{startError}</p>}

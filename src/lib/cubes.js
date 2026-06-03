@@ -101,7 +101,7 @@ export const COMMUNITY_CUBES = [
     id: 'luiginico-cube-v2',
     name: "LuigiNico's Cube",
     author: 'LuigiNico',
-    description: 'A 2-4 player cube spanning sets 1-5, Axiom / Bravos / Lyra / Muna only (with out-of-faction tech). Rare-heavy: of its 192 cards, 27 are commons, 141 rares (incl. 1 exalted) and 24 uniques. Heroes are snake-drafted manually — the in-app panel shows the 12 heroes and the rules.',
+    description: 'A 2-4 player cube spanning sets 1-5, Axiom / Bravos / Lyra / Muna only (with out-of-faction tech). Rare-heavy: of its 192 cards, 27 are commons, 141 rares and 24 uniques. Heroes are snake-drafted manually — the in-app panel shows the 12 heroes and the rules.',
     cardCount: 192,
     heroDraft: true,
     // Fixed per-booster recipe (rare-heavy cube can't use classic 9C+3R). 12 cards:
