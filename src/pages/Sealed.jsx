@@ -78,8 +78,15 @@ export default function Sealed() {
   const currentPack = myPacks[packIndex] ?? []
   const allDecklist = buildDecklist(allRefs, cardMap)
 
-  // Each sealed booster is single-set — label it from its cards.
+  // Cube sealed boosters are multiset (cards span every set in the cube), so a
+  // per-set label is misleading — show the cube name instead.
+  const cube = COMMUNITY_CUBES.find(c => c.id === roomState.config.cubeId)
+  const cubeName = cube?.name ?? roomState.config.customCube?.name ?? null
+  const isCube = !!cubeName
+
+  // Each sealed booster is single-set — label it from its cards (cubes excepted).
   function packSet(pack) {
+    if (isCube) return { name: cubeName, icon: null }
     const raw = pack?.length ? setCodeFromRef(pack[0]) : null
     if (!raw) return { name: null, icon: null }
     const abbrev = SET_ABBREV[raw] ?? raw
@@ -177,7 +184,7 @@ export default function Sealed() {
               {currentSet.name && (
                 <span className="text-gray-400 font-normal">
                   · {currentSet.name}
-                  <span className="text-gray-500"> {setOrdinal}/{setTotal}</span>
+                  {!isCube && <span className="text-gray-500"> {setOrdinal}/{setTotal}</span>}
                 </span>
               )}
             </h2>
