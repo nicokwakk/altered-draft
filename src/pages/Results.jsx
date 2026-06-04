@@ -122,7 +122,7 @@ export default function Results() {
       {/* Tabs */}
       <div className="bg-gray-900 border-b border-gray-800 flex shrink-0">
         {[
-          { id: 'picks',   label: `All Picks (${new Set(myPicks).size})` },
+          { id: 'picks',   label: `All Picks (${myPicks.length})` },
           { id: 'deck',    label: `Deck (${deckTotal})`, highlight: isValid },
           { id: 'stats',   label: 'Stats' },
           { id: 'players', label: 'Players' },
