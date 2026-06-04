@@ -249,15 +249,19 @@ export default function Lobby() {
       }
 
       // Multi-Set draft — single-set boosters. The "same packs" toggle picks the
-      // distribution: ON = every player drafts the same single-set boosters (one set
-      // per round); OFF = counts × players go into a bag, shuffled and dealt at random.
+      // distribution: ON  = per-player counts (sum 4); every player drafts the same
+      // single-set boosters (one set per round). OFF = the WHOLE bag (sum players × 4),
+      // shuffled and dealt at random.
       if (configTab === 'multiset') {
         const mix = Object.fromEntries(Object.entries(multiSetMix).filter(([, n]) => n > 0))
         const setCodes = Object.keys(mix)
         if (!setCodes.length) { setStartError('Select at least one set.'); setLoading(false); return }
         const total = Object.values(mix).reduce((a, b) => a + b, 0)
-        if (total !== 4) {
-          setStartError(`Each player drafts exactly 4 packs — you have ${total}.`)
+        const target = equalPacks ? 4 : playerCount * 4
+        if (total !== target) {
+          setStartError(equalPacks
+            ? `Each player drafts exactly 4 packs — you have ${total}.`
+            : `The bag needs exactly ${target} boosters (${playerCount} players × 4) — you have ${total}.`)
           setLoading(false); return
         }
         const fetched = await Promise.all(setCodes.map(async s => [s, await fetchSet(s, lang).catch(() => [])]))
@@ -265,11 +269,7 @@ export default function Lobby() {
         if (!Object.values(cardsBySet).some(c => c.length)) { setStartError('No cards loaded. Check set selection.'); setLoading(false); return }
         const packs = equalPacks
           ? generateStructuredPacks(cardsBySet, mix, playerCount, { includeHeroes })
-          : generateChaosPacks(
-              cardsBySet,
-              Object.fromEntries(setCodes.map(s => [s, mix[s] * playerCount])),
-              { includeHeroes }
-            )
+          : generateChaosPacks(cardsBySet, mix, { includeHeroes })
         const apiCodes = [...new Set(setCodes.map(apiSetCode))]
         const state = buildInitialState(
           { sets: apiCodes, playerCount, lang, includeHeroes, timerEnabled, timerSeconds, multiSetMix: mix, equalPacks },
@@ -510,7 +510,7 @@ export default function Lobby() {
                     onChange={setMultiSetMix}
                     equalPacks={equalPacks}
                     onEqualChange={setEqualPacks}
-                    target={4}
+                    target={equalPacks ? 4 : roomState.players.length * 4}
                     disabled={loading}
                   />
 
@@ -602,7 +602,7 @@ export default function Lobby() {
                 || (configTab === 'presets' && draftMode === 'draft' && !selectedPreset)
                 || (configTab === 'presets' && draftMode === 'sealed' && !selectedPreset)
                 || (configTab === 'cubes' && !selectedCube)
-                || (configTab === 'multiset' && Object.values(multiSetMix).reduce((a, b) => a + (b || 0), 0) !== 4)}
+                || (configTab === 'multiset' && Object.values(multiSetMix).reduce((a, b) => a + (b || 0), 0) !== (equalPacks ? 4 : roomState.players.length * 4))}
                 className="w-full py-3 bg-amber-500 hover:bg-amber-400 disabled:opacity-40 text-gray-950 font-bold rounded-lg transition-colors"
               >
                 {loading ? 'Generating packs…' : draftMode === 'sealed' ? 'Start sealed' : 'Start draft'}

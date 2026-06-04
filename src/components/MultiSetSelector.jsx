@@ -2,11 +2,13 @@ import { SETS } from '../lib/cardData.js'
 import { SET_ASSETS } from '../lib/assets.js'
 
 /**
- * Multi-Set draft picker. Per-set NUMBER of packs ONE player receives — counts must
- * total `target` (4, the four draft rounds). The "same packs" toggle controls how the
- * packs are distributed:
- *   ON  → every player drafts the same single-set boosters (one set per round).
- *   OFF → counts × player count go into a bag, shuffled and dealt at random (chaos).
+ * Multi-Set draft picker. Per-set booster counts; the required total depends on the
+ * "same packs" toggle:
+ *   ON  → counts are PER PLAYER and must sum to 4 (the four rounds). Every player
+ *         drafts the same single-set boosters (one set per round).
+ *   OFF → counts are the WHOLE BAG and must sum to players × 4. All single-set
+ *         boosters are shuffled together and dealt at random (chaos).
+ * `target` (passed in) is 4 when ON, players × 4 when OFF.
  */
 export default function MultiSetSelector({ mix, onChange, equalPacks, onEqualChange, target = 4, disabled }) {
   const total = Object.values(mix).reduce((a, b) => a + (b || 0), 0)
@@ -32,21 +34,23 @@ export default function MultiSetSelector({ mix, onChange, equalPacks, onEqualCha
           <span className="block text-xs text-gray-500 mt-0.5">
             {equalPacks
               ? 'Every player drafts the same single-set boosters — one set per round.'
-              : 'Counts are multiplied by the player count, then shuffled and dealt at random.'}
+              : 'Build the whole booster bag — all boosters are shuffled and dealt at random.'}
           </span>
         </span>
       </label>
 
       <div>
         <div className="flex items-center justify-between mb-2">
-          <label className="block text-sm text-gray-400">Packs per player</label>
+          <label className="block text-sm text-gray-400">{equalPacks ? 'Packs per player' : 'Booster bag'}</label>
           <span className={`text-sm font-mono font-bold ${
             reached ? 'text-green-400' : total > target ? 'text-red-400' : 'text-amber-400'}`}>
             {total} / {target}
           </span>
         </div>
         <p className="text-xs text-gray-500 mb-3">
-          Choose how many of each set make up one player's {target} packs.
+          {equalPacks
+            ? `Choose how many of each set make up one player's ${target} packs.`
+            : `Choose how many single-set boosters of each set go in the bag (total = ${target}).`}
         </p>
 
         <div className="space-y-2">
@@ -86,8 +90,8 @@ export default function MultiSetSelector({ mix, onChange, equalPacks, onEqualCha
         {!reached && (
           <p className={`text-xs mt-3 ${total > target ? 'text-red-400' : 'text-gray-500'}`}>
             {total > target
-              ? `Remove ${total - target} — each player drafts exactly ${target} packs.`
-              : `Add ${target - total} more — each player drafts ${target} packs.`}
+              ? `Remove ${total - target} ${total - target === 1 ? 'pack' : 'packs'} — the total must equal ${target}.`
+              : `Add ${target - total} more ${target - total === 1 ? 'pack' : 'packs'} — the total must equal ${target}.`}
           </p>
         )}
       </div>
