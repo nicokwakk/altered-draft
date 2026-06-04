@@ -94,10 +94,12 @@ export default function Draft() {
             } catch (e) { errors.push(`${s}: ${e.message}`) }
           }))
           if (errors.length) setFetchErrors(errors)
-          // Cube uniques aren't in set data — pull them from the Altered API.
+          // Cube uniques aren't in set data — pull them (bundled snapshot, else API).
           const cube = COMMUNITY_CUBES.find(c => c.id === state.config.cubeId)
-          if (cube?.refs) {
-            const uCards = await fetchUniques(cube.refs.filter(isUniqueRef), state.config.lang || 'EN')
+          const cc = state.config.customCube
+          const cubeRefs = cube?.refs ?? (cc ? [...(cc.cards ?? []), ...(cc.heroes ?? [])] : null)
+          if (cubeRefs) {
+            const uCards = await fetchUniques(cubeRefs.filter(isUniqueRef), state.config.lang || 'EN')
             for (const c of uCards) maps[c.reference] = c
           }
           setCardMap(maps)

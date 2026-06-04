@@ -5,8 +5,9 @@ import { fetchSet, SETS, apiSetCode, fetchUniques, isUniqueRef } from '../lib/ca
 import { SET_ASSETS } from '../lib/assets.js'
 import { COMMUNITY_CUBES, setsForCube } from '../lib/cubes.js'
 import CubePreviewModal from '../components/CubePreviewModal.jsx'
-import { generateAllPacks, generatePacksFromPool, generateChaosPacks, generateCubeRecipePacks, generateStructuredPacks } from '../lib/packGenerator.js'
+import { generateAllPacks, generatePacksFromPool, generateChaosPacks, generateCubeRecipePacks, generateStructuredPacks, generateCubeDraftPacks } from '../lib/packGenerator.js'
 import { buildInitialState } from '../lib/draftLogic.js'
+import { parseDecklist } from '../lib/cubeParser.js'
 import SetSelector from '../components/SetSelector.jsx'
 import MultiSetSelector from '../components/MultiSetSelector.jsx'
 
@@ -39,6 +40,13 @@ export default function Lobby() {
   const [selectedPreset, setSelectedPreset] = useState(null) // set code
   const [selectedCube, setSelectedCube] = useState(null) // cube id
   const [previewCube, setPreviewCube] = useState(null)  // cube being previewed
+  // Pasted personal cube: parsed + resolved into { name, cards:[refs], heroes:[refs], unresolved:[refs] }.
+  // Carried inline in room state as config.customCube (no cubeId, no storage).
+  const [customCube, setCustomCube] = useState(null)
+  const [customCubeText, setCustomCubeText] = useState('')
+  const [customCubeName, setCustomCubeName] = useState('')
+  const [parsingCube, setParsingCube] = useState(false)
+  const [parseMsg, setParseMsg] = useState('')
   const [selectedSets, setSelectedSets] = useState({ CORE: 1 })
   const [multiSetMix, setMultiSetMix] = useState({ CORE: 4 }) // per-player pack counts (sum = 4) for the Multi-Set draft tab
   const [equalPacks, setEqualPacks] = useState(true) // ON = same single-set boosters for all; OFF = random bag
@@ -99,6 +107,44 @@ export default function Lobby() {
     return selectedSets
   }
 
+  // Parse a pasted decklist and resolve it against card data: split heroes out
+  // (cardType HERO), flag refs that don't resolve, keep duplicate copies. Uniques
+  // resolve from the bundled snapshot only.
+  async function handleParseCube() {
+    setParseMsg('')
+    const { refs } = parseDecklist(customCubeText)
+    if (!refs.length) {
+      setParseMsg('No card references found. Paste lines like "1 ALT_CORE_B_YZ_03_C".')
+      return
+    }
+    setParsingCube(true)
+    try {
+      const rawCodes = [...new Set(setsForCube(refs))]
+      const results = await Promise.all(rawCodes.map(s => fetchSet(s, lang).catch(() => [])))
+      const byRef = new Map(results.flat().map(c => [c.reference, c]))
+      const uniqueCards = await fetchUniques(refs.filter(isUniqueRef), lang)
+      for (const c of uniqueCards) byRef.set(c.reference, c)
+
+      const resolved = [], unresolved = []
+      for (const r of refs) (byRef.has(r) ? resolved : unresolved).push(r)
+      const heroes = resolved.filter(r => byRef.get(r).cardType === 'HERO')
+      const cards = resolved.filter(r => byRef.get(r).cardType !== 'HERO')
+      if (!cards.length) {
+        setParseMsg('No draftable (non-hero) cards resolved — check your references.')
+        setParsingCube(false); return
+      }
+      setCustomCube({
+        name: customCubeName.trim() || 'Custom cube',
+        cards, heroes,
+        unresolved: [...new Set(unresolved)],
+      })
+      setSelectedCube(null) // custom + built-in cubes are mutually exclusive
+    } catch (e) {
+      setParseMsg('Could not load card data: ' + e.message)
+    }
+    setParsingCube(false)
+  }
+
   const handleStart = async () => {
     if (!roomState) return
     if (draftMode === 'draft' && roomState.players.length < 2) { setStartError('Need at least 2 players to start a draft.'); return }
@@ -113,6 +159,31 @@ export default function Lobby() {
       // Sealed mode — each player gets a set of boosters (array of arrays)
       if (draftMode === 'sealed') {
         const SEALED_PACKS = 7
+
+        // Pasted personal cube — sealed. Heroes STAY in the pool (sealed has no draft
+        // phase), so they can show up in boosters. Each player gets 7 multiset packs.
+        if (configTab === 'cubes' && customCube) {
+          const allRefs = [...customCube.cards, ...customCube.heroes]
+          const rawCodes = [...new Set(setsForCube(allRefs))]
+          const results = await Promise.all(rawCodes.map(s => fetchSet(s, lang).catch(() => [])))
+          const apiCodes = [...new Set(rawCodes.map(apiSetCode))]
+          const byRef = new Map(results.flat().map(c => [c.reference, c]))
+          const uniqueCards = await fetchUniques(allRefs.filter(isUniqueRef), lang)
+          for (const c of uniqueCards) byRef.set(c.reference, c)
+          const pool = allRefs.map(r => byRef.get(r)).filter(Boolean)
+          if (pool.length < SEALED_PACKS) {
+            setStartError(`This cube is too small for sealed (need at least ${SEALED_PACKS} cards).`); setLoading(false); return
+          }
+          const sealedPacks = {}
+          for (let i = 0; i < playerCount; i++) sealedPacks[String(i)] = generateCubeDraftPacks(pool, SEALED_PACKS)
+          const state = {
+            config: { sets: apiCodes, playerCount, lang, includeHeroes, mode: 'sealed', customCube: { name: customCube.name, cards: customCube.cards, heroes: customCube.heroes } },
+            players: shuffledPlayers, phase: 'sealed', sealedPacks, version: 0,
+          }
+          const { error: upErr } = await supabase.from('draft_rooms').update({ state }).eq('id', code)
+          if (upErr) { setStartError('Could not start: ' + upErr.message); setLoading(false); return }
+          return
+        }
 
         // Cube sealed — curated pool; boosters drawn from the whole cube
         if (configTab === 'cubes' && selectedCube) {
@@ -175,6 +246,38 @@ export default function Lobby() {
           const { error: upErr } = await supabase.from('draft_rooms').update({ state }).eq('id', code)
           if (upErr) { setStartError('Could not start: ' + upErr.message); setLoading(false); return }
         }
+        return
+      }
+
+      // Pasted personal cube — draft. Keeps duplicate copies (multiset, equal packs).
+      // Heroes are drafted in-app via the shared-pool snake when there are at least as
+      // many as players; otherwise they fold into the card packs so none are lost.
+      if (configTab === 'cubes' && customCube) {
+        const allRefs = [...customCube.cards, ...customCube.heroes]
+        const rawCodes = [...new Set(setsForCube(allRefs))]
+        const results = await Promise.all(rawCodes.map(s => fetchSet(s, lang).catch(() => [])))
+        const apiCodes = [...new Set(rawCodes.map(apiSetCode))]
+        const byRef = new Map(results.flat().map(c => [c.reference, c]))
+        const uniqueCards = await fetchUniques(allRefs.filter(isUniqueRef), lang)
+        for (const c of uniqueCards) byRef.set(c.reference, c)
+
+        const heroUnique = [...new Set(customCube.heroes)]
+        const useHeroDraft = heroUnique.length >= playerCount
+        const cardRefs = useHeroDraft ? customCube.cards : [...customCube.cards, ...customCube.heroes]
+        const cardPool = cardRefs.map(r => byRef.get(r)).filter(Boolean)
+        const totalPacks = playerCount * 4
+        if (cardPool.length < totalPacks) {
+          setStartError(`This cube is too small for ${playerCount} players — needs at least ${totalPacks} non-hero cards (has ${cardPool.length}).`)
+          setLoading(false); return
+        }
+        const packs = generateCubeDraftPacks(cardPool, totalPacks)
+        const heroPool = useHeroDraft ? shuffle(heroUnique) : null
+        const state = buildInitialState(
+          { sets: apiCodes, playerCount, lang, includeHeroes: false, timerEnabled, timerSeconds, customCube: { name: customCube.name, cards: customCube.cards, heroes: customCube.heroes } },
+          shuffledPlayers, packs, heroPool
+        )
+        const { error: upErr } = await supabase.from('draft_rooms').update({ state }).eq('id', code)
+        if (upErr) { setStartError('Could not start: ' + upErr.message); setLoading(false); return }
         return
       }
 
@@ -448,7 +551,7 @@ export default function Lobby() {
                       <div key={cube.id}
                         className={`rounded-xl border-2 transition-all ${
                           selected ? 'border-amber-500 bg-amber-500/5' : 'border-gray-700 bg-gray-800'}`}>
-                        <button onClick={() => setSelectedCube(selected ? null : cube.id)}
+                        <button onClick={() => { setSelectedCube(selected ? null : cube.id); setCustomCube(null) }}
                           className="w-full text-left p-4">
                           <div className="flex items-start justify-between gap-3">
                             <div>
@@ -470,6 +573,68 @@ export default function Lobby() {
                       </div>
                     )
                   })}
+
+                  {/* Paste your own cube */}
+                  <div className={`rounded-xl border-2 p-4 space-y-3 transition-all ${
+                    customCube ? 'border-amber-500 bg-amber-500/5' : 'border-dashed border-gray-700 bg-gray-800/40'}`}>
+                    <div className="flex items-center justify-between">
+                      <p className="font-semibold text-sm text-gray-100">＋ Paste your own cube</p>
+                      {customCube && (
+                        <span className="w-5 h-5 rounded-full bg-amber-500 flex items-center justify-center text-xs text-gray-950 font-bold shrink-0">✓</span>
+                      )}
+                    </div>
+                    <p className="text-xs text-gray-500 leading-relaxed">
+                      One card per line as <span className="font-mono text-gray-400">qty REF</span> (e.g.{' '}
+                      <span className="font-mono text-gray-400">3 ALT_CORE_B_MU_06_R2</span>) — the same format as Export.
+                      Heroes in the list are detected automatically and snake-drafted in-app. Nothing is saved; keep your own list.
+                    </p>
+                    <input value={customCubeName} onChange={e => setCustomCubeName(e.target.value)}
+                      placeholder="Cube name (optional)"
+                      className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:border-amber-500" />
+                    <textarea value={customCubeText} onChange={e => setCustomCubeText(e.target.value)} rows={6}
+                      placeholder={"1 ALT_CORE_B_YZ_03_C\n3 ALT_CORE_B_MU_06_R2\n..."}
+                      className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-xs font-mono focus:outline-none focus:border-amber-500 resize-none" />
+                    <div className="flex items-center gap-3">
+                      <button onClick={handleParseCube} disabled={parsingCube || !customCubeText.trim()}
+                        className="px-3 py-1.5 rounded-lg text-sm font-medium bg-gray-700 hover:bg-gray-600 disabled:opacity-40 text-gray-100 transition-colors">
+                        {parsingCube ? 'Parsing…' : customCube ? 'Re-parse' : 'Parse & preview'}
+                      </button>
+                      {customCube && (
+                        <>
+                          <button onClick={() => setPreviewCube({ name: customCube.name, author: 'You', cardCount: customCube.cards.length + customCube.heroes.length, refs: [...customCube.cards, ...customCube.heroes] })}
+                            className="text-xs text-amber-400 hover:text-amber-300 transition-colors">
+                            Preview →
+                          </button>
+                          <button onClick={() => { setCustomCube(null); setParseMsg('') }}
+                            className="text-xs text-gray-500 hover:text-gray-300 transition-colors ml-auto">
+                            Clear
+                          </button>
+                        </>
+                      )}
+                    </div>
+                    {parseMsg && <p className="text-xs text-red-400">{parseMsg}</p>}
+                    {customCube && (
+                      <div className="text-xs space-y-1">
+                        <p className="text-green-400">
+                          ✓ {customCube.cards.length} card{customCube.cards.length !== 1 ? 's' : ''}
+                          {customCube.heroes.length > 0 && ` · ${customCube.heroes.length} hero${customCube.heroes.length !== 1 ? 'es' : ''}`} loaded
+                          {customCube.heroes.length > 0 && (
+                            new Set(customCube.heroes).size >= roomState.players.length
+                              ? ' (heroes drafted in-app)'
+                              : ' (too few heroes to draft in-app → dealt in packs)'
+                          )}.
+                        </p>
+                        {customCube.unresolved.length > 0 && (
+                          <p className="text-amber-400">
+                            ⚠ {customCube.unresolved.length} reference{customCube.unresolved.length !== 1 ? 's' : ''} couldn't be resolved and {customCube.unresolved.length !== 1 ? 'were' : 'was'} skipped:{' '}
+                            <span className="font-mono break-all text-amber-300">
+                              {customCube.unresolved.slice(0, 8).join(', ')}{customCube.unresolved.length > 8 ? ` … (+${customCube.unresolved.length - 8})` : ''}
+                            </span>
+                          </p>
+                        )}
+                      </div>
+                    )}
+                  </div>
                 </div>
               )}
 
@@ -601,7 +766,7 @@ export default function Lobby() {
                 || (draftMode === 'draft' && roomState.players.length < 2)
                 || (configTab === 'presets' && draftMode === 'draft' && !selectedPreset)
                 || (configTab === 'presets' && draftMode === 'sealed' && !selectedPreset)
-                || (configTab === 'cubes' && !selectedCube)
+                || (configTab === 'cubes' && !selectedCube && !customCube)
                 || (configTab === 'multiset' && Object.values(multiSetMix).reduce((a, b) => a + (b || 0), 0) !== (equalPacks ? 4 : roomState.players.length * 4))}
                 className="w-full py-3 bg-amber-500 hover:bg-amber-400 disabled:opacity-40 text-gray-950 font-bold rounded-lg transition-colors"
               >

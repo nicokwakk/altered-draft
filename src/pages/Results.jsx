@@ -41,8 +41,10 @@ export default function Results() {
             for (const c of cards) maps[c.reference] = c
           }))
           const cube = COMMUNITY_CUBES.find(c => c.id === data.state.config.cubeId)
-          if (cube?.refs) {
-            const uCards = await fetchUniques(cube.refs.filter(isUniqueRef), data.state.config.lang || 'EN')
+          const cc = data.state.config.customCube
+          const cubeRefs = cube?.refs ?? (cc ? [...(cc.cards ?? []), ...(cc.heroes ?? [])] : null)
+          if (cubeRefs) {
+            const uCards = await fetchUniques(cubeRefs.filter(isUniqueRef), data.state.config.lang || 'EN')
             for (const c of uCards) maps[c.reference] = c
           }
           setCardMap(maps)
