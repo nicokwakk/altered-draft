@@ -5,7 +5,7 @@ import { fetchSet, SETS, apiSetCode, fetchUniques, isUniqueRef } from '../lib/ca
 import { SET_ASSETS } from '../lib/assets.js'
 import { COMMUNITY_CUBES, setsForCube } from '../lib/cubes.js'
 import CubePreviewModal from '../components/CubePreviewModal.jsx'
-import { generateAllPacks, generatePacksFromPool, generateChaosPacks, generateCubeDraftPacks, generateCubeRecipePacks, generateHeroDraftPacks } from '../lib/packGenerator.js'
+import { generateAllPacks, generatePacksFromPool, generateChaosPacks, generateCubeRecipePacks } from '../lib/packGenerator.js'
 import { buildInitialState } from '../lib/draftLogic.js'
 import SetSelector from '../components/SetSelector.jsx'
 import ChaosSelector from '../components/ChaosSelector.jsx'
@@ -191,7 +191,7 @@ export default function Lobby() {
         if (cube.heroDraft) {
           // Multi-copy cube: preserve duplicate refs (mapping each to its card object),
           // deal equal packs. Heroes are not in these packs — they're drafted in-app
-          // first (see generateHeroDraftPacks below).
+          // from the shared hero pool (see heroPool below).
           const byRef = new Map(results.flat().map(c => [c.reference, c]))
           // Uniques aren't in set data — fetch them from the Altered API and merge.
           const uniqueCards = await fetchUniques(cube.refs.filter(isUniqueRef), lang)
@@ -200,23 +200,20 @@ export default function Lobby() {
           if (!allCards.length) { setStartError('Could not load cube card data.'); setLoading(false); return }
           packs = cube.booster
             ? generateCubeRecipePacks(allCards, playerCount * 4, cube.booster)
-            : generateCubeDraftPacks(allCards, playerCount * 4)
+            : generateAllPacks(allCards, playerCount, 4, { includeHeroes: false, cubeMode: true })
         } else {
           const cubeRefSet = new Set(cube.refs)
           const allCards = results.flat().filter(c => cubeRefSet.has(c.reference))
           if (!allCards.length) { setStartError('Could not load cube card data.'); setLoading(false); return }
           packs = generateAllPacks(allCards, playerCount, 4, { includeHeroes, cubeMode: true })
         }
-        // Hero-draft cubes draft heroes in-app, turn-based, interleaved between card
-        // rounds per cube.heroRules.schedule (e.g. 1 after round 1, the rest after
-        // round 2). N shared boosters sized to the table; min(3, …) heroes per player.
-        const boosters = cube.heroDraft && cube.heroes?.length
-          ? generateHeroDraftPacks(cube.heroes, playerCount)
-          : null
-        const heroDraft = boosters ? { boosters, schedule: cube.heroRules?.schedule } : null
+        // Hero-draft cubes draft heroes in-app from one shared pool (all the cube's
+        // heroes), snake-drafted one-per-player after each card round until each has
+        // min(3, …) heroes. Pass the shuffled hero pool; buildInitialState does the rest.
+        const heroPool = cube.heroDraft && cube.heroes?.length ? shuffle(cube.heroes) : null
         const state = buildInitialState(
           { sets: apiCodes, playerCount, lang, cubeId: cube.id, includeHeroes, timerEnabled, timerSeconds },
-          shuffledPlayers, packs, heroDraft
+          shuffledPlayers, packs, heroPool
         )
         {
           const { error: upErr } = await supabase.from('draft_rooms').update({ state }).eq('id', code)

@@ -127,8 +127,8 @@ export default function Draft() {
   const isHeroPhase = roomState?.phase === 'heroDraft'
   const myIndex = roomState && me ? roomState.players.findIndex(p => p.id === me.id) : -1
   // Card draft: simultaneous — each seat has its own pack and is in waitingFor.
-  // Hero draft (after the cards): turn-based — ONE shared booster picked in snake
-  // order, so only the seat at heroOrder[heroTurnPos] can pick.
+  // Hero draft (between rounds): turn-based — ONE shared pool of all heroes, picked in
+  // snake order, so only the seat at heroOrder[heroTurnPos] can pick.
   const heroTurnIdx = isHeroPhase ? (roomState.heroOrder?.[roomState.heroTurnPos] ?? -1) : -1
   const isMyTurn = isHeroPhase
     ? (myIndex !== -1 && myIndex === heroTurnIdx)
@@ -136,7 +136,7 @@ export default function Draft() {
   const myCardPack = (myIndex !== -1 && roomState) ? (roomState.packs[String(myIndex)] ?? []) : []
   const myPicks = (myIndex !== -1 && roomState) ? (roomState.picks[String(myIndex)] ?? []) : []
   const myHeroPicks = (myIndex !== -1 && roomState) ? (roomState.heroPicks?.[String(myIndex)] ?? []) : []
-  const myPack = isHeroPhase ? (roomState?.heroCurrent ?? []) : myCardPack
+  const myPack = isHeroPhase ? (roomState?.heroPool ?? []) : myCardPack
 
   const doPick = useCallback(async (ref) => {
     if (inFlightRef.current) return
@@ -144,9 +144,9 @@ export default function Draft() {
     if (!state || !me) return
     // Whether this seat may pick `ref` right now — differs by phase. Card draft: it's
     // in your waitingFor and the card is in your pack. Hero draft: it's your turn in
-    // the snake order and the card is in the shared booster.
+    // the snake order and the hero is in the shared pool.
     const canPick = (s, idx) => s.phase === 'heroDraft'
-      ? (s.heroOrder?.[s.heroTurnPos] === idx && (s.heroCurrent ?? []).includes(ref))
+      ? (s.heroOrder?.[s.heroTurnPos] === idx && (s.heroPool ?? []).includes(ref))
       : ((s.waitingFor?.includes(idx) ?? false) && (s.packs[String(idx)] ?? []).includes(ref))
     const idx0 = state.players.findIndex(p => p.id === me.id)
     if (idx0 === -1 || !canPick(state, idx0)) return
@@ -241,15 +241,15 @@ export default function Draft() {
 
   const packSize = myPack.length
   const activePicks = isHeroPhase ? myHeroPicks : myPicks
-  const heroesPerPlayer = isHeroPhase ? (roomState.heroBoosters?.length ?? 0) : 0
+  const heroTarget = isHeroPhase ? (roomState.heroTarget ?? 0) : 0
   const heroPickerName = (isHeroPhase && heroTurnIdx >= 0) ? (roomState.players[heroTurnIdx]?.name ?? '') : ''
-  // Progress within the current phase. Hero draft is turn-based across N shared
-  // boosters → show booster progress. Card draft: a full pack's size isn't fixed
-  // (hero toggle, set composition), so derive it from picks made this round.
+  // Progress within the current phase. Hero draft: how many heroes you have toward the
+  // target. Card draft: a full pack's size isn't fixed (hero toggle, set composition),
+  // so derive it from picks made this round.
   let currentPickNum, totalPicks
   if (isHeroPhase) {
-    currentPickNum = (roomState.heroBoosterIndex ?? 0) + 1
-    totalPicks = roomState.heroBoosters?.length ?? 0
+    currentPickNum = myHeroPicks.length // heroes you already have (target shown alongside)
+    totalPicks = heroTarget
   } else {
     const fullPack = roomState.round ? Math.round((myPicks.length + packSize) / roomState.round) : packSize
     currentPickNum = Math.max(1, fullPack - packSize + 1)
@@ -289,7 +289,7 @@ export default function Draft() {
             {isHeroPhase ? (
               <>
                 <h2 className="font-semibold text-lg text-amber-400">Hero Draft</h2>
-                <span className="text-sm text-gray-500">Booster {currentPickNum} / {totalPicks}</span>
+                <span className="text-sm text-gray-500">You have {currentPickNum} / {totalPicks} heroes</span>
               </>
             ) : (
               <>
@@ -300,7 +300,7 @@ export default function Draft() {
           </div>
           {isHeroPhase && (
             <p className="mb-3 text-sm text-gray-400">
-              Heroes are drafted between packs, one at a time. On your turn, take a hero from the shared booster — {heroesPerPlayer} in total, no two from the same booster.
+              Between packs, each player snake-drafts one hero from the shared pool — {heroTarget} in total.
             </p>
           )}
           {isHeroPhase && myHeroPicks.length > 0 && <MyHeroes heroes={myHeroPicks} cardMap={cardMap} label="Heroes you've taken" />}
@@ -328,7 +328,7 @@ export default function Draft() {
           <div className="p-3">
             <div className="flex items-baseline gap-2 mb-2">
               <h2 className="font-semibold">{isHeroPhase ? <span className="text-amber-400">Hero Draft</span> : `Pack ${roomState.round}`}</h2>
-              <span className="text-xs text-gray-500">{isHeroPhase ? `Booster ${currentPickNum} / ${totalPicks}` : `Pick ${currentPickNum}`}</span>
+              <span className="text-xs text-gray-500">{isHeroPhase ? `${currentPickNum} / ${totalPicks} heroes` : `Pick ${currentPickNum}`}</span>
             </div>
             {myHeroPicks.length > 0 && <MyHeroes heroes={myHeroPicks} cardMap={cardMap} label={isHeroPhase ? "Heroes you've taken" : undefined} />}
             {roomState.config?.timerEnabled && roomState.pickDeadline && (

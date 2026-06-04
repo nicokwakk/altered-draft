@@ -15,31 +15,6 @@ function pickRandom(pool) {
 }
 
 /**
- * Hero draft for cubes that draft their heroes in-app (AFTER the card draft).
- * Build N SHARED boosters, each sized to the table (`playerCount` heroes), where
- * N = the number of heroes each player ends with = min(3, floor(heroes/players)).
- * The boosters are drafted turn-based, one pick per player per booster (snake
- * order), so nobody ever drafts twice from the same booster. Capped at 3 heroes;
- * drops to 2 once a booster of `playerCount` can't fit 3× the heroes (5-6 players),
- * etc. e.g. 12 heroes: 2-4 players → 3 boosters (3 each), 5-6 players → 2 boosters
- * (2 each). Leftover heroes (12 − N×players) are simply unused this draft.
- * @param {string[]} heroRefs
- * @param {number} playerCount
- * @returns {string[][]} N boosters, each with `playerCount` heroes (or [] if too few heroes)
- */
-export function generateHeroDraftPacks(heroRefs, playerCount) {
-  if (playerCount < 1 || !heroRefs?.length) return []
-  const perPlayer = Math.min(3, Math.floor(heroRefs.length / playerCount))
-  if (perPlayer < 1) return [] // fewer heroes than players — can't give everyone one
-  const shuffled = shuffle(heroRefs)
-  const boosters = []
-  for (let b = 0; b < perPlayer; b++) {
-    boosters.push(shuffled.slice(b * playerCount, (b + 1) * playerCount))
-  }
-  return boosters
-}
-
-/**
  * Generate all packs for a draft session.
  * @param {object[]} allCards - normalized card objects from fetchSet
  * @param {number} playerCount
