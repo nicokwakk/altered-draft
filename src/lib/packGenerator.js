@@ -84,6 +84,39 @@ export function generateChaosPacks(cardsBySet, packMix, options = {}) {
 }
 
 /**
+ * Structured multi-set draft (the "all players receive the same packs" mode): every
+ * player drafts the SAME single-set boosters. `perPlayerMix` = how many packs of each
+ * set ONE player gets (sum must = 4 → one set per round). Each round, ALL seats open
+ * that round's set, so every player experiences an identical, set-pure draft. Returns
+ * a flat array laid out BY ROUND (round r → indices r*playerCount … r*playerCount +
+ * playerCount-1) to match buildInitialState's round layout. Boosters use normal
+ * single-set composition (like generateChaosPacks) and are drawn randomly per pack, so
+ * two seats' packs of the same set differ — they're just statistically equivalent.
+ * @param {Object<string, object[]>} cardsBySet - { setCode: normalized cards }
+ * @param {Object<string, number>} perPlayerMix - { setCode: packs per player }, sum = 4
+ * @param {number} playerCount
+ */
+export function generateStructuredPacks(cardsBySet, perPlayerMix, playerCount, options = {}) {
+  const { includeHeroes = true } = options
+  // Expand the per-player counts into one set per round: {CORE:2, BISE:2} → [CORE,CORE,BISE,BISE]
+  const rounds = []
+  for (const [setCode, count] of Object.entries(perPlayerMix)) {
+    for (let i = 0; i < (count || 0); i++) rounds.push(setCode)
+  }
+  const poolsBySet = {}
+  const packs = []
+  let packIndex = 0
+  for (const setCode of rounds) {
+    if (!poolsBySet[setCode]) poolsBySet[setCode] = splitPools(cardsBySet[setCode] ?? [], includeHeroes)
+    const { heroes, commons, rares, uniques } = poolsBySet[setCode]
+    for (let s = 0; s < playerCount; s++) {
+      packs.push(generateOnePack(heroes, commons, rares, uniques, packIndex++))
+    }
+  }
+  return packs
+}
+
+/**
  * Cube DRAFT from a multiset of card OBJECTS (preserves duplicate copies — a cube
  * may intentionally run multiple copies of a card, so we do NOT dedupe). Deals
  * equal-size packs (unequal packs deadlock the pass-and-pick rotation); heroes are

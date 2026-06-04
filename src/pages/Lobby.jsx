@@ -5,10 +5,12 @@ import { fetchSet, SETS, apiSetCode, fetchUniques, isUniqueRef } from '../lib/ca
 import { SET_ASSETS } from '../lib/assets.js'
 import { COMMUNITY_CUBES, setsForCube } from '../lib/cubes.js'
 import CubePreviewModal from '../components/CubePreviewModal.jsx'
-import { generateAllPacks, generatePacksFromPool, generateChaosPacks, generateCubeRecipePacks } from '../lib/packGenerator.js'
+import { generateAllPacks, generatePacksFromPool, generateChaosPacks, generateCubeRecipePacks, generateStructuredPacks } from '../lib/packGenerator.js'
 import { buildInitialState } from '../lib/draftLogic.js'
 import SetSelector from '../components/SetSelector.jsx'
-import ChaosSelector from '../components/ChaosSelector.jsx'
+import MultiSetSelector from '../components/MultiSetSelector.jsx'
+
+const TAB_LABELS = { presets: 'Presets', cubes: 'Cubes', advanced: 'Advanced', multiset: 'Multi-Set' }
 
 const LANGS = ['EN', 'FR', 'ES', 'DE', 'IT']
 
@@ -38,7 +40,8 @@ export default function Lobby() {
   const [selectedCube, setSelectedCube] = useState(null) // cube id
   const [previewCube, setPreviewCube] = useState(null)  // cube being previewed
   const [selectedSets, setSelectedSets] = useState({ CORE: 1 })
-  const [chaosMix, setChaosMix] = useState({}) // { setCode: boosterCount } for chaos draft
+  const [multiSetMix, setMultiSetMix] = useState({ CORE: 4 }) // per-player pack counts (sum = 4) for the Multi-Set draft tab
+  const [equalPacks, setEqualPacks] = useState(true) // ON = same single-set boosters for all; OFF = random bag
   const [lang, setLang] = useState('EN')
   const [includeHeroes, setIncludeHeroes] = useState(true)
   const [timerEnabled, setTimerEnabled] = useState(false)
@@ -245,24 +248,31 @@ export default function Lobby() {
         return
       }
 
-      // Chaos draft — single-set boosters mixed in a bag and dealt at random
-      if (configTab === 'chaos') {
-        const mix = Object.fromEntries(Object.entries(chaosMix).filter(([, n]) => n > 0))
+      // Multi-Set draft — single-set boosters. The "same packs" toggle picks the
+      // distribution: ON = every player drafts the same single-set boosters (one set
+      // per round); OFF = counts × players go into a bag, shuffled and dealt at random.
+      if (configTab === 'multiset') {
+        const mix = Object.fromEntries(Object.entries(multiSetMix).filter(([, n]) => n > 0))
         const setCodes = Object.keys(mix)
-        if (!setCodes.length) { setStartError('Add some boosters to the bag.'); setLoading(false); return }
-        const totalBoosters = Object.values(mix).reduce((a, b) => a + b, 0)
-        const target = playerCount * 4
-        if (totalBoosters !== target) {
-          setStartError(`Need exactly ${target} boosters (${playerCount} players × 4). You have ${totalBoosters}.`)
+        if (!setCodes.length) { setStartError('Select at least one set.'); setLoading(false); return }
+        const total = Object.values(mix).reduce((a, b) => a + b, 0)
+        if (total !== 4) {
+          setStartError(`Each player drafts exactly 4 packs — you have ${total}.`)
           setLoading(false); return
         }
         const fetched = await Promise.all(setCodes.map(async s => [s, await fetchSet(s, lang).catch(() => [])]))
         const cardsBySet = Object.fromEntries(fetched)
         if (!Object.values(cardsBySet).some(c => c.length)) { setStartError('No cards loaded. Check set selection.'); setLoading(false); return }
-        const packs = generateChaosPacks(cardsBySet, mix, { includeHeroes })
+        const packs = equalPacks
+          ? generateStructuredPacks(cardsBySet, mix, playerCount, { includeHeroes })
+          : generateChaosPacks(
+              cardsBySet,
+              Object.fromEntries(setCodes.map(s => [s, mix[s] * playerCount])),
+              { includeHeroes }
+            )
         const apiCodes = [...new Set(setCodes.map(apiSetCode))]
         const state = buildInitialState(
-          { sets: apiCodes, playerCount, lang, includeHeroes, timerEnabled, timerSeconds, chaosMix: mix },
+          { sets: apiCodes, playerCount, lang, includeHeroes, timerEnabled, timerSeconds, multiSetMix: mix, equalPacks },
           shuffledPlayers, packs
         )
         {
@@ -272,7 +282,7 @@ export default function Lobby() {
         return
       }
 
-      // Booster preset / advanced mode
+      // Preset draft — 4 packs of the one selected set per player
       const setsToUse = resolveConfig(playerCount)
       if (!setsToUse || !Object.keys(setsToUse).filter(k => setsToUse[k] > 0).length) {
         setStartError('Select a set to draft from.')
@@ -360,7 +370,12 @@ export default function Lobby() {
             <div className="grid grid-cols-2 border-b border-gray-800">
               {[{ id: 'draft', label: 'Draft', desc: 'Pick from passing packs' },
                 { id: 'sealed', label: 'Sealed', desc: '7 boosters, build your pool' }].map(m => (
-                <button key={m.id} onClick={() => { setDraftMode(m.id); if (m.id === 'sealed' && configTab === 'chaos') setConfigTab('presets') }}
+                <button key={m.id} onClick={() => {
+                    setDraftMode(m.id)
+                    // The Multi-Set tab is draft-only; sealed keeps the classic Advanced tab.
+                    if (m.id === 'sealed' && configTab === 'multiset') setConfigTab('advanced')
+                    if (m.id === 'draft' && configTab === 'advanced') setConfigTab('multiset')
+                  }}
                   className={`py-3 px-4 text-left transition-colors ${
                     draftMode === m.id ? 'bg-amber-500/10 border-b-2 border-amber-500' : 'hover:bg-gray-800/50'}`}>
                   <p className={`text-sm font-semibold ${draftMode === m.id ? 'text-amber-400' : 'text-gray-400'}`}>{m.label}</p>
@@ -371,13 +386,13 @@ export default function Lobby() {
 
             {/* Config tab bar */}
             <div className="flex border-b border-gray-800">
-              {(draftMode === 'draft' ? ['presets', 'cubes', 'advanced', 'chaos'] : ['presets', 'cubes', 'advanced']).map(t => (
+              {(draftMode === 'draft' ? ['presets', 'cubes', 'multiset'] : ['presets', 'cubes', 'advanced']).map(t => (
                 <button key={t} onClick={() => setConfigTab(t)}
-                  className={`flex-1 py-3 text-sm font-medium transition-colors capitalize ${
+                  className={`flex-1 py-3 text-sm font-medium transition-colors ${
                     configTab === t
                       ? 'text-amber-400 border-b-2 border-amber-400 bg-gray-900'
                       : 'text-gray-500 hover:text-gray-300 bg-gray-800/50'}`}>
-                  {t}
+                  {TAB_LABELS[t] ?? t}
                 </button>
               ))}
             </div>
@@ -487,14 +502,40 @@ export default function Lobby() {
                 </div>
               )}
 
-              {/* CHAOS TAB */}
-              {configTab === 'chaos' && (
-                <ChaosSelector
-                  mix={chaosMix}
-                  onChange={setChaosMix}
-                  target={roomState.players.length * 4}
-                  disabled={loading}
-                />
+              {/* MULTI-SET TAB (draft only) */}
+              {configTab === 'multiset' && (
+                <div className="space-y-5">
+                  <MultiSetSelector
+                    mix={multiSetMix}
+                    onChange={setMultiSetMix}
+                    equalPacks={equalPacks}
+                    onEqualChange={setEqualPacks}
+                    target={4}
+                    disabled={loading}
+                  />
+
+                  <div>
+                    <button onClick={() => setShowCustomPool(!showCustomPool)}
+                      className="text-sm text-gray-400 hover:text-gray-200 transition-colors flex items-center gap-1">
+                      <span className="text-xs">{showCustomPool ? '▼' : '▶'}</span>
+                      Custom card pool
+                    </button>
+                    {showCustomPool && (
+                      <div className="mt-3">
+                        <p className="text-xs text-gray-500 mb-2">
+                          Paste card references (one per line, starting with ALT_). Overrides set selection.
+                        </p>
+                        <textarea
+                          value={customPoolText}
+                          onChange={e => setCustomPoolText(e.target.value)}
+                          rows={6}
+                          placeholder={"ALT_CORE_B_AX_02_C\nALT_CORE_B_BR_03_R1\n..."}
+                          className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-xs font-mono focus:outline-none focus:border-amber-500 resize-none"
+                        />
+                      </div>
+                    )}
+                  </div>
+                </div>
               )}
 
               {/* Shared settings */}
@@ -561,7 +602,7 @@ export default function Lobby() {
                 || (configTab === 'presets' && draftMode === 'draft' && !selectedPreset)
                 || (configTab === 'presets' && draftMode === 'sealed' && !selectedPreset)
                 || (configTab === 'cubes' && !selectedCube)
-                || (configTab === 'chaos' && Object.values(chaosMix).reduce((a, b) => a + (b || 0), 0) !== roomState.players.length * 4)}
+                || (configTab === 'multiset' && Object.values(multiSetMix).reduce((a, b) => a + (b || 0), 0) !== 4)}
                 className="w-full py-3 bg-amber-500 hover:bg-amber-400 disabled:opacity-40 text-gray-950 font-bold rounded-lg transition-colors"
               >
                 {loading ? 'Generating packs…' : draftMode === 'sealed' ? 'Start sealed' : 'Start draft'}
