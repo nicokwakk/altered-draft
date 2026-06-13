@@ -61,17 +61,41 @@ export) is unchanged; "Connect Re:Union" just unlocks extras for those who opt i
 - 🔴 **card-data API (strategic)** — if Re:Union exposes card + unique data, it can replace the
   dying `api.altered.gg` and largely dissolve priority #2 below. Uncertain — treat #2 as a hedge.
 
-### 2. Bundle more uniques locally — URGENT (closing API window)
-`api.altered.gg` is being retired. Today only **24 cube uniques** are bundled
-(`src/lib/uniquesData.js` `UNIQUES_EN` + images in `public/uniques/<ref>.jpg`); any other
-unique resolves *only while the live API is up*, then is dropped (surfaced in the
-"unresolved refs" callout). Multiple community members want **unique-heavy cubes**
-(CptKawaii's "cube unique", wordcandy70's "Uniques Cube"), which is exactly the at-risk case.
-- **Action:** re-run the fetch-and-download snapshot script over a WIDER set of unique refs
-  while the API still answers — write each to `UNIQUES_EN` and save `imagePath` to
-  `public/uniques/`. Prioritise refs from the community cubes people are actually pasting.
-- This is the one item with a **hard deadline** (the API going dark). Do it even if Re:Union's
-  card-data API (1🔴) might later supersede it — that's not guaranteed and not yet available.
+### 2. Bundle more uniques locally — data source FOUND, art still time-sensitive
+Today only **24 cube uniques** are bundled (`src/lib/uniquesData.js` `UNIQUES_EN` + images in
+`public/uniques/<ref>.jpg`); any other unique resolves *only while a live API is up*, then is
+dropped (surfaced in the "unresolved refs" callout). Multiple community members want
+**unique-heavy cubes** (CptKawaii's "cube unique", wordcandy70's "Uniques Cube") — exactly the
+at-risk case.
+
+**New durable data source (tested June 2026):** `api.altered.gg` is being retired, but the
+community site **`cards.alteredcore.org`** serves the same data and should outlive it.
+- **Endpoint:** `https://cards.alteredcore.org/api/cards?reference=<REF>` (Symfony / API
+  Platform; no auth). Returns `{ member: [<card>], totalItems }`. The single-id path
+  (`/api/cards/<ref>`) 500s — always use the `?reference=` filter.
+- **Verified:** all 24 bundled uniques **+** an arbitrary new ref (`ALT_CORE_B_AX_16_U_5075`)
+  resolve with full data, and `faction.code` matches our hardcoded factions exactly — including
+  every out-of-faction case (e.g. `..._AX_16_U_...` → Bravos, `..._BR_19_...` → Lyra). So this
+  source can snapshot **any** unique, not just our 24, even after the old API dies.
+- **Different JSON shape** than the old API (needs its own adapter, NOT `normalizeCard`):
+  `name` / `imagePath` / `cardType.name` are **per-locale objects** (use `.en`); faction is
+  `faction.code` + `faction.name`; `rarity.reference`; `cardType.reference`; and **flat integer**
+  `mainCost` / `recallCost` / `forestPower` / `mountainPower` / `oceanPower` (no `#...#` markers).
+- **⚠️ Image gotcha:** the API's `imagePath.en` points at the **locked** `altered-dev.s3.eu-west-3.amazonaws.com`
+  bucket (403 AccessDenied, even with UA/referer). The **same file is public on the prod bucket** —
+  swap the host to **`altered-prod-eu.s3.amazonaws.com`** (path + filename hash identical) → 200
+  JPEG. (The old `api.altered.gg` also still returns the prod URL directly while it's up.)
+
+**Action (snapshot script, when refs are in hand — no code yet):** for each unique ref, GET
+`cards.alteredcore.org/api/cards?reference=<ref>`, map the fields above into a `UNIQUES_EN`
+entry, and download the art from the **prod**-bucket URL (host-swap the returned `imagePath.en`)
+to `public/uniques/<ref>.jpg`. Commit the script this time (the original wasn't committed).
+Prioritise refs from the community cubes people are actually pasting. Needs Node → run on macOS
+(not on PATH on Windows).
+- **Urgency reassessed:** card **data** is now future-proofed by `cards.alteredcore.org`, so this
+  is no longer a hard deadline for metadata. **Art still depends on the prod S3 bucket staying
+  public** — so grabbing images sooner is the remaining time-sensitive part. May later be
+  superseded if Re:Union ships its own card-data + image API (1🔴), but that's not guaranteed.
 - Possible enhancement: accept a pasted list of unique refs and snapshot them on demand.
 
 ### 3. Import Marcus' cube (data-only) — ACTIVE, blocked on the full card list
