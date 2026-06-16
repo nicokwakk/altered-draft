@@ -40,13 +40,27 @@ export) is unchanged; "Connect Re:Union" just unlocks extras for those who opt i
 - Public OIDC config (issuer, realm, clientId) can be plain constants / `VITE_` vars; only the
   secret is server-side.
 
-**Blocked on the Re:Union dev:**
-- Register **redirect URIs** for BOTH local and prod (we test on both):
-  `http://localhost:5173/auth/callback`, `https://altered-draft.vercel.app/auth/callback`,
-  post-logout `http://localhost:5173/` + `https://altered-draft.vercel.app/`,
-  and web-origins (CORS) for both.
-- Provide the **decks API**: base URL, the create-deck endpoint, payload format, and the
-  **scope/audience** the user's access token needs.
+**Local dev environment FOUND — `github.com/Altered-Community/altered-dev-environment`.**
+A .NET Aspire stack that runs the WHOLE Re:Union backend locally, so we can build AND test the
+integration end-to-end without waiting on the dev:
+- **Keycloak** (realm `players`) at `http://auth.altered.local.gd:18080`, admin `admin`/`admin`;
+  test users `alice`/`bob` (pw `TestPassword1234`). `*.local.gd` → 127.0.0.1 (no hosts-file edit).
+- **decks-api** at `http://localhost:8001` (the deck-write target); **collection-api** OpenAPI at
+  `http://localhost:8002/api/docs`. Read the deck contract straight from the running API.
+- Register our own **confidential `altered-draft`** client via the realm seed
+  `AlteredAuth/dev/clean.js` (then restart `altered-auth`): redirect `http://localhost:5173/auth/callback`,
+  web-origin `http://localhost:5173`; copy its secret. `DEV_AUTH_ENABLED` (HS256 `iss:dev`) shortcut
+  exists for testing deck-writes without the full login.
+- Confirms our architecture: the decks-api "uses a confidential client requiring consent."
+- Prereqs (ALL on one machine — `*.local.gd` is 127.0.0.1): Docker, .NET 10 SDK, Aspire CLI, plus
+  Node + Vercel CLI for our `vercel dev` side. Run `./run.ps1` / `./run.sh`.
+- **Setup deferred — not started (user's call).** This Windows box has only `git` on PATH; macOS
+  already has Node, likely the lighter lift.
+
+**Still needed from the dev — PRODUCTION ONLY** (local is now self-serviceable):
+- The prod `altered-draft` client registration + **secret** + redirect URIs
+  (`https://altered-draft.vercel.app/auth/callback`, post-logout, web-origins).
+- Confirm the prod decks-API contract matches local (create-deck endpoint, payload, scope/audience).
 
 **Feature tiers (each maps to a Keycloak/API scope — ask for these, ship in this order):**
 - 🟢 **`deck:write`** — one-click "Save deck to my Re:Union account" at the end of a
