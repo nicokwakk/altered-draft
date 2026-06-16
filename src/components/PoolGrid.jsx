@@ -170,7 +170,7 @@ export default function PoolGrid({ refs, cardMap, deck, poolCounts, onAdd, onRem
           <div key={group.key}>
             <div className={`inline-flex items-center gap-1.5 text-xs px-2 py-0.5 rounded border mb-2 ${group.colorCls}`}>
               {group.icon && <img src={group.icon} alt="" className="w-3.5 h-3.5 object-contain" onError={e => { e.currentTarget.style.display = 'none' }} />}
-              {group.label} <span className="opacity-60">({new Set(group.refs).size})</span>
+              {group.label} <span className="opacity-60">({group.refs.length})</span>
             </div>
             <CardGridInner refs={group.refs} cardMap={cardMap} loading={loading}
               deck={deck} poolCounts={poolCounts} onAdd={onAdd} onRemove={onRemove} />
