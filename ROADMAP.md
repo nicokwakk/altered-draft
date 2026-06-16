@@ -24,9 +24,18 @@ export) is unchanged; "Connect Re:Union" just unlocks extras for those who opt i
 (serverless code↔token exchange), `src/lib/reunion.js` (PKCE OIDC client), `AuthProvider` +
 `useAuth()`, `/auth/callback` route, `ReunionButton` on Home. Deployed and **verified live end-to-end**: a real user logged in (redirect URIs registered by the
 dev) and their pseudo renders — the full Connect → Keycloak → callback → token exchange (function +
-`KEYCLOAK_CLIENT_SECRET`) → userinfo flow works. **Next (step 2): deck read/write** — needs the
-decks-API contract (list-decks + create-deck endpoints, payloads, scope). _Hardening fast-follow:
-move the refresh token to an httpOnly cookie._
+`KEYCLOAK_CLIENT_SECRET`) → userinfo flow works.
+
+**✅ Step 2 (deck read/write) shipped (June 2026) — pending live user test.** Both features built +
+deployed; the proxy layer is verified live (no-auth → our 401; bogus token → upstream's 401, proving
+forwarding). Decks API `https://decks.alteredcore.org` via same-origin Vercel proxies
+(`api/decks/index.js` GET list/POST create, `api/decks/[id].js` GET detail) forwarding the Bearer token
+(no browser CORS). **Load a cube from your decks** (Lobby Cubes tab) and **save pool + final deck**
+(`SaveToReunion` on Results/Sealed). Shared `resolveCubeRefs` (`src/lib/cubeResolve.js`) turns deck cards
+into a cube like paste. **Remaining = live test with a real account:** load a deck → draft/seal it; save →
+confirm pool + deck land in the account. Watch for (a) a 403 → add a deck scope to `SCOPES` in `reunion.js`;
+(b) the pool POST rejected for legality even as `isDraft:true` → fall back to deck-only.
+_Hardening fast-follow: move the refresh token to an httpOnly cookie._
 
 **Auth setup (provided by the Re:Union dev):**
 - Protocol: **OpenID Connect** via **Keycloak**.
