@@ -38,9 +38,10 @@ const uniqueCache = {}
 
 // Unique cards (…_U_<serial>) don't exist in the community set files. The 24 cube
 // uniques are bundled locally (data in uniquesData.js, images in /public/uniques) so
-// the cube keeps working after Altered's API is retired. We serve the bundled EN copy
-// first; any other unique (or non-EN locale) still fetches live from the API while it's
-// up, then falls back to the bundled EN snapshot if the request fails.
+// the cube works offline / instantly in EN. Everything else (any other unique, or a
+// non-EN locale) resolves live from cards.alteredcore.org — the community card API
+// that REPLACES the retiring api.altered.gg, so this no longer depends on the dying
+// API. Falls back to the bundled EN snapshot if the request fails.
 export async function fetchUnique(reference, lang = 'EN') {
   const key = `${reference}_${lang}`
   if (uniqueCache[key]) return uniqueCache[key]
@@ -50,11 +51,14 @@ export async function fetchUnique(reference, lang = 'EN') {
     uniqueCache[key] = snapshot
     return snapshot
   }
-  const locale = LOCALE[lang] ?? 'en-us'
+  const loc = (LOCALE[lang] ?? 'en-us').slice(0, 2) // 'en','fr',… for the per-locale fields
   try {
-    const res = await fetch(`https://api.altered.gg/cards/${reference}?locale=${locale}`, { headers: { Accept: 'application/json' } })
+    // Filter by reference (the /api/cards/<id> path expects a numeric id, not a ref).
+    const res = await fetch(`https://cards.alteredcore.org/api/cards?reference=${encodeURIComponent(reference)}`, { headers: { Accept: 'application/json' } })
     if (!res.ok) throw new Error(`Failed to fetch unique ${reference}: ${res.status}`)
-    const card = normalizeCard(await res.json())
+    const raw = (await res.json()).member?.[0]
+    if (!raw) throw new Error(`Unique ${reference} not found`)
+    const card = normalizeAlteredCore(raw, loc)
     uniqueCache[key] = card
     return card
   } catch (err) {
@@ -111,6 +115,39 @@ function normalizeCard(raw) {
     forestPower: stripMarkers(raw.elements?.FOREST_POWER),
     mountainPower: stripMarkers(raw.elements?.MOUNTAIN_POWER),
     oceanPower: stripMarkers(raw.elements?.OCEAN_POWER),
+  }
+}
+
+// Image host-swap: cards.alteredcore.org serves imagePath from a LOCKED dev S3 bucket
+// (403 AccessDenied). The same file is public on the prod bucket — rewrite the host
+// (path + filename are identical). Handles both full URLs and relative "Art/…" paths.
+function prodImage(p) {
+  if (!p) return null
+  const path = p.replace(/^https?:\/\/[^/]+\//, '')
+  return `https://altered-prod-eu.s3.amazonaws.com/${path}`
+}
+
+// Map a card from cards.alteredcore.org into our normalized shape. Its JSON differs
+// from the old API: name/imagePath are per-locale objects, faction/cardType/rarity are
+// nested, and powers are flat integers (no #…# markers).
+function normalizeAlteredCore(raw, loc = 'en') {
+  const refStr = raw.reference ?? ''
+  const pick = obj => obj == null ? null
+    : typeof obj === 'string' ? obj
+    : (obj[loc] ?? obj.en ?? Object.values(obj)[0] ?? null)
+  return {
+    reference: refStr,
+    name: pick(raw.name),
+    faction: raw.faction?.code ?? 'XX',
+    factionName: raw.faction?.name ?? 'Unknown',
+    rarity: normalizeRarity(raw.rarity, refStr),
+    imagePath: prodImage(pick(raw.imagePath)),
+    cardType: raw.cardType?.reference ?? '',
+    mainCost: raw.mainCost ?? null,
+    recallCost: raw.recallCost ?? null,
+    forestPower: raw.forestPower ?? null,
+    mountainPower: raw.mountainPower ?? null,
+    oceanPower: raw.oceanPower ?? null,
   }
 }
 
