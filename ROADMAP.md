@@ -183,6 +183,37 @@ A cube by a game designer (MarcusK, engaged on Discord). Add it the manual way, 
 
 ## Planned
 
+### From live testing (17 Jun 2026) — queued for future sessions
+Backlog captured after the user tried the deployed app (theming + Re:Union deck flow all working). In rough priority:
+
+- **Bug — top-nav "Altered Draft" sends you back to room creation.** Clicking the wordmark in
+  `TopNav` (a `<Link to="/">` → Home) while in a room navigates away from the room. Expected:
+  it should NOT bounce an in-room user to the create/join screen. Fix options: make the wordmark
+  a no-op (or scroll-to-top) when already inside a `/room/...` route, or route it to the current
+  room's lobby instead of `/`. (`src/components/TopNav.jsx`.) Note `TopNav` currently only renders
+  on Home + Lobby, so this is mainly about the Lobby instance and any future placement in app views.
+- **Heroes: option to access ALL available heroes in draft/sealed.** Add a toggle so a draft/sealed
+  pool can offer the full hero roster (every hero in the selected sets/cube) rather than the
+  current per-pack/per-cube hero handling — i.e. let players pick from all heroes. Decide scope
+  (presets vs cubes), how it interacts with the in-app hero snake draft and the sealed slot-0 hero,
+  and the config-tab UI. (`Lobby.jsx` hero paths, `packGenerator.js`, `draftLogic.js`.)
+- **Cube of the month / spotlight.** A featured rotating cube highlighted in the Cubes tab (see also
+  "Community / Spotlight cubes (rotating)" below — likely fold these together). Needs a curation
+  mechanism + a spotlight card UI.
+- **Graphic / visual polish.** General look-and-feel pass on top of the new light/dark theme —
+  spacing, panel contrast (esp. low-contrast borderless panels in light mode), card grids, empty
+  states, iconography.
+- **Menu improvements.** Refine `TopNav` — content/links (e.g. Cubes, Decks, Re:Union deckbuilder),
+  layout, mobile behavior, active states.
+- **Change the menu font.** Revisit the display font (currently Cinzel for the wordmark) — pick a
+  face that better matches the Altered Core identity and decide how widely to apply it (wordmark
+  only vs headings). (`index.html` font link, `tailwind.config.js` `fontFamily.display`.)
+- **Harden code for Re:Union ecosystem integration.** A correctness/robustness pass to be
+  "full-proof" for living inside the Re:Union ecosystem: tighten the decks-API client + proxies
+  (error handling, token-refresh edge cases, the noted 403→deck-scope and sandbox-rejection
+  fallbacks), validate payloads against the live OpenAPI, move the refresh token to an httpOnly
+  cookie (already-noted hardening), and review the open-sourcing path under Altered-Community.
+
 ### Fix: heroes missing from built-in cube sealed (bug) — unblocked, spec locked
 Playing **LuigiNico** or **All Sets** in **Sealed** currently deals **zero heroes**: their 12
 heroes live in `cube.heroes` (not `cube.refs`), the in-app hero draft is draft-only, and the
