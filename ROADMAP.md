@@ -22,12 +22,11 @@ export) is unchanged; "Connect Re:Union" just unlocks extras for those who opt i
 
 **✅ Auth FOUNDATION shipped (June 2026):** login/logout works in code — `api/token.js`
 (serverless code↔token exchange), `src/lib/reunion.js` (PKCE OIDC client), `AuthProvider` +
-`useAuth()`, `/auth/callback` route, `ReunionButton` on Home. Deployed; the function + the
-`KEYCLOAK_CLIENT_SECRET` env var are **verified live** (a bad-refresh-token probe returns Keycloak's
-`invalid_grant`, proving the client authenticated). **Remaining to test interactive login: the dev
-must register the redirect URIs** (`https://altered-draft.vercel.app/auth/callback` +
-`http://localhost:5173/auth/callback`). **Next (step 2): deck read/write** — needs the decks-API
-contract. _Hardening fast-follow: move the refresh token to an httpOnly cookie._
+`useAuth()`, `/auth/callback` route, `ReunionButton` on Home. Deployed and **verified live end-to-end**: a real user logged in (redirect URIs registered by the
+dev) and their pseudo renders — the full Connect → Keycloak → callback → token exchange (function +
+`KEYCLOAK_CLIENT_SECRET`) → userinfo flow works. **Next (step 2): deck read/write** — needs the
+decks-API contract (list-decks + create-deck endpoints, payloads, scope). _Hardening fast-follow:
+move the refresh token to an httpOnly cookie._
 
 **Auth setup (provided by the Re:Union dev):**
 - Protocol: **OpenID Connect** via **Keycloak**.
