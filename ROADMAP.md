@@ -20,6 +20,15 @@ drafted deck straight into their account. This does NOT mean building our own ac
 Strictly **optional and additive**: anonymous use (paste cubes, localStorage decks, file
 export) is unchanged; "Connect Re:Union" just unlocks extras for those who opt in.
 
+**✅ Auth FOUNDATION shipped (June 2026):** login/logout works in code — `api/token.js`
+(serverless code↔token exchange), `src/lib/reunion.js` (PKCE OIDC client), `AuthProvider` +
+`useAuth()`, `/auth/callback` route, `ReunionButton` on Home. Deployed; the function + the
+`KEYCLOAK_CLIENT_SECRET` env var are **verified live** (a bad-refresh-token probe returns Keycloak's
+`invalid_grant`, proving the client authenticated). **Remaining to test interactive login: the dev
+must register the redirect URIs** (`https://altered-draft.vercel.app/auth/callback` +
+`http://localhost:5173/auth/callback`). **Next (step 2): deck read/write** — needs the decks-API
+contract. _Hardening fast-follow: move the refresh token to an httpOnly cookie._
+
 **Auth setup (provided by the Re:Union dev):**
 - Protocol: **OpenID Connect** via **Keycloak**.
 - Issuer / base: `https://auth.altered.re/`, realm `players`
