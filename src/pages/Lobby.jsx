@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase.js'
-import { fetchSet, SETS, apiSetCode, fetchUniques, isUniqueRef } from '../lib/cardData.js'
+import { fetchSet, SETS, apiSetCode, fetchUniques, isUniqueRef, canonicalCardRef } from '../lib/cardData.js'
 import { SET_ASSETS } from '../lib/assets.js'
 import { COMMUNITY_CUBES, setsForCube } from '../lib/cubes.js'
 import CubePreviewModal from '../components/CubePreviewModal.jsx'
@@ -112,7 +112,10 @@ export default function Lobby() {
   // resolve from the bundled snapshot only.
   async function handleParseCube() {
     setParseMsg('')
-    const { refs } = parseDecklist(customCubeText)
+    const { refs: rawRefs } = parseDecklist(customCubeText)
+    // Canonicalize alt-art / promo printings (e.g. ALT_DUSTEROP_A_AX_98_C) to their
+    // standard B card so they resolve from set data instead of being dropped.
+    const refs = rawRefs.map(canonicalCardRef)
     if (!refs.length) {
       setParseMsg('No card references found. Paste lines like "1 ALT_CORE_B_YZ_03_C".')
       return

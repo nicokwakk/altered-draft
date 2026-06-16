@@ -33,6 +33,31 @@ export function isUniqueRef(ref) {
   return /_U_\d+$/.test(ref ?? '')
 }
 
+// Cube refs may list non-standard printings — alternate-art (`_A_`), promo (`_P_`),
+// or promo / organized-play set codes like `DUSTEROP` (= DUSTER OP). These are the SAME
+// gameplay card as the standard booster (`B`) printing, but `fetchSet` only stocks `B`
+// cards from the canonical sets, so a pasted cube listing them would never resolve.
+// Canonicalize to the `B` printing of the base set so they resolve from set data like any
+// other card. Uniques are left as-is (resolved via fetchUnique); an unknown set with no
+// known base is left untouched (it surfaces as unresolved).
+export function canonicalCardRef(ref) {
+  if (!ref || isUniqueRef(ref)) return ref
+  const parts = ref.split('_')            // ALT, SET, PRINT, FAC, NUM, RARITY…
+  if (parts.length < 6 || parts[0] !== 'ALT') return ref
+  const setCode = parts[1]
+  const known = SETS.map(s => s.code)
+  // Exact known set wins; otherwise the longest known set that prefixes the (promo) set
+  // code — DUSTEROP → DUSTER, while COREKS stays COREKS (it's a known set itself).
+  const base = known.includes(setCode)
+    ? setCode
+    : known.filter(s => setCode.startsWith(s)).sort((a, b) => b.length - a.length)[0]
+  if (!base) return ref
+  if (base === setCode && parts[2] === 'B') return ref   // already standard
+  parts[1] = base
+  parts[2] = 'B'
+  return parts.join('_')
+}
+
 const LOCALE = { EN: 'en-us', FR: 'fr-fr', ES: 'es-es', DE: 'de-de', IT: 'it-it' }
 const uniqueCache = {}
 
