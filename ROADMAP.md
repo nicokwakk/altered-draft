@@ -76,13 +76,15 @@ integration end-to-end without waiting on the dev:
 - Maps cleanly to both objectives: load-cube = GET list → GET {id} → expand `deckCards`; save =
   POST twice (pool + final deck).
 
-**Still to confirm with the dev (small):**
-- **Prod base URL** of the decks API (`DECKS_API_URL`; dev = `localhost:8001`; public config only shows
-  `deckbuilder.alteredcore.org`). The one real blocker for step 2.
-- **CORS:** the website calls the decks API SERVER-SIDE (PHP cURL) → likely no browser CORS, so OUR app
-  should **proxy** decks calls through Vercel functions (`/api/decks…`) forwarding the Bearer token
-  (cleaner; sidesteps CORS). Confirm there's no CORS.
-- **Scope/audience:** confirm our `openid profile` token is accepted by the decks API, or add a deck scope.
+**Resolved by probing (step 2 now effectively unblocked):**
+- **Prod base URL = `https://decks.alteredcore.org`** ✅ (`GET /api/decks` → 401
+  `application/problem+json` "Full authentication is required"; Symfony API behind Cloudflare).
+- **CORS → MUST proxy** ✅ — preflight returns allow-methods/headers but **no `Access-Control-Allow-Origin`**
+  for our origin, so direct browser calls are blocked. Route decks calls through **Vercel proxy functions**
+  (`api/decks…`) that forward the user's Bearer token server-side (BFF pattern; also enables the httpOnly
+  hardening later).
+- **Scope:** resource APIs validate the realm JWT signature (per dev-env README), so our `openid profile`
+  token is very likely accepted as-is — confirm on the first authenticated call; add a scope only if it 403s.
 
 **Feature tiers (each maps to a Keycloak/API scope — ask for these, ship in this order):**
 - 🟢 **`deck:write`** — one-click "Save deck to my Re:Union account" at the end of a
