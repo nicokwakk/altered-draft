@@ -10,12 +10,16 @@ async function authHeaders() {
   return { Authorization: `Bearer ${token}`, Accept: 'application/json' }
 }
 
-// The authenticated user's decks (summaries). Unwraps the {items|decks|data:[...]} shape.
-export async function listDecks() {
-  const res = await fetch('/api/decks', { headers: await authHeaders() })
+// The authenticated user's decks (summaries). Fetches the whole list (the API paginates
+// at 20/page by default) sorted by name, and unwraps the various envelope shapes.
+// Each summary carries: id, name, format, isDraft, isPublic, createdAt… (no card list —
+// that's only on the per-deck detail endpoint).
+export async function listDecks(params = {}) {
+  const qs = new URLSearchParams({ itemsPerPage: '1000', 'order[name]': 'asc', ...params }).toString()
+  const res = await fetch(`/api/decks?${qs}`, { headers: await authHeaders() })
   if (!res.ok) throw new Error(`Could not load your decks (HTTP ${res.status}).`)
   const data = await res.json()
-  for (const key of ['items', 'decks', 'data']) {
+  for (const key of ['member', 'hydra:member', 'items', 'decks', 'data']) {
     if (Array.isArray(data?.[key])) return data[key]
   }
   return Array.isArray(data) ? data : []
@@ -28,8 +32,10 @@ export async function getDeck(id) {
   return res.json()
 }
 
-// Create one deck. Returns the API payload ({ id, ... }).
-export async function createDeck({ name, deckCards, isDraft = false, format = 'standard' }) {
+// Create one deck. Returns the API payload ({ id, ... }). Defaults to the API's
+// permissive `sandbox` format (valid enum: standard|nuc|singleton|singleton_nuc|sandbox)
+// so drafted/opened cards aren't rejected for collection/legality.
+export async function createDeck({ name, deckCards, isDraft = false, format = 'sandbox' }) {
   const res = await fetch('/api/decks', {
     method: 'POST',
     headers: { ...(await authHeaders()), 'Content-Type': 'application/json' },

@@ -9,7 +9,10 @@ export default async function handler(req, res) {
   if (!auth) return res.status(401).json({ error: 'missing_authorization' })
 
   if (req.method === 'GET') {
-    return forward(res, DECKS_API, { headers: { Authorization: auth, Accept: 'application/json' } })
+    // Forward the client's query string (pagination/order/filters: itemsPerPage, order[name],
+    // name, format, isDraft…). Fixed upstream host — only the query is pass-through.
+    const qs = req.url.includes('?') ? req.url.slice(req.url.indexOf('?')) : ''
+    return forward(res, DECKS_API + qs, { headers: { Authorization: auth, Accept: 'application/json' } })
   }
   if (req.method === 'POST') {
     const body = typeof req.body === 'string' ? req.body : JSON.stringify(req.body ?? {})

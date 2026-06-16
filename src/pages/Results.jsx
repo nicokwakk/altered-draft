@@ -5,8 +5,7 @@ import { fetchSet, apiSetCode, fetchUniques, isUniqueRef } from '../lib/cardData
 import { buildDecklist } from '../lib/exportFormat.js'
 import { FACTIONS, FACTION_NAMES, FACTION_COLORS } from '../lib/cardData.js'
 import { FACTION_ICONS } from '../lib/assets.js'
-import ExportButton from '../components/ExportButton.jsx'
-import SaveToReunion from '../components/SaveToReunion.jsx'
+import ExportMenu from '../components/ExportMenu.jsx'
 import DraftStats from '../components/DraftStats.jsx'
 import PoolGrid from '../components/PoolGrid.jsx'
 import DeckList from '../components/DeckList.jsx'
@@ -112,10 +111,8 @@ export default function Results() {
         <span className="font-mono text-amber-400 font-bold">{code}</span>
         <span className="text-gray-400 text-sm">Draft Complete · {myPicks.length} picks</span>
         <div className="ml-auto flex gap-2 items-center">
-          <SaveToReunion poolRefs={myPicks} deckRefs={deckRefs} name={code} />
-          {tab === 'deck'
-            ? <ExportButton decklist={deckDecklist} />
-            : <ExportButton decklist={allDecklist} />}
+          <ExportMenu poolRefs={myPicks} deckRefs={deckRefs}
+            poolDecklist={allDecklist} deckDecklist={deckDecklist} name={code} format="Draft" />
           <a href="https://altered.re/pages/decks" target="_blank" rel="noopener noreferrer"
             className="px-3 py-1.5 bg-gray-800 hover:bg-gray-700 text-sm rounded-lg text-gray-300 transition-colors">
             altered.re ↗

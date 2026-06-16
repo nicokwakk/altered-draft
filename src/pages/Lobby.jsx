@@ -55,6 +55,8 @@ export default function Lobby() {
   const [myDecks, setMyDecks] = useState(null) // null = not loaded yet; [] = loaded, empty
   const [loadingDecks, setLoadingDecks] = useState(false)
   const [decksMsg, setDecksMsg] = useState('')
+  const [deckSearch, setDeckSearch] = useState('')   // name filter for the deck picker
+  const [deckFormat, setDeckFormat] = useState('all') // format filter ('all' | standard | sandbox | …)
   const [selectedSets, setSelectedSets] = useState({ CORE: 1 })
   const [multiSetMix, setMultiSetMix] = useState({ CORE: 4 }) // per-player pack counts (sum = 4) for the Multi-Set draft tab
   const [equalPacks, setEqualPacks] = useState(true) // ON = same single-set boosters for all; OFF = random bag
@@ -162,8 +164,7 @@ export default function Lobby() {
       const { cards, heroes, unresolved } = await resolveCubeRefs(refs, lang)
       if (!cards.length) { setDecksMsg('No draftable cards resolved from that deck.'); setLoadingDecks(false); return }
       setCustomCube({ name: deck.name || 'Re:Union deck', cards, heroes, unresolved, source: 'reunion' })
-      setSelectedCube(null)
-      setMyDecks(null) // collapse the picker
+      setSelectedCube(null) // keep the picker open so another deck can be chosen
     } catch (e) { setDecksMsg(e.message) }
     setLoadingDecks(false)
   }
@@ -627,23 +628,61 @@ export default function Lobby() {
                           </button>
                           <span className="text-xs text-gray-500">as {user.pseudo}</span>
                         </div>
-                        {myDecks && myDecks.length > 0 && (
-                          <div className="max-h-48 overflow-y-auto space-y-1 pr-1">
-                            {myDecks.map((d, i) => (
-                              <button key={d.id ?? d.uuid ?? i} onClick={() => handleSelectDeck(d)}
-                                className="w-full text-left px-3 py-1.5 rounded-lg bg-gray-800 hover:bg-gray-700 text-sm text-gray-200 truncate transition-colors">
-                                {d.name || 'Untitled deck'}
-                              </button>
-                            ))}
-                          </div>
-                        )}
+                        {myDecks && myDecks.length > 0 && (() => {
+                          // Filter client-side by name + format. The list API has no card
+                          // count, so a deck-size filter isn't possible here — name/format
+                          // (the user's stated fallback) is what the API exposes.
+                          const formats = [...new Set(myDecks.map(d => d.format).filter(Boolean))]
+                          const q = deckSearch.trim().toLowerCase()
+                          const shown = myDecks.filter(d =>
+                            (deckFormat === 'all' || d.format === deckFormat) &&
+                            (!q || (d.name ?? '').toLowerCase().includes(q)))
+                          return (
+                            <div className="space-y-2">
+                              <input value={deckSearch} onChange={e => setDeckSearch(e.target.value)}
+                                placeholder={`Search ${myDecks.length} deck${myDecks.length !== 1 ? 's' : ''} by name…`}
+                                className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:border-amber-500" />
+                              {formats.length > 1 && (
+                                <div className="flex flex-wrap gap-1">
+                                  {['all', ...formats].map(f => (
+                                    <button key={f} onClick={() => setDeckFormat(f)}
+                                      className={`px-2 py-0.5 rounded text-xs capitalize transition-colors ${
+                                        deckFormat === f ? 'bg-amber-500 text-gray-950 font-bold' : 'bg-gray-800 text-gray-400 hover:text-gray-200'}`}>
+                                      {f === 'all' ? 'All' : f.replace('_', ' ')}
+                                    </button>
+                                  ))}
+                                </div>
+                              )}
+                              <div className="max-h-56 overflow-y-auto space-y-1 pr-1">
+                                {shown.map((d, i) => {
+                                  const active = customCube?.source === 'reunion' && customCube.name === (d.name || 'Re:Union deck')
+                                  return (
+                                    <button key={d.id ?? d.uuid ?? i} onClick={() => handleSelectDeck(d)}
+                                      className={`w-full flex items-center gap-2 text-left px-3 py-1.5 rounded-lg text-sm transition-colors ${
+                                        active ? 'bg-amber-500/20 text-amber-200' : 'bg-gray-800 hover:bg-gray-700 text-gray-200'}`}>
+                                      <span className="truncate flex-1">{d.name || 'Untitled deck'}</span>
+                                      {d.format && <span className="text-[10px] uppercase tracking-wide text-gray-500 shrink-0">{d.format.replace('_', ' ')}</span>}
+                                    </button>
+                                  )
+                                })}
+                                {!shown.length && <p className="text-xs text-gray-500 px-1 py-2">No decks match this filter.</p>}
+                              </div>
+                            </div>
+                          )
+                        })()}
                         {customCube?.source === 'reunion' && (
-                          <p className="text-xs text-green-400">
-                            ✓ Loaded “{customCube.name}” — {customCube.cards.length} card{customCube.cards.length !== 1 ? 's' : ''}
-                            {customCube.heroes.length > 0 && ` · ${customCube.heroes.length} hero${customCube.heroes.length !== 1 ? 'es' : ''}`}
-                            {customCube.unresolved.length > 0 && ` (${customCube.unresolved.length} unresolved, skipped)`}.
-                            <button onClick={() => setCustomCube(null)} className="text-gray-500 hover:text-gray-300 ml-2">Clear</button>
-                          </p>
+                          <div className="text-xs space-y-1.5">
+                            <p className="text-green-400">
+                              ✓ Loaded “{customCube.name}” — {customCube.cards.length} card{customCube.cards.length !== 1 ? 's' : ''}
+                              {customCube.heroes.length > 0 && ` · ${customCube.heroes.length} hero${customCube.heroes.length !== 1 ? 'es' : ''}`}
+                              {customCube.unresolved.length > 0 && ` (${customCube.unresolved.length} unresolved, skipped)`}.
+                            </p>
+                            <div className="flex items-center gap-3">
+                              <button onClick={() => setPreviewCube({ name: customCube.name, author: 'Re:Union', cardCount: customCube.cards.length + customCube.heroes.length, refs: [...customCube.cards, ...customCube.heroes] })}
+                                className="text-amber-400 hover:text-amber-300 transition-colors">Preview cube →</button>
+                              <button onClick={() => setCustomCube(null)} className="text-gray-500 hover:text-gray-300 transition-colors">Clear</button>
+                            </div>
+                          </div>
                         )}
                         {decksMsg && <p className="text-xs text-amber-400">{decksMsg}</p>}
                       </div>
