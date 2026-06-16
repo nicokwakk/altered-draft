@@ -5,7 +5,7 @@ import { fetchSet, SETS, apiSetCode, fetchUniques, isUniqueRef } from '../lib/ca
 import { SET_ASSETS } from '../lib/assets.js'
 import { COMMUNITY_CUBES, setsForCube } from '../lib/cubes.js'
 import CubePreviewModal from '../components/CubePreviewModal.jsx'
-import { generateAllPacks, generatePacksFromPool, generateChaosPacks, generateCubeRecipePacks, generateStructuredPacks, generateCubeDraftPacks } from '../lib/packGenerator.js'
+import { generateAllPacks, generatePacksFromPool, generateChaosPacks, generateCubeRecipePacks, generateStructuredPacks, generateCubeDraftPacks, dealHeroSlots } from '../lib/packGenerator.js'
 import { buildInitialState } from '../lib/draftLogic.js'
 import { parseDecklist } from '../lib/cubeParser.js'
 import SetSelector from '../components/SetSelector.jsx'
@@ -189,27 +189,31 @@ export default function Lobby() {
         if (configTab === 'cubes' && selectedCube) {
           const cube = COMMUNITY_CUBES.find(c => c.id === selectedCube)
           if (!cube) { setStartError('Cube not found.'); setLoading(false); return }
-          const rawCodes = [...new Set(setsForCube(cube.refs))]
+          // Include hero refs so their sets load (they fill each booster's slot 0 below).
+          const rawCodes = [...new Set(setsForCube([...cube.refs, ...(cube.heroes ?? [])]))]
           const results = await Promise.all(rawCodes.map(s => fetchSet(s, lang).catch(() => [])))
           const apiCodes = [...new Set(rawCodes.map(apiSetCode))]
+          const byRef = new Map(results.flat().map(c => [c.reference, c]))
+          // Hero-draft cubes keep heroes in a separate pool (not in refs). Sealed has no
+          // hero-draft phase, so deal one hero into each booster's first slot instead.
+          const heroRefs = cube.heroDraft ? [...new Set(cube.heroes ?? [])].filter(r => byRef.has(r)) : []
           const sealedPacks = {}
           if (cube.booster) {
             // Recipe cube (e.g. LuigiNico's): SAME fixed booster as draft. Use the
             // multiset pool incl. uniques (which aren't in set data — fetch them).
-            const byRef = new Map(results.flat().map(c => [c.reference, c]))
             const uniqueCards = await fetchUniques(cube.refs.filter(isUniqueRef), lang)
             for (const c of uniqueCards) byRef.set(c.reference, c)
             const allCards = cube.refs.map(r => byRef.get(r)).filter(Boolean)
             if (!allCards.length) { setStartError('Could not load cube card data.'); setLoading(false); return }
             for (let i = 0; i < playerCount; i++) {
-              sealedPacks[String(i)] = generateCubeRecipePacks(allCards, SEALED_PACKS, cube.booster)
+              sealedPacks[String(i)] = dealHeroSlots(generateCubeRecipePacks(allCards, SEALED_PACKS, cube.booster), heroRefs)
             }
           } else {
             const cubeRefSet = new Set(cube.refs)
             const allCards = results.flat().filter(c => cubeRefSet.has(c.reference))
             if (!allCards.length) { setStartError('Could not load cube card data.'); setLoading(false); return }
             for (let i = 0; i < playerCount; i++) {
-              sealedPacks[String(i)] = generateAllPacks(allCards, 1, SEALED_PACKS, { includeHeroes })
+              sealedPacks[String(i)] = dealHeroSlots(generateAllPacks(allCards, 1, SEALED_PACKS, { includeHeroes }), heroRefs)
             }
           }
           const state = {

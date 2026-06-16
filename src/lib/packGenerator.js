@@ -206,6 +206,22 @@ export function generateCubeRecipePacks(cardObjects, totalPacks, recipe) {
 }
 
 /**
+ * Deal one hero into each booster's FIRST slot, drawn from `heroRefs`. Used by
+ * built-in hero-draft cube SEALED, which has no hero-draft phase: every booster
+ * instead opens a hero the player can keep (like a real Altered booster). Heroes
+ * are shuffled per call (so each player gets their own order) and assigned distinct
+ * until the pool is exhausted, then repeated. Returns NEW packs (input untouched);
+ * a no-op when heroRefs is empty, so non-hero-draft cubes are unaffected.
+ * @param {string[][]} packs - packs of card references
+ * @param {string[]} heroRefs - hero references to deal from
+ */
+export function dealHeroSlots(packs, heroRefs) {
+  if (!heroRefs?.length) return packs
+  const bag = shuffle([...new Set(heroRefs)])
+  return packs.map((pack, i) => [bag[i % bag.length], ...pack])
+}
+
+/**
  * Cube mode: each card appears at most once across ALL packs, and EVERY pack is
  * the same size (critical — unequal packs deadlock the pass-and-pick rotation).
  *
