@@ -122,6 +122,23 @@ A cube by a game designer (MarcusK, engaged on Discord). Add it the manual way, 
 
 ## Planned
 
+### Fix: heroes missing from built-in cube sealed (bug) — unblocked, spec locked
+Playing **LuigiNico** or **All Sets** in **Sealed** currently deals **zero heroes**: their 12
+heroes live in `cube.heroes` (not `cube.refs`), the in-app hero draft is draft-only, and the
+sealed branch ([Lobby.jsx:188](src/pages/Lobby.jsx:188)) only uses `cube.refs`. The in-app snake
+hero draft has no sealed equivalent.
+- **Decided fix:** each of the 7 sealed boosters becomes a **13-card booster** — **slot 0 = a
+  hero drawn (with repetition) from the cube's hero list (`cube.heroes`)** + 12 cards from the
+  existing generator. Player still opens **7 boosters**, keeps 1 hero for the deck.
+- **Recipe cubes** (LuigiNico, `cube.booster` {3,8,1} = 12): prepend a random hero → 13.
+- **Non-recipe cubes** (All Sets, `generateAllPacks`): fill the hero slot from `cube.heroes`
+  (its 12 heroes were moved out of `refs`, so the current `includeHeroes` path finds none).
+- Resolve `cube.heroes` as card objects and ensure their sets load (mirror the draft branch's
+  `setsForCube([...cube.refs, ...cube.heroes])`) so they render in `Sealed.jsx` pool/deck/export.
+- **Scope: built-in hero-draft cubes ONLY.** Pasted custom cubes keep folding heroes into the
+  pool (unchanged); preset/advanced sealed already put a set hero in slot 0 (unchanged).
+- Small, self-contained, **no external dependency — can ship anytime.**
+
 ### Community / Spotlight cubes (rotating)
 wordcandy70 & Kari (Casual Alterations) want to put up a **rotating monthly community cube**
 (first: All Commons; others: a Uniques Cube, "Opps All Jellyfish", "Six Sets, Six Factions").
