@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase.js'
 import { generateRoomCode } from '../lib/roomCode.js'
+import ReunionButton from '../components/ReunionButton.jsx'
 
 export default function Home() {
   const navigate = useNavigate()
@@ -98,6 +99,7 @@ export default function Home() {
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center px-4">
+      <div className="fixed top-4 right-4 z-10"><ReunionButton /></div>
       <div className="max-w-md w-full">
         <div className="text-center mb-10">
           <h1 className="text-4xl font-bold tracking-tight mb-2">
