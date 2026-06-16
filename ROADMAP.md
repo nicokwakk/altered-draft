@@ -65,10 +65,24 @@ integration end-to-end without waiting on the dev:
 - **Setup deferred — not started (user's call).** This Windows box has only `git` on PATH; macOS
   already has Node, likely the lighter lift.
 
-**Still needed from the dev — PRODUCTION ONLY** (local is now self-serviceable):
-- The prod `altered-draft` client registration + **secret** + redirect URIs
-  (`https://altered-draft.vercel.app/auth/callback`, post-logout, web-origins).
-- Confirm the prod decks-API contract matches local (create-deck endpoint, payload, scope/audience).
+**Decks API contract — FOUND in `github.com/Altered-Community/alteredcore-website`**
+(the `equinox-deck-import` plugin's `CurlDeckApiClient.php` + `Domain/{Card,Deck}.php`):
+- Auth: `Authorization: Bearer <user access token>` + `Accept: application/json`.
+- **List my decks:** `GET {base}/api/decks` → array (or `{items|decks|data:[...]}` wrapper).
+- **Deck detail (with cards):** `GET {base}/api/decks/{id}` → full deck incl. `deckCards`.
+- **Create:** `POST {base}/api/decks` JSON `{ name, format:"standard", isPublic:false, isDraft:false,
+  deckCards:[{cardReference:"ALT_…", quantity:1-99}] }` → 2xx `{ id }`. Hero = just a 1-of entry in
+  `deckCards`. Card ref must match `^ALT_[A-Z0-9_]+$` (uppercase).
+- Maps cleanly to both objectives: load-cube = GET list → GET {id} → expand `deckCards`; save =
+  POST twice (pool + final deck).
+
+**Still to confirm with the dev (small):**
+- **Prod base URL** of the decks API (`DECKS_API_URL`; dev = `localhost:8001`; public config only shows
+  `deckbuilder.alteredcore.org`). The one real blocker for step 2.
+- **CORS:** the website calls the decks API SERVER-SIDE (PHP cURL) → likely no browser CORS, so OUR app
+  should **proxy** decks calls through Vercel functions (`/api/decks…`) forwarding the Bearer token
+  (cleaner; sidesteps CORS). Confirm there's no CORS.
+- **Scope/audience:** confirm our `openid profile` token is accepted by the decks API, or add a deck scope.
 
 **Feature tiers (each maps to a Keycloak/API scope — ask for these, ship in this order):**
 - 🟢 **`deck:write`** — one-click "Save deck to my Re:Union account" at the end of a
