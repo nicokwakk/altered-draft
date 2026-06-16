@@ -58,6 +58,7 @@ export default function Lobby() {
   const [decksMsg, setDecksMsg] = useState('')
   const [deckSearch, setDeckSearch] = useState('')   // name filter for the deck picker
   const [deckFormat, setDeckFormat] = useState('all') // format filter ('all' | standard | sandbox | …)
+  const [selectedDeckIds, setSelectedDeckIds] = useState([]) // decks ticked to merge into one cube
   const [selectedSets, setSelectedSets] = useState({ CORE: 1 })
   const [multiSetMix, setMultiSetMix] = useState({ CORE: 4 }) // per-player pack counts (sum = 4) for the Multi-Set draft tab
   const [equalPacks, setEqualPacks] = useState(true) // ON = same single-set boosters for all; OFF = random bag
@@ -156,16 +157,29 @@ export default function Lobby() {
     setLoadingDecks(false)
   }
 
-  // Turn one chosen Re:Union deck into a custom cube (same shape as a pasted cube).
-  async function handleSelectDeck(deck) {
+  const deckKey = d => d.id ?? d.uuid ?? d.name
+  function toggleDeck(id) {
+    setSelectedDeckIds(ids => ids.includes(id) ? ids.filter(x => x !== id) : [...ids, id])
+  }
+
+  // Merge the chosen Re:Union deck(s) into ONE custom cube (same shape as a pasted
+  // cube). Combining several decks stacks copies into a bigger multiset pool — useful
+  // since a single ~40-card deck is too small to draft with a full table.
+  async function handleLoadSelectedDecks() {
+    const chosen = (myDecks ?? []).filter(d => selectedDeckIds.includes(deckKey(d)))
+    if (!chosen.length) return
     setDecksMsg(''); setLoadingDecks(true)
     try {
-      const refs = deckCardsToRefs(await getDeck(deck.id ?? deck.uuid))
-      if (!refs.length) { setDecksMsg('That deck has no cards.'); setLoadingDecks(false); return }
-      const { cards, heroes, unresolved } = await resolveCubeRefs(refs, lang)
-      if (!cards.length) { setDecksMsg('No draftable cards resolved from that deck.'); setLoadingDecks(false); return }
-      setCustomCube({ name: deck.name || 'Re:Union deck', cards, heroes, unresolved, source: 'reunion' })
-      setSelectedCube(null) // keep the picker open so another deck can be chosen
+      const lists = await Promise.all(chosen.map(d => getDeck(d.id ?? d.uuid).then(deckCardsToRefs)))
+      const allRefs = lists.flat()
+      if (!allRefs.length) { setDecksMsg('Those decks have no cards.'); setLoadingDecks(false); return }
+      const { cards, heroes, unresolved } = await resolveCubeRefs(allRefs, lang)
+      if (!cards.length) { setDecksMsg('No draftable cards resolved from those decks.'); setLoadingDecks(false); return }
+      const name = chosen.length === 1
+        ? (chosen[0].name || 'Re:Union deck')
+        : `${chosen.length} decks (${chosen.map(d => d.name || 'Untitled').slice(0, 3).join(', ')}${chosen.length > 3 ? '…' : ''})`
+      setCustomCube({ name, cards, heroes, unresolved, source: 'reunion' })
+      setSelectedCube(null) // custom + built-in cubes are mutually exclusive
     } catch (e) { setDecksMsg(e.message) }
     setLoadingDecks(false)
   }
@@ -658,11 +672,13 @@ export default function Lobby() {
                               )}
                               <div className="max-h-56 overflow-y-auto space-y-1 pr-1">
                                 {shown.map((d, i) => {
-                                  const active = customCube?.source === 'reunion' && customCube.name === (d.name || 'Re:Union deck')
+                                  const checked = selectedDeckIds.includes(deckKey(d))
                                   return (
-                                    <button key={d.id ?? d.uuid ?? i} onClick={() => handleSelectDeck(d)}
+                                    <button key={deckKey(d) ?? i} onClick={() => toggleDeck(deckKey(d))}
                                       className={`w-full flex items-center gap-2 text-left px-3 py-1.5 rounded-lg text-sm transition-colors ${
-                                        active ? 'bg-accent/20 text-accent2' : 'bg-surface2 hover:bg-surface3 text-ink'}`}>
+                                        checked ? 'bg-accent/20 text-accent2' : 'bg-surface2 hover:bg-surface3 text-ink'}`}>
+                                      <span className={`w-4 h-4 rounded border shrink-0 flex items-center justify-center text-[10px] ${
+                                        checked ? 'bg-accent border-accent text-on-accent' : 'border-line'}`}>{checked ? '✓' : ''}</span>
                                       <span className="truncate flex-1">{d.name || 'Untitled deck'}</span>
                                       {d.format && <span className="text-[10px] uppercase tracking-wide text-faint shrink-0">{d.format.replace('_', ' ')}</span>}
                                     </button>
@@ -670,6 +686,16 @@ export default function Lobby() {
                                 })}
                                 {!shown.length && <p className="text-xs text-faint px-1 py-2">No decks match this filter.</p>}
                               </div>
+                              <div className="flex items-center gap-3">
+                                <button onClick={handleLoadSelectedDecks} disabled={loadingDecks || !selectedDeckIds.length}
+                                  className="px-3 py-1.5 rounded-lg text-sm font-medium bg-accent hover:bg-accent2 disabled:opacity-40 text-on-accent transition-colors">
+                                  {loadingDecks ? 'Loading…' : `Load ${selectedDeckIds.length || ''} deck${selectedDeckIds.length === 1 ? '' : 's'} as cube`.replace('  ', ' ')}
+                                </button>
+                                {selectedDeckIds.length > 0 && (
+                                  <button onClick={() => setSelectedDeckIds([])} className="text-xs text-faint hover:text-ink2 transition-colors">Clear selection</button>
+                                )}
+                              </div>
+                              <p className="text-[11px] text-faint">Tick one or more decks — multiple decks merge into a single, bigger cube.</p>
                             </div>
                           )
                         })()}
