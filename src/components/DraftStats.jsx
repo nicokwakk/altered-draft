@@ -5,7 +5,7 @@ import { FACTION_ICONS, RARITY_GEMS, SET_ICONS, setCodeFromRef } from '../lib/as
 const SET_ORDER = ['BTG', 'TBF', 'WTM', 'SKY', 'SDU', 'ROC', 'NEJ']
 
 const TYPE_GROUPS = {
-  HERO:                 { label: 'Hero',       color: 'text-amber-400' },
+  HERO:                 { label: 'Hero',       color: 'text-accent' },
   CHARACTER:            { label: 'Character',  color: 'text-blue-400' },
   SPELL:                { label: 'Spell',      color: 'text-purple-400' },
   PERMANENT:            { label: 'Permanent',  color: 'text-green-400' },
@@ -38,7 +38,7 @@ function CostCurve({ title, counts, maxCost, color }) {
 
   return (
     <div>
-      <p className="text-xs text-gray-500 mb-1">{title}</p>
+      <p className="text-xs text-faint mb-1">{title}</p>
       <div className="flex items-end gap-1 h-14 relative">
         {Array.from({ length: maxCost + 1 }, (_, i) => i).map(cost => {
           const count = counts[cost] ?? 0
@@ -50,7 +50,7 @@ function CostCurve({ title, counts, maxCost, color }) {
               onMouseLeave={() => setHovered(null)}
             >
               {isHov && count > 0 && (
-                <div className="absolute -top-5 left-1/2 -translate-x-1/2 bg-gray-700 text-gray-100 text-xs rounded px-1 py-0.5 whitespace-nowrap z-10">
+                <div className="absolute -top-5 left-1/2 -translate-x-1/2 bg-surface3 text-ink text-xs rounded px-1 py-0.5 whitespace-nowrap z-10">
                   {count} card{count !== 1 ? 's' : ''}
                 </div>
               )}
@@ -58,7 +58,7 @@ function CostCurve({ title, counts, maxCost, color }) {
                 className="w-full rounded-t transition-all duration-200"
                 style={{ height: `${height}px`, backgroundColor: count ? color : '#1f2937', opacity: isHov ? 1 : 0.85 }}
               />
-              <span className="text-xs text-gray-600">{cost}</span>
+              <span className="text-xs text-faint">{cost}</span>
             </div>
           )
         })}
@@ -120,7 +120,7 @@ export default function DraftStats({ pickedRefs, cardMap }) {
 
       {/* Faction split */}
       <section>
-        <h4 className="text-xs uppercase tracking-widest text-gray-500 mb-2">Faction split</h4>
+        <h4 className="text-xs uppercase tracking-widest text-faint mb-2">Faction split</h4>
         <div className="space-y-1.5">
           {FACTIONS.map(f => {
             const count = factionCounts[f] ?? 0
@@ -132,11 +132,11 @@ export default function DraftStats({ pickedRefs, cardMap }) {
                   {FACTION_ICONS[f] && <img src={FACTION_ICONS[f]} alt="" className="w-3 h-3 object-contain shrink-0" />}
                   {FACTION_NAMES[f]}
                 </span>
-                <div className="flex-1 h-2 bg-gray-800 rounded-full overflow-hidden">
+                <div className="flex-1 h-2 bg-surface2 rounded-full overflow-hidden">
                   <div className="h-full rounded-full transition-all duration-300"
                     style={{ width: `${pct}%`, backgroundColor: FACTION_BAR_COLORS[f] ?? '#6b7280' }} />
                 </div>
-                <span className="text-xs text-gray-400 w-6 text-right">{count}</span>
+                <span className="text-xs text-muted w-6 text-right">{count}</span>
               </div>
             )
           })}
@@ -146,7 +146,7 @@ export default function DraftStats({ pickedRefs, cardMap }) {
       {/* Set breakdown */}
       {Object.keys(setCounts).length > 1 && (
         <section>
-          <h4 className="text-xs uppercase tracking-widest text-gray-500 mb-2">Sets</h4>
+          <h4 className="text-xs uppercase tracking-widest text-faint mb-2">Sets</h4>
           <div className="space-y-1.5">
             {SET_ORDER.filter(s => setCounts[s]).map(s => {
               const count = setCounts[s]
@@ -158,12 +158,12 @@ export default function DraftStats({ pickedRefs, cardMap }) {
                   <div className="w-5 h-5 shrink-0 flex items-center justify-center" title={s}>
                     {icon
                       ? <img src={icon} alt={s} className="w-5 h-5 object-contain" onError={e => { e.currentTarget.style.display = 'none' }} />
-                      : <span className="text-xs text-gray-500">{s}</span>}
+                      : <span className="text-xs text-faint">{s}</span>}
                   </div>
-                  <div className="flex-1 h-2 bg-gray-800 rounded-full overflow-hidden">
-                    <div className="h-full rounded-full bg-gray-500 transition-all duration-300" style={{ width: `${pct}%` }} />
+                  <div className="flex-1 h-2 bg-surface2 rounded-full overflow-hidden">
+                    <div className="h-full rounded-full bg-surface3 transition-all duration-300" style={{ width: `${pct}%` }} />
                   </div>
-                  <span className="text-xs text-gray-400 w-6 text-right">{count}</span>
+                  <span className="text-xs text-muted w-6 text-right">{count}</span>
                 </div>
               )
             })}
@@ -173,14 +173,14 @@ export default function DraftStats({ pickedRefs, cardMap }) {
 
       {/* Card type breakdown */}
       <section>
-        <h4 className="text-xs uppercase tracking-widest text-gray-500 mb-2">Card types</h4>
+        <h4 className="text-xs uppercase tracking-widest text-faint mb-2">Card types</h4>
         <div className="grid grid-cols-2 gap-1.5">
           {Object.entries(typeCounts).map(([type, count]) => {
             const group = Object.values(TYPE_GROUPS).find(g => g.label === type)
             return (
-              <div key={type} className="bg-gray-800 rounded-lg px-3 py-2 flex items-center justify-between">
-                <span className={`text-xs font-medium ${group?.color ?? 'text-gray-400'}`}>{type}</span>
-                <span className="text-sm font-bold text-gray-200">{count}</span>
+              <div key={type} className="bg-surface2 rounded-lg px-3 py-2 flex items-center justify-between">
+                <span className={`text-xs font-medium ${group?.color ?? 'text-muted'}`}>{type}</span>
+                <span className="text-sm font-bold text-ink">{count}</span>
               </div>
             )
           })}
@@ -190,7 +190,7 @@ export default function DraftStats({ pickedRefs, cardMap }) {
       {/* Rarity breakdown */}
       {rarityTotal > 0 && (
         <section>
-          <h4 className="text-xs uppercase tracking-widest text-gray-500 mb-2">Rarity</h4>
+          <h4 className="text-xs uppercase tracking-widest text-faint mb-2">Rarity</h4>
           <div className="flex gap-2">
             {[
               { key: 'C',  label: 'Common',  gem: RARITY_GEMS.C },
@@ -201,10 +201,10 @@ export default function DraftStats({ pickedRefs, cardMap }) {
               const count = key === 'R1' ? rarityCounts.R1 + rarityCounts.R2 : rarityCounts[key]
               if (!count) return null
               return (
-                <div key={key} className="flex-1 bg-gray-800 rounded-lg px-2 py-2 flex flex-col items-center gap-1">
+                <div key={key} className="flex-1 bg-surface2 rounded-lg px-2 py-2 flex flex-col items-center gap-1">
                   <img src={gem} alt={label} className="w-6 h-6 object-contain" />
-                  <span className="text-sm font-bold text-gray-200">{count}</span>
-                  <span className="text-xs text-gray-500">{label}</span>
+                  <span className="text-sm font-bold text-ink">{count}</span>
+                  <span className="text-xs text-faint">{label}</span>
                 </div>
               )
             })}
@@ -214,7 +214,7 @@ export default function DraftStats({ pickedRefs, cardMap }) {
 
       {/* Cost curves */}
       <section>
-        <h4 className="text-xs uppercase tracking-widest text-gray-500 mb-3">Cost curves</h4>
+        <h4 className="text-xs uppercase tracking-widest text-faint mb-3">Cost curves</h4>
         <div className="space-y-4">
           <CostCurve title="Hand cost" counts={handCounts} maxCost={handMax} color="#f59e0b" />
           <CostCurve title="Recall cost" counts={recallCounts} maxCost={recallMax} color="#60a5fa" />
@@ -224,17 +224,17 @@ export default function DraftStats({ pickedRefs, cardMap }) {
       {/* Biome totals */}
       {hasBiomes && (
         <section>
-          <h4 className="text-xs uppercase tracking-widest text-gray-500 mb-2">Biome power</h4>
+          <h4 className="text-xs uppercase tracking-widest text-faint mb-2">Biome power</h4>
           <div className="grid grid-cols-3 gap-2">
             {[
               { label: 'Forest',   emoji: '🌲', value: forestTotal,   color: 'text-green-400' },
               { label: 'Mountain', emoji: '⛰️',  value: mountainTotal, color: 'text-orange-400' },
               { label: 'Ocean',    emoji: '🌊', value: oceanTotal,    color: 'text-blue-400' },
             ].map(({ label, emoji, value, color }) => (
-              <div key={label} className="bg-gray-800 rounded-lg px-2 py-2 flex flex-col items-center gap-1">
+              <div key={label} className="bg-surface2 rounded-lg px-2 py-2 flex flex-col items-center gap-1">
                 <span className="text-lg leading-none">{emoji}</span>
                 <span className={`text-sm font-bold ${color}`}>{value}</span>
-                <span className="text-xs text-gray-500">{label}</span>
+                <span className="text-xs text-faint">{label}</span>
               </div>
             ))}
           </div>

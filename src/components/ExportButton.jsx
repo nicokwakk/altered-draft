@@ -40,7 +40,7 @@ export default function ExportButton({ decklist, small }) {
         rounded-lg font-medium transition-colors disabled:opacity-40
         ${state === 'copied' ? 'bg-green-600 text-white'
           : state === 'error' ? 'bg-red-700 text-white'
-          : 'bg-amber-500 hover:bg-amber-400 text-gray-950'}
+          : 'bg-accent hover:bg-accent2 text-on-accent'}
       `}
     >
       {label}

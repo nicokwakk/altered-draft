@@ -6,6 +6,7 @@ import { buildDecklist } from '../lib/exportFormat.js'
 import { FACTIONS, FACTION_NAMES, FACTION_COLORS } from '../lib/cardData.js'
 import { FACTION_ICONS } from '../lib/assets.js'
 import ExportMenu from '../components/ExportMenu.jsx'
+import ThemeToggle from '../components/ThemeToggle.jsx'
 import DraftStats from '../components/DraftStats.jsx'
 import PoolGrid from '../components/PoolGrid.jsx'
 import DeckList from '../components/DeckList.jsx'
@@ -64,7 +65,7 @@ export default function Results() {
   }
 
   if (!roomState || !me) {
-    return <div className="min-h-screen flex items-center justify-center text-gray-400">Loading results…</div>
+    return <div className="min-h-screen flex items-center justify-center text-muted">Loading results…</div>
   }
 
   const myIndex = roomState.players.findIndex(p => p.id === me.id)
@@ -107,21 +108,22 @@ export default function Results() {
   return (
     <div className="h-screen flex flex-col overflow-hidden">
       {/* Top bar */}
-      <div className="bg-gray-900 border-b border-gray-800 px-4 py-2 flex items-center gap-3 shrink-0">
-        <span className="font-mono text-amber-400 font-bold">{code}</span>
-        <span className="text-gray-400 text-sm">Draft Complete · {myPicks.length} picks</span>
+      <div className="bg-surface border-b border-line px-4 py-2 flex items-center gap-3 shrink-0">
+        <span className="font-mono text-accent font-bold">{code}</span>
+        <span className="text-muted text-sm">Draft Complete · {myPicks.length} picks</span>
         <div className="ml-auto flex gap-2 items-center">
           <ExportMenu poolRefs={myPicks} deckRefs={deckRefs}
             poolDecklist={allDecklist} deckDecklist={deckDecklist} name={code} format="Draft" />
           <a href="https://altered.re/pages/decks" target="_blank" rel="noopener noreferrer"
-            className="px-3 py-1.5 bg-gray-800 hover:bg-gray-700 text-sm rounded-lg text-gray-300 transition-colors">
+            className="px-3 py-1.5 bg-surface2 hover:bg-surface3 text-sm rounded-lg text-ink2 transition-colors">
             altered.re ↗
           </a>
+          <ThemeToggle />
         </div>
       </div>
 
       {/* Tabs */}
-      <div className="bg-gray-900 border-b border-gray-800 flex shrink-0">
+      <div className="bg-surface border-b border-line flex shrink-0">
         {[
           { id: 'picks',   label: `All Picks (${myPicks.length})` },
           { id: 'deck',    label: `Deck (${deckTotal})`, highlight: isValid },
@@ -131,8 +133,8 @@ export default function Results() {
           <button key={t.id} onClick={() => setTab(t.id)}
             className={`flex-1 py-2.5 text-sm transition-colors ${
               tab === t.id
-                ? t.highlight ? 'text-green-400 border-b-2 border-green-400' : 'text-amber-400 border-b-2 border-amber-400'
-                : 'text-gray-500 hover:text-gray-300'}`}>
+                ? t.highlight ? 'text-green-400 border-b-2 border-green-400' : 'text-accent border-b-2 border-accent2'
+                : 'text-faint hover:text-ink2'}`}>
             {t.label}
           </button>
         ))}
@@ -148,14 +150,14 @@ export default function Results() {
       {tab === 'deck' && (
         <div className="flex-1 flex flex-col overflow-hidden">
           <div className={`px-4 py-2 border-b shrink-0 flex flex-wrap gap-3 items-center text-sm ${
-            isValid ? 'border-green-800 bg-green-900/20' : 'border-gray-800 bg-gray-900'}`}>
+            isValid ? 'border-green-800 bg-green-900/20' : 'border-line bg-surface'}`}>
             <span className={isEnough ? 'text-green-400' : 'text-red-400'}>{isEnough ? '✓' : '✗'} {deckRefs.length}/30 cards</span>
             <span className={isValidFactions ? 'text-green-400' : 'text-red-400'}>{isValidFactions ? '✓' : '✗'} {deckFactions.size}/3 factions</span>
-            <span className={isValidHero ? (deckHeroCount === 1 ? 'text-green-400' : 'text-gray-500') : 'text-red-400'}>{isValidHero ? '✓' : '✗'} {deckHeroCount}/1 hero</span>
+            <span className={isValidHero ? (deckHeroCount === 1 ? 'text-green-400' : 'text-faint') : 'text-red-400'}>{isValidHero ? '✓' : '✗'} {deckHeroCount}/1 hero</span>
             {isValid && <span className="text-green-400 font-semibold ml-auto">Deck is valid ✓</span>}
           </div>
           {deckTotal === 0
-            ? <div className="flex-1 flex items-center justify-center text-gray-500 text-sm">No cards in deck yet — add them from the All Picks tab.</div>
+            ? <div className="flex-1 flex items-center justify-center text-faint text-sm">No cards in deck yet — add them from the All Picks tab.</div>
             : <div className="flex-1 overflow-y-auto" style={{ scrollbarGutter: 'stable' }}><DeckList deck={deck} cardMap={cardMap} onRemove={removeFromDeck} onAdd={addToDeck} poolCounts={poolCounts} /></div>}
         </div>
       )}
@@ -164,10 +166,10 @@ export default function Results() {
       {tab === 'stats' && (
         <div className="flex-1 flex flex-col overflow-hidden">
           {deckTotal > 0 && (
-            <div className="flex border-b border-gray-800 shrink-0">
+            <div className="flex border-b border-line shrink-0">
               {[['all', 'All Picks'], ['deck', 'Deck']].map(([id, label]) => (
                 <button key={id} onClick={() => setStatsScope(id)}
-                  className={`flex-1 py-2 text-sm transition-colors ${statsScope === id ? 'text-amber-400 border-b-2 border-amber-400' : 'text-gray-500 hover:text-gray-300'}`}>
+                  className={`flex-1 py-2 text-sm transition-colors ${statsScope === id ? 'text-accent border-b-2 border-accent2' : 'text-faint hover:text-ink2'}`}>
                   {label}
                 </button>
               ))}
@@ -192,11 +194,11 @@ export default function Results() {
                 factionCounts[card.faction] = (factionCounts[card.faction] ?? 0) + 1
               }
               return (
-                <div key={player.id} className="bg-gray-900 rounded-xl p-4">
+                <div key={player.id} className="bg-surface rounded-xl p-4">
                   <div className="flex items-center gap-2 mb-3">
                     <span className="font-medium">{player.name}</span>
-                    {player.id === me.id && <span className="text-xs text-amber-400">(you)</span>}
-                    <span className="ml-auto text-xs text-gray-500">{picks.length} picks</span>
+                    {player.id === me.id && <span className="text-xs text-accent">(you)</span>}
+                    <span className="ml-auto text-xs text-faint">{picks.length} picks</span>
                   </div>
                   <div className="flex flex-wrap gap-1">
                     {FACTIONS.filter(f => factionCounts[f]).map(f => (

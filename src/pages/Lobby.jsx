@@ -13,6 +13,7 @@ import { listDecks, getDeck, deckCardsToRefs } from '../lib/decks.js'
 import { useAuth } from '../auth/AuthProvider.jsx'
 import SetSelector from '../components/SetSelector.jsx'
 import MultiSetSelector from '../components/MultiSetSelector.jsx'
+import TopNav from '../components/TopNav.jsx'
 
 const TAB_LABELS = { presets: 'Presets', cubes: 'Cubes', advanced: 'Advanced', multiset: 'Multi-Set' }
 
@@ -440,28 +441,30 @@ export default function Lobby() {
   }
 
   if (!roomState || !me) {
-    return <div className="min-h-screen flex items-center justify-center text-gray-400">Loading room…</div>
+    return <div className="min-h-screen flex items-center justify-center text-muted">Loading room…</div>
   }
 
   const isHost = me.isHost
 
   return (
-    <div className="min-h-screen flex flex-col items-center py-12 px-4">
+    <div className="min-h-screen flex flex-col">
+      <TopNav />
+      <div className="flex-1 w-full flex flex-col items-center px-4 py-8">
       <div className="max-w-2xl w-full space-y-6">
 
         {/* Room code + share */}
-        <div className="bg-gray-900 rounded-xl p-6">
+        <div className="bg-surface rounded-xl p-6">
           <div className="flex gap-6 items-center">
             <div className="flex-1">
-              <p className="text-xs text-gray-500 uppercase tracking-widest mb-1">Room code</p>
-              <p className="text-4xl sm:text-5xl font-mono font-bold tracking-widest text-amber-400">{code}</p>
-              <p className="text-sm text-gray-500 mt-2">Share this code or the link below</p>
+              <p className="text-xs text-faint uppercase tracking-widest mb-1">Room code</p>
+              <p className="text-4xl sm:text-5xl font-mono font-bold tracking-widest text-accent">{code}</p>
+              <p className="text-sm text-faint mt-2">Share this code or the link below</p>
               <div className="flex gap-2 mt-3">
                 <input readOnly value={joinUrl}
-                  className="flex-1 bg-gray-800 border border-gray-700 rounded-lg px-3 py-1.5 text-xs text-gray-400 font-mono min-w-0" />
+                  className="flex-1 bg-surface2 border border-line rounded-lg px-3 py-1.5 text-xs text-muted font-mono min-w-0" />
                 <button onClick={copyLink}
                   className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors shrink-0 ${
-                    linkCopied ? 'bg-green-600 text-white' : 'bg-gray-700 hover:bg-gray-600 text-gray-300'}`}>
+                    linkCopied ? 'bg-green-600 text-white' : 'bg-surface3 hover:bg-surface3 text-ink2'}`}>
                   {linkCopied ? '✓ Copied' : 'Copy'}
                 </button>
               </div>
@@ -471,22 +474,22 @@ export default function Lobby() {
         </div>
 
         {/* Players list */}
-        <div className="bg-gray-900 rounded-xl p-6">
-          <h2 className="font-semibold mb-3 text-gray-300">Players ({roomState.players.length})</h2>
+        <div className="bg-surface rounded-xl p-6">
+          <h2 className="font-semibold mb-3 text-ink2">Players ({roomState.players.length})</h2>
           <ul className="space-y-2">
             {roomState.players.map((p, i) => (
               <li key={p.id} className="flex items-center gap-3 text-sm">
-                <span className="w-7 h-7 rounded-full bg-amber-500/20 text-amber-400 flex items-center justify-center text-xs font-bold">
+                <span className="w-7 h-7 rounded-full bg-accent/20 text-accent flex items-center justify-center text-xs font-bold">
                   {i + 1}
                 </span>
                 <span className="font-medium">{p.name}</span>
-                {i === 0 && <span className="text-xs text-amber-400 ml-auto">Host</span>}
-                {p.id === me.id && <span className="text-xs text-gray-500 ml-1">(you)</span>}
+                {i === 0 && <span className="text-xs text-accent ml-auto">Host</span>}
+                {p.id === me.id && <span className="text-xs text-faint ml-1">(you)</span>}
               </li>
             ))}
           </ul>
           {roomState.players.length < 2 && (
-            <p className="text-xs text-gray-500 mt-3">
+            <p className="text-xs text-faint mt-3">
               {isHost && draftMode === 'sealed'
                 ? 'You can start sealed solo, or wait for others to join.'
                 : 'Waiting for more players to join…'}
@@ -496,9 +499,9 @@ export default function Lobby() {
 
         {/* Draft config — host only */}
         {isHost && (
-          <div className="bg-gray-900 rounded-xl overflow-hidden">
+          <div className="bg-surface rounded-xl overflow-hidden">
             {/* Mode selector: Draft vs Sealed */}
-            <div className="grid grid-cols-2 border-b border-gray-800">
+            <div className="grid grid-cols-2 border-b border-line">
               {[{ id: 'draft', label: 'Draft', desc: 'Pick from passing packs' },
                 { id: 'sealed', label: 'Sealed', desc: '7 boosters, build your pool' }].map(m => (
                 <button key={m.id} onClick={() => {
@@ -508,21 +511,21 @@ export default function Lobby() {
                     if (m.id === 'draft' && configTab === 'advanced') setConfigTab('multiset')
                   }}
                   className={`py-3 px-4 text-left transition-colors ${
-                    draftMode === m.id ? 'bg-amber-500/10 border-b-2 border-amber-500' : 'hover:bg-gray-800/50'}`}>
-                  <p className={`text-sm font-semibold ${draftMode === m.id ? 'text-amber-400' : 'text-gray-400'}`}>{m.label}</p>
-                  <p className="text-xs text-gray-600 hidden sm:block">{m.desc}</p>
+                    draftMode === m.id ? 'bg-accent/10 border-b-2 border-accent' : 'hover:bg-surface2/50'}`}>
+                  <p className={`text-sm font-semibold ${draftMode === m.id ? 'text-accent' : 'text-muted'}`}>{m.label}</p>
+                  <p className="text-xs text-faint hidden sm:block">{m.desc}</p>
                 </button>
               ))}
             </div>
 
             {/* Config tab bar */}
-            <div className="flex border-b border-gray-800">
+            <div className="flex border-b border-line">
               {(draftMode === 'draft' ? ['presets', 'cubes', 'multiset'] : ['presets', 'cubes', 'advanced']).map(t => (
                 <button key={t} onClick={() => setConfigTab(t)}
                   className={`flex-1 py-3 text-sm font-medium transition-colors ${
                     configTab === t
-                      ? 'text-amber-400 border-b-2 border-amber-400 bg-gray-900'
-                      : 'text-gray-500 hover:text-gray-300 bg-gray-800/50'}`}>
+                      ? 'text-accent border-b-2 border-accent2 bg-surface'
+                      : 'text-faint hover:text-ink2 bg-surface2/50'}`}>
                   {TAB_LABELS[t] ?? t}
                 </button>
               ))}
@@ -532,7 +535,7 @@ export default function Lobby() {
               {/* PRESETS TAB */}
               {configTab === 'presets' && (
                 <div>
-                  <p className="text-sm text-gray-400 mb-3">
+                  <p className="text-sm text-muted mb-3">
                     Select a set — each player receives 4 packs of that set.
                   </p>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -547,8 +550,8 @@ export default function Lobby() {
                           onClick={() => setSelectedPreset(selected ? null : set.code)}
                           className={`relative flex flex-col items-center justify-center rounded-xl border-2 p-3 h-32 transition-all overflow-hidden gap-1 ${
                             selected
-                              ? 'border-amber-500 shadow-lg shadow-amber-500/20'
-                              : 'border-gray-700 hover:border-gray-500'}`}
+                              ? 'border-accent shadow-lg shadow-accent/20'
+                              : 'border-line hover:border-line'}`}
                           style={{ backgroundColor: set.color + 'cc' }}
                         >
                           {logoUrl ? (
@@ -558,9 +561,9 @@ export default function Lobby() {
                             <img src={iconUrl} alt={set.name} className="h-10 object-contain"
                               onError={e => { e.currentTarget.style.display = 'none' }} />
                           ) : null}
-                          <span className="text-xs text-gray-200 text-center leading-tight font-medium px-1">{set.name}</span>
+                          <span className="text-xs text-ink text-center leading-tight font-medium px-1">{set.name}</span>
                           {selected && (
-                            <span className="absolute top-2 right-2 w-5 h-5 rounded-full bg-amber-500 flex items-center justify-center text-xs text-gray-950 font-bold">✓</span>
+                            <span className="absolute top-2 right-2 w-5 h-5 rounded-full bg-accent flex items-center justify-center text-xs text-on-accent font-bold">✓</span>
                           )}
                         </button>
                       )
@@ -572,29 +575,29 @@ export default function Lobby() {
               {/* CUBES TAB */}
               {configTab === 'cubes' && (
                 <div className="space-y-3">
-                  <p className="text-sm text-gray-400">Community cubes — curated card pools ready to draft.</p>
+                  <p className="text-sm text-muted">Community cubes — curated card pools ready to draft.</p>
                   {COMMUNITY_CUBES.map(cube => {
                     const selected = selectedCube === cube.id
                     return (
                       <div key={cube.id}
                         className={`rounded-xl border-2 transition-all ${
-                          selected ? 'border-amber-500 bg-amber-500/5' : 'border-gray-700 bg-gray-800'}`}>
+                          selected ? 'border-accent bg-accent/5' : 'border-line bg-surface2'}`}>
                         <button onClick={() => { setSelectedCube(selected ? null : cube.id); setCustomCube(null) }}
                           className="w-full text-left p-4">
                           <div className="flex items-start justify-between gap-3">
                             <div>
-                              <p className="font-semibold text-sm text-gray-100">{cube.name}</p>
-                              <p className="text-xs text-gray-500 mt-0.5">by {cube.author} · {cube.cardCount} cards</p>
-                              <p className="text-xs text-gray-400 mt-1.5 leading-relaxed">{cube.description}</p>
+                              <p className="font-semibold text-sm text-ink">{cube.name}</p>
+                              <p className="text-xs text-faint mt-0.5">by {cube.author} · {cube.cardCount} cards</p>
+                              <p className="text-xs text-muted mt-1.5 leading-relaxed">{cube.description}</p>
                             </div>
                             {selected && (
-                              <span className="w-5 h-5 rounded-full bg-amber-500 flex items-center justify-center text-xs text-gray-950 font-bold shrink-0">✓</span>
+                              <span className="w-5 h-5 rounded-full bg-accent flex items-center justify-center text-xs text-on-accent font-bold shrink-0">✓</span>
                             )}
                           </div>
                         </button>
                         <div className="px-4 pb-3">
                           <button onClick={() => setPreviewCube(cube)}
-                            className="text-xs text-amber-400 hover:text-amber-300 transition-colors">
+                            className="text-xs text-accent hover:text-accent2 transition-colors">
                             Preview cube →
                           </button>
                         </div>
@@ -604,18 +607,18 @@ export default function Lobby() {
 
                   {/* Load from your Re:Union decks */}
                   <div className={`rounded-xl border-2 p-4 space-y-3 transition-all ${
-                    customCube?.source === 'reunion' ? 'border-amber-500 bg-amber-500/5' : 'border-dashed border-gray-700 bg-gray-800/40'}`}>
+                    customCube?.source === 'reunion' ? 'border-accent bg-accent/5' : 'border-dashed border-line bg-surface2/40'}`}>
                     <div className="flex items-center justify-between">
-                      <p className="font-semibold text-sm text-gray-100">⬇ Load from your Re:Union decks</p>
+                      <p className="font-semibold text-sm text-ink">⬇ Load from your Re:Union decks</p>
                       {customCube?.source === 'reunion' && (
-                        <span className="w-5 h-5 rounded-full bg-amber-500 flex items-center justify-center text-xs text-gray-950 font-bold shrink-0">✓</span>
+                        <span className="w-5 h-5 rounded-full bg-accent flex items-center justify-center text-xs text-on-accent font-bold shrink-0">✓</span>
                       )}
                     </div>
                     {!user ? (
                       <div className="space-y-2">
-                        <p className="text-xs text-gray-500 leading-relaxed">Connect your Re:Union account to pick one of your decks and draft or seal with it as a cube.</p>
+                        <p className="text-xs text-faint leading-relaxed">Connect your Re:Union account to pick one of your decks and draft or seal with it as a cube.</p>
                         <button onClick={() => login()}
-                          className="px-3 py-1.5 rounded-lg text-sm font-medium bg-gray-700 hover:bg-gray-600 text-gray-100 transition-colors">
+                          className="px-3 py-1.5 rounded-lg text-sm font-medium bg-surface3 hover:bg-surface3 text-ink transition-colors">
                           Connect Re:Union
                         </button>
                       </div>
@@ -623,10 +626,10 @@ export default function Lobby() {
                       <div className="space-y-2">
                         <div className="flex items-center gap-3">
                           <button onClick={handleLoadDecks} disabled={loadingDecks}
-                            className="px-3 py-1.5 rounded-lg text-sm font-medium bg-gray-700 hover:bg-gray-600 disabled:opacity-40 text-gray-100 transition-colors">
+                            className="px-3 py-1.5 rounded-lg text-sm font-medium bg-surface3 hover:bg-surface3 disabled:opacity-40 text-ink transition-colors">
                             {loadingDecks ? 'Loading…' : myDecks ? 'Refresh decks' : 'Load my decks'}
                           </button>
-                          <span className="text-xs text-gray-500">as {user.pseudo}</span>
+                          <span className="text-xs text-faint">as {user.pseudo}</span>
                         </div>
                         {myDecks && myDecks.length > 0 && (() => {
                           // Filter client-side by name + format. The list API has no card
@@ -641,13 +644,13 @@ export default function Lobby() {
                             <div className="space-y-2">
                               <input value={deckSearch} onChange={e => setDeckSearch(e.target.value)}
                                 placeholder={`Search ${myDecks.length} deck${myDecks.length !== 1 ? 's' : ''} by name…`}
-                                className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:border-amber-500" />
+                                className="w-full bg-surface2 border border-line rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:border-accent" />
                               {formats.length > 1 && (
                                 <div className="flex flex-wrap gap-1">
                                   {['all', ...formats].map(f => (
                                     <button key={f} onClick={() => setDeckFormat(f)}
                                       className={`px-2 py-0.5 rounded text-xs capitalize transition-colors ${
-                                        deckFormat === f ? 'bg-amber-500 text-gray-950 font-bold' : 'bg-gray-800 text-gray-400 hover:text-gray-200'}`}>
+                                        deckFormat === f ? 'bg-accent text-on-accent font-bold' : 'bg-surface2 text-muted hover:text-ink'}`}>
                                       {f === 'all' ? 'All' : f.replace('_', ' ')}
                                     </button>
                                   ))}
@@ -659,13 +662,13 @@ export default function Lobby() {
                                   return (
                                     <button key={d.id ?? d.uuid ?? i} onClick={() => handleSelectDeck(d)}
                                       className={`w-full flex items-center gap-2 text-left px-3 py-1.5 rounded-lg text-sm transition-colors ${
-                                        active ? 'bg-amber-500/20 text-amber-200' : 'bg-gray-800 hover:bg-gray-700 text-gray-200'}`}>
+                                        active ? 'bg-accent/20 text-accent2' : 'bg-surface2 hover:bg-surface3 text-ink'}`}>
                                       <span className="truncate flex-1">{d.name || 'Untitled deck'}</span>
-                                      {d.format && <span className="text-[10px] uppercase tracking-wide text-gray-500 shrink-0">{d.format.replace('_', ' ')}</span>}
+                                      {d.format && <span className="text-[10px] uppercase tracking-wide text-faint shrink-0">{d.format.replace('_', ' ')}</span>}
                                     </button>
                                   )
                                 })}
-                                {!shown.length && <p className="text-xs text-gray-500 px-1 py-2">No decks match this filter.</p>}
+                                {!shown.length && <p className="text-xs text-faint px-1 py-2">No decks match this filter.</p>}
                               </div>
                             </div>
                           )
@@ -679,49 +682,49 @@ export default function Lobby() {
                             </p>
                             <div className="flex items-center gap-3">
                               <button onClick={() => setPreviewCube({ name: customCube.name, author: 'Re:Union', cardCount: customCube.cards.length + customCube.heroes.length, refs: [...customCube.cards, ...customCube.heroes] })}
-                                className="text-amber-400 hover:text-amber-300 transition-colors">Preview cube →</button>
-                              <button onClick={() => setCustomCube(null)} className="text-gray-500 hover:text-gray-300 transition-colors">Clear</button>
+                                className="text-accent hover:text-accent2 transition-colors">Preview cube →</button>
+                              <button onClick={() => setCustomCube(null)} className="text-faint hover:text-ink2 transition-colors">Clear</button>
                             </div>
                           </div>
                         )}
-                        {decksMsg && <p className="text-xs text-amber-400">{decksMsg}</p>}
+                        {decksMsg && <p className="text-xs text-accent">{decksMsg}</p>}
                       </div>
                     )}
                   </div>
 
                   {/* Paste your own cube */}
                   <div className={`rounded-xl border-2 p-4 space-y-3 transition-all ${
-                    customCube?.source === 'paste' ? 'border-amber-500 bg-amber-500/5' : 'border-dashed border-gray-700 bg-gray-800/40'}`}>
+                    customCube?.source === 'paste' ? 'border-accent bg-accent/5' : 'border-dashed border-line bg-surface2/40'}`}>
                     <div className="flex items-center justify-between">
-                      <p className="font-semibold text-sm text-gray-100">＋ Paste your own cube</p>
+                      <p className="font-semibold text-sm text-ink">＋ Paste your own cube</p>
                       {customCube?.source === 'paste' && (
-                        <span className="w-5 h-5 rounded-full bg-amber-500 flex items-center justify-center text-xs text-gray-950 font-bold shrink-0">✓</span>
+                        <span className="w-5 h-5 rounded-full bg-accent flex items-center justify-center text-xs text-on-accent font-bold shrink-0">✓</span>
                       )}
                     </div>
-                    <p className="text-xs text-gray-500 leading-relaxed">
-                      One card per line as <span className="font-mono text-gray-400">qty REF</span> (e.g.{' '}
-                      <span className="font-mono text-gray-400">3 ALT_CORE_B_MU_06_R2</span>) — the same format as Export.
+                    <p className="text-xs text-faint leading-relaxed">
+                      One card per line as <span className="font-mono text-muted">qty REF</span> (e.g.{' '}
+                      <span className="font-mono text-muted">3 ALT_CORE_B_MU_06_R2</span>) — the same format as Export.
                       Heroes in the list are detected automatically and snake-drafted in-app. Nothing is saved; keep your own list.
                     </p>
                     <input value={customCubeName} onChange={e => setCustomCubeName(e.target.value)}
                       placeholder="Cube name (optional)"
-                      className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:border-amber-500" />
+                      className="w-full bg-surface2 border border-line rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:border-accent" />
                     <textarea value={customCubeText} onChange={e => setCustomCubeText(e.target.value)} rows={6}
                       placeholder={"1 ALT_CORE_B_YZ_03_C\n3 ALT_CORE_B_MU_06_R2\n..."}
-                      className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-xs font-mono focus:outline-none focus:border-amber-500 resize-none" />
+                      className="w-full bg-surface2 border border-line rounded-lg px-3 py-2 text-xs font-mono focus:outline-none focus:border-accent resize-none" />
                     <div className="flex items-center gap-3">
                       <button onClick={handleParseCube} disabled={parsingCube || !customCubeText.trim()}
-                        className="px-3 py-1.5 rounded-lg text-sm font-medium bg-gray-700 hover:bg-gray-600 disabled:opacity-40 text-gray-100 transition-colors">
+                        className="px-3 py-1.5 rounded-lg text-sm font-medium bg-surface3 hover:bg-surface3 disabled:opacity-40 text-ink transition-colors">
                         {parsingCube ? 'Parsing…' : customCube?.source === 'paste' ? 'Re-parse' : 'Parse & preview'}
                       </button>
                       {customCube?.source === 'paste' && (
                         <>
                           <button onClick={() => setPreviewCube({ name: customCube.name, author: 'You', cardCount: customCube.cards.length + customCube.heroes.length, refs: [...customCube.cards, ...customCube.heroes] })}
-                            className="text-xs text-amber-400 hover:text-amber-300 transition-colors">
+                            className="text-xs text-accent hover:text-accent2 transition-colors">
                             Preview →
                           </button>
                           <button onClick={() => { setCustomCube(null); setParseMsg('') }}
-                            className="text-xs text-gray-500 hover:text-gray-300 transition-colors ml-auto">
+                            className="text-xs text-faint hover:text-ink2 transition-colors ml-auto">
                             Clear
                           </button>
                         </>
@@ -740,9 +743,9 @@ export default function Lobby() {
                           )}.
                         </p>
                         {customCube.unresolved.length > 0 && (
-                          <p className="text-amber-400">
+                          <p className="text-accent">
                             ⚠ {customCube.unresolved.length} reference{customCube.unresolved.length !== 1 ? 's' : ''} couldn't be resolved and {customCube.unresolved.length !== 1 ? 'were' : 'was'} skipped:{' '}
-                            <span className="font-mono break-all text-amber-300">
+                            <span className="font-mono break-all text-accent2">
                               {customCube.unresolved.slice(0, 8).join(', ')}{customCube.unresolved.length > 8 ? ` … (+${customCube.unresolved.length - 8})` : ''}
                             </span>
                           </p>
@@ -760,13 +763,13 @@ export default function Lobby() {
 
                   <div>
                     <button onClick={() => setShowCustomPool(!showCustomPool)}
-                      className="text-sm text-gray-400 hover:text-gray-200 transition-colors flex items-center gap-1">
+                      className="text-sm text-muted hover:text-ink transition-colors flex items-center gap-1">
                       <span className="text-xs">{showCustomPool ? '▼' : '▶'}</span>
                       Custom card pool
                     </button>
                     {showCustomPool && (
                       <div className="mt-3">
-                        <p className="text-xs text-gray-500 mb-2">
+                        <p className="text-xs text-faint mb-2">
                           Paste card references (one per line, starting with ALT_). Overrides set selection.
                         </p>
                         <textarea
@@ -774,7 +777,7 @@ export default function Lobby() {
                           onChange={e => setCustomPoolText(e.target.value)}
                           rows={6}
                           placeholder={"ALT_CORE_B_AX_02_C\nALT_CORE_B_BR_03_R1\n..."}
-                          className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-xs font-mono focus:outline-none focus:border-amber-500 resize-none"
+                          className="w-full bg-surface2 border border-line rounded-lg px-3 py-2 text-xs font-mono focus:outline-none focus:border-accent resize-none"
                         />
                       </div>
                     )}
@@ -796,13 +799,13 @@ export default function Lobby() {
 
                   <div>
                     <button onClick={() => setShowCustomPool(!showCustomPool)}
-                      className="text-sm text-gray-400 hover:text-gray-200 transition-colors flex items-center gap-1">
+                      className="text-sm text-muted hover:text-ink transition-colors flex items-center gap-1">
                       <span className="text-xs">{showCustomPool ? '▼' : '▶'}</span>
                       Custom card pool
                     </button>
                     {showCustomPool && (
                       <div className="mt-3">
-                        <p className="text-xs text-gray-500 mb-2">
+                        <p className="text-xs text-faint mb-2">
                           Paste card references (one per line, starting with ALT_). Overrides set selection.
                         </p>
                         <textarea
@@ -810,7 +813,7 @@ export default function Lobby() {
                           onChange={e => setCustomPoolText(e.target.value)}
                           rows={6}
                           placeholder={"ALT_CORE_B_AX_02_C\nALT_CORE_B_BR_03_R1\n..."}
-                          className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-xs font-mono focus:outline-none focus:border-amber-500 resize-none"
+                          className="w-full bg-surface2 border border-line rounded-lg px-3 py-2 text-xs font-mono focus:outline-none focus:border-accent resize-none"
                         />
                       </div>
                     )}
@@ -819,15 +822,15 @@ export default function Lobby() {
               )}
 
               {/* Shared settings */}
-              <div className="pt-2 border-t border-gray-800 space-y-4">
+              <div className="pt-2 border-t border-line space-y-4">
                 <div>
-                  <label className="block text-sm text-gray-400 mb-2">Card language</label>
+                  <label className="block text-sm text-muted mb-2">Card language</label>
                   <div className="flex gap-2 flex-wrap">
                     {LANGS.map(l => (
                       <button key={l} onClick={() => setLang(l)}
                         className={`px-3 py-1 rounded text-sm font-mono transition-colors ${lang === l
-                          ? 'bg-amber-500 text-gray-950 font-bold'
-                          : 'bg-gray-800 hover:bg-gray-700 text-gray-300'}`}>
+                          ? 'bg-accent text-on-accent font-bold'
+                          : 'bg-surface2 hover:bg-surface3 text-ink2'}`}>
                         {l}
                       </button>
                     ))}
@@ -837,8 +840,8 @@ export default function Lobby() {
                 <div className="flex items-center gap-3">
                   <input type="checkbox" id="include-heroes" checked={includeHeroes}
                     onChange={e => setIncludeHeroes(e.target.checked)}
-                    className="accent-amber-500 w-4 h-4" />
-                  <label htmlFor="include-heroes" className="text-sm text-gray-300 cursor-pointer">
+                    className="accent-accent w-4 h-4" />
+                  <label htmlFor="include-heroes" className="text-sm text-ink2 cursor-pointer">
                     Include hero cards in packs
                   </label>
                 </div>
@@ -849,20 +852,20 @@ export default function Lobby() {
                     <div className="flex items-center gap-3">
                       <input type="checkbox" id="timer-enabled" checked={timerEnabled}
                         onChange={e => setTimerEnabled(e.target.checked)}
-                        className="accent-amber-500 w-4 h-4" />
-                      <label htmlFor="timer-enabled" className="text-sm text-gray-300 cursor-pointer">
+                        className="accent-accent w-4 h-4" />
+                      <label htmlFor="timer-enabled" className="text-sm text-ink2 cursor-pointer">
                         Pick timer
                       </label>
                     </div>
                     {timerEnabled && (
                       <div className="flex items-center gap-3 pl-7">
-                        <span className="text-sm text-gray-400">Time per pick:</span>
+                        <span className="text-sm text-muted">Time per pick:</span>
                         <div className="flex gap-2">
                           {[30, 60, 90, 120].map(s => (
                             <button key={s} onClick={() => setTimerSeconds(s)}
                               className={`px-2.5 py-1 rounded text-sm transition-colors ${timerSeconds === s
-                                ? 'bg-amber-500 text-gray-950 font-bold'
-                                : 'bg-gray-800 hover:bg-gray-700 text-gray-300'}`}>
+                                ? 'bg-accent text-on-accent font-bold'
+                                : 'bg-surface2 hover:bg-surface3 text-ink2'}`}>
                               {s}s
                             </button>
                           ))}
@@ -883,7 +886,7 @@ export default function Lobby() {
                 || (configTab === 'presets' && draftMode === 'sealed' && !selectedPreset)
                 || (configTab === 'cubes' && !selectedCube && !customCube)
                 || (configTab === 'multiset' && Object.values(multiSetMix).reduce((a, b) => a + (b || 0), 0) !== (equalPacks ? 4 : roomState.players.length * 4))}
-                className="w-full py-3 bg-amber-500 hover:bg-amber-400 disabled:opacity-40 text-gray-950 font-bold rounded-lg transition-colors"
+                className="w-full py-3 bg-accent hover:bg-accent2 disabled:opacity-40 text-on-accent font-bold rounded-lg transition-colors"
               >
                 {loading ? 'Generating packs…' : draftMode === 'sealed' ? 'Start sealed' : 'Start draft'}
               </button>
@@ -892,10 +895,11 @@ export default function Lobby() {
         )}
 
         {!isHost && (
-          <div className="bg-gray-900 rounded-xl p-6 text-center text-gray-400 text-sm">
+          <div className="bg-surface rounded-xl p-6 text-center text-muted text-sm">
             Waiting for the host to start the draft…
           </div>
         )}
+      </div>
       </div>
 
       {previewCube && (

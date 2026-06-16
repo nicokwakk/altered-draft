@@ -6,6 +6,7 @@ import { COMMUNITY_CUBES } from '../lib/cubes.js'
 import { SET_ICONS, setCodeFromRef } from '../lib/assets.js'
 import { buildDecklist } from '../lib/exportFormat.js'
 import ExportMenu from '../components/ExportMenu.jsx'
+import ThemeToggle from '../components/ThemeToggle.jsx'
 import DraftStats from '../components/DraftStats.jsx'
 import PoolGrid, { SimpleCardGrid } from '../components/PoolGrid.jsx'
 import DeckList from '../components/DeckList.jsx'
@@ -64,7 +65,7 @@ export default function Sealed() {
     if (me) localStorage.setItem(`sealed_deck_${code}_${me.id}`, JSON.stringify(next))
   }
 
-  if (!roomState || !me) return <div className="min-h-screen flex items-center justify-center text-gray-400">Loading…</div>
+  if (!roomState || !me) return <div className="min-h-screen flex items-center justify-center text-muted">Loading…</div>
 
   const myIndex = roomState.players.findIndex(p => p.id === me.id)
   const myPacks = roomState.sealedPacks?.[String(myIndex)]
@@ -127,17 +128,18 @@ export default function Sealed() {
   return (
     <div className="h-screen flex flex-col overflow-hidden">
       {/* Top bar */}
-      <div className="bg-gray-900 border-b border-gray-800 px-4 py-2 flex items-center gap-3 shrink-0">
-        <span className="font-mono text-amber-400 font-bold text-sm">{code}</span>
-        <span className="text-gray-400 text-sm">Sealed</span>
+      <div className="bg-surface border-b border-line px-4 py-2 flex items-center gap-3 shrink-0">
+        <span className="font-mono text-accent font-bold text-sm">{code}</span>
+        <span className="text-muted text-sm">Sealed</span>
         <div className="ml-auto flex gap-2 items-center">
           <ExportMenu poolRefs={allRefs} deckRefs={deckRefs}
             poolDecklist={allDecklist} deckDecklist={deckDecklist} name={code} format="Sealed" />
+          <ThemeToggle />
         </div>
       </div>
 
       {/* Tab bar */}
-      <div className="bg-gray-900 border-b border-gray-800 flex shrink-0">
+      <div className="bg-surface border-b border-line flex shrink-0">
         {[
           { id: 'booster', label: `Boosters (${totalPacks})` },
           { id: 'pool',    label: `Full Pool (${allRefs.length})` },
@@ -147,8 +149,8 @@ export default function Sealed() {
           <button key={t.id} onClick={() => setTab(t.id)}
             className={`flex-1 py-2.5 text-sm transition-colors ${
               tab === t.id
-                ? t.highlight ? 'text-green-400 border-b-2 border-green-400' : 'text-amber-400 border-b-2 border-amber-400'
-                : 'text-gray-500 hover:text-gray-300'}`}>
+                ? t.highlight ? 'text-green-400 border-b-2 border-green-400' : 'text-accent border-b-2 border-accent2'
+                : 'text-faint hover:text-ink2'}`}>
             {t.label}
           </button>
         ))}
@@ -157,16 +159,16 @@ export default function Sealed() {
       {/* BOOSTER TAB */}
       {tab === 'booster' && (
         <div className="flex-1 flex flex-col overflow-hidden">
-          <div className="flex items-center gap-3 px-4 py-3 border-b border-gray-800 shrink-0">
+          <div className="flex items-center gap-3 px-4 py-3 border-b border-line shrink-0">
             <button onClick={() => setPackIndex(i => Math.max(0, i - 1))} disabled={packIndex === 0}
-              className="w-8 h-8 rounded-lg bg-gray-800 disabled:opacity-30 flex items-center justify-center text-gray-300 hover:bg-gray-700">‹</button>
+              className="w-8 h-8 rounded-lg bg-surface2 disabled:opacity-30 flex items-center justify-center text-ink2 hover:bg-surface3">‹</button>
             <div className="flex gap-1 flex-1 justify-center flex-wrap">
               {myPacks.map((pack, i) => {
                 const s = packSet(pack)
                 return (
                   <button key={i} onClick={() => setPackIndex(i)} title={s.name ?? `Booster ${i + 1}`}
                     className={`h-7 px-1.5 rounded-lg text-xs font-bold transition-colors flex items-center gap-1 ${
-                      i === packIndex ? 'bg-amber-500 text-gray-950' : 'bg-gray-800 text-gray-400 hover:bg-gray-700'}`}>
+                      i === packIndex ? 'bg-accent text-on-accent' : 'bg-surface2 text-muted hover:bg-surface3'}`}>
                     {s.icon && <img src={s.icon} alt="" className="w-3.5 h-3.5 object-contain" onError={e => { e.currentTarget.style.display = 'none' }} />}
                     {i + 1}
                   </button>
@@ -174,16 +176,16 @@ export default function Sealed() {
               })}
             </div>
             <button onClick={() => setPackIndex(i => Math.min(totalPacks - 1, i + 1))} disabled={packIndex === totalPacks - 1}
-              className="w-8 h-8 rounded-lg bg-gray-800 disabled:opacity-30 flex items-center justify-center text-gray-300 hover:bg-gray-700">›</button>
+              className="w-8 h-8 rounded-lg bg-surface2 disabled:opacity-30 flex items-center justify-center text-ink2 hover:bg-surface3">›</button>
           </div>
           <div className="flex-1 overflow-y-auto px-8 pt-4 pb-40" style={{ scrollbarGutter: 'stable' }}>
             <h2 className="font-semibold mb-3 flex items-center gap-2">
               {currentSet.icon && <img src={currentSet.icon} alt="" className="w-5 h-5 object-contain" onError={e => { e.currentTarget.style.display = 'none' }} />}
               <span>Booster {packIndex + 1}</span>
               {currentSet.name && (
-                <span className="text-gray-400 font-normal">
+                <span className="text-muted font-normal">
                   · {currentSet.name}
-                  {!isCube && <span className="text-gray-500"> {setOrdinal}/{setTotal}</span>}
+                  {!isCube && <span className="text-faint"> {setOrdinal}/{setTotal}</span>}
                 </span>
               )}
             </h2>
@@ -203,14 +205,14 @@ export default function Sealed() {
       {tab === 'deck' && (
         <div className="flex-1 flex flex-col overflow-hidden">
           <div className={`px-4 py-2 border-b shrink-0 flex flex-wrap gap-3 items-center text-sm ${
-            isValid ? 'border-green-800 bg-green-900/20' : 'border-gray-800 bg-gray-900'}`}>
+            isValid ? 'border-green-800 bg-green-900/20' : 'border-line bg-surface'}`}>
             <span className={isEnough ? 'text-green-400' : 'text-red-400'}>{isEnough ? '✓' : '✗'} {deckRefs.length}/30 cards</span>
             <span className={isValidFactions ? 'text-green-400' : 'text-red-400'}>{isValidFactions ? '✓' : '✗'} {deckFactions.size}/3 factions</span>
-            <span className={isValidHero ? (deckHeroCount === 1 ? 'text-green-400' : 'text-gray-500') : 'text-red-400'}>{isValidHero ? '✓' : '✗'} {deckHeroCount}/1 hero</span>
+            <span className={isValidHero ? (deckHeroCount === 1 ? 'text-green-400' : 'text-faint') : 'text-red-400'}>{isValidHero ? '✓' : '✗'} {deckHeroCount}/1 hero</span>
             {isValid && <span className="text-green-400 font-semibold ml-auto">Deck is valid ✓</span>}
           </div>
           {deckTotal === 0
-            ? <div className="flex-1 flex items-center justify-center text-gray-500 text-sm">No cards in deck yet — use + on cards to add them.</div>
+            ? <div className="flex-1 flex items-center justify-center text-faint text-sm">No cards in deck yet — use + on cards to add them.</div>
             : <div className="flex-1 overflow-y-auto" style={{ scrollbarGutter: 'stable' }}><DeckList deck={deck} cardMap={cardMap} onRemove={removeFromDeck} onAdd={addToDeck} poolCounts={poolCounts} /></div>}
         </div>
       )}
@@ -219,10 +221,10 @@ export default function Sealed() {
       {tab === 'stats' && (
         <div className="flex-1 flex flex-col overflow-hidden">
           {deckTotal > 0 && (
-            <div className="flex border-b border-gray-800 shrink-0">
+            <div className="flex border-b border-line shrink-0">
               {[['pool', 'Full Pool'], ['deck', 'Deck']].map(([id, label]) => (
                 <button key={id} onClick={() => setStatsScope(id)}
-                  className={`flex-1 py-2 text-sm transition-colors ${statsScope === id ? 'text-amber-400 border-b-2 border-amber-400' : 'text-gray-500 hover:text-gray-300'}`}>
+                  className={`flex-1 py-2 text-sm transition-colors ${statsScope === id ? 'text-accent border-b-2 border-accent2' : 'text-faint hover:text-ink2'}`}>
                   {label}
                 </button>
               ))}
@@ -236,14 +238,14 @@ export default function Sealed() {
 
       {/* Other players footer */}
       {roomState.players.length > 1 && (
-        <div className="border-t border-gray-800 bg-gray-900 px-4 py-2 flex flex-wrap gap-2 shrink-0">
+        <div className="border-t border-line bg-surface px-4 py-2 flex flex-wrap gap-2 shrink-0">
           {roomState.players.map((player, i) => {
             const packs = roomState.sealedPacks?.[String(i)] ?? []
             const count = packs.flat().length
             return (
-              <div key={player.id} className="flex items-center gap-1.5 text-xs bg-gray-800 rounded-lg px-3 py-1.5">
-                <span className={player.id === me.id ? 'text-amber-400 font-medium' : 'text-gray-300'}>{player.name}</span>
-                <span className="text-gray-500">{count} cards</span>
+              <div key={player.id} className="flex items-center gap-1.5 text-xs bg-surface2 rounded-lg px-3 py-1.5">
+                <span className={player.id === me.id ? 'text-accent font-medium' : 'text-ink2'}>{player.name}</span>
+                <span className="text-faint">{count} cards</span>
               </div>
             )
           })}

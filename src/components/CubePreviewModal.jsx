@@ -99,7 +99,7 @@ export default function CubePreviewModal({ cube, onClose }) {
       return Object.entries(groups).filter(([, v]) => v.length).map(([key, cards]) => ({
         key, label: FACTION_NAMES[key] ?? key,
         icon: FACTION_ICONS[key] ?? null,
-        colorCls: FACTION_COLORS[key] ?? 'text-gray-400 bg-gray-800 border-gray-700',
+        colorCls: FACTION_COLORS[key] ?? 'text-muted bg-surface2 border-line',
         cards: sortedByRarity(cards),
       }))
     }
@@ -115,7 +115,7 @@ export default function CubePreviewModal({ cube, onClose }) {
           return {
             key, label: `${key} — ${SET_FULL_NAMES[key] ?? key}`,
             icon: iconCode ? SET_ICONS[iconCode] : null,
-            colorCls: 'text-gray-300 bg-gray-800 border-gray-700',
+            colorCls: 'text-ink2 bg-surface2 border-line',
             cards: sortedByRarity(cards),
           }
         })
@@ -126,7 +126,7 @@ export default function CubePreviewModal({ cube, onClose }) {
       for (const c of filtered) { if (!groups[c.rarity]) groups[c.rarity] = []; groups[c.rarity].push(c) }
       return order.filter(r => groups[r]?.length).map(key => ({
         key, label: RARITY_LABELS[key] ?? key, icon: RARITY_GEMS[key] ?? null,
-        colorCls: 'text-gray-300 bg-gray-800 border-gray-700',
+        colorCls: 'text-ink2 bg-surface2 border-line',
         cards: [...(groups[key] ?? [])].sort((a, b) => a.faction.localeCompare(b.faction)),
       }))
     }
@@ -138,34 +138,34 @@ export default function CubePreviewModal({ cube, onClose }) {
   return createPortal(
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4"
       onClick={e => e.target === e.currentTarget && onClose()}>
-      <div className="bg-gray-900 rounded-2xl w-full max-w-5xl max-h-[90vh] flex flex-col shadow-2xl">
+      <div className="bg-surface rounded-2xl w-full max-w-5xl max-h-[90vh] flex flex-col shadow-2xl">
 
         {/* Header */}
-        <div className="flex items-start justify-between p-5 border-b border-gray-800 shrink-0">
+        <div className="flex items-start justify-between p-5 border-b border-line shrink-0">
           <div>
             <h2 className="font-bold text-lg">{cube.name}</h2>
-            <p className="text-sm text-gray-500">by {cube.author} · {cube.cardCount} cards</p>
+            <p className="text-sm text-faint">by {cube.author} · {cube.cardCount} cards</p>
           </div>
-          <button onClick={onClose} className="text-gray-500 hover:text-gray-200 text-xl leading-none p-1">✕</button>
+          <button onClick={onClose} className="text-faint hover:text-ink text-xl leading-none p-1">✕</button>
         </div>
 
         <div className="flex flex-1 overflow-hidden">
           {/* Sidebar stats */}
-          <div className="w-40 border-r border-gray-800 p-4 space-y-4 shrink-0 overflow-y-auto">
+          <div className="w-40 border-r border-line p-4 space-y-4 shrink-0 overflow-y-auto">
             <div>
-              <p className="text-xs uppercase tracking-widest text-gray-500 mb-2">Factions</p>
+              <p className="text-xs uppercase tracking-widest text-faint mb-2">Factions</p>
               <div className="space-y-1.5">
                 {FACTIONS.filter(f => factionCounts[f]).map(f => (
                   <div key={f} className="flex items-center gap-1.5">
                     {FACTION_ICONS[f] && <img src={FACTION_ICONS[f]} alt="" className="w-3.5 h-3.5 object-contain shrink-0" />}
-                    <span className="text-xs text-gray-300 flex-1">{FACTION_NAMES[f]}</span>
-                    <span className="text-xs text-gray-500">{factionCounts[f]}</span>
+                    <span className="text-xs text-ink2 flex-1">{FACTION_NAMES[f]}</span>
+                    <span className="text-xs text-faint">{factionCounts[f]}</span>
                   </div>
                 ))}
               </div>
             </div>
             <div>
-              <p className="text-xs uppercase tracking-widest text-gray-500 mb-2">Rarity</p>
+              <p className="text-xs uppercase tracking-widest text-faint mb-2">Rarity</p>
               <div className="space-y-1.5">
                 {[{ key: 'C', label: 'Common' }, { key: 'R1', label: 'Rare', merge: 'R2' }, { key: 'EX', label: 'Exalted' }, { key: 'U', label: 'Unique' }]
                   .map(({ key, label, merge }) => {
@@ -174,15 +174,15 @@ export default function CubePreviewModal({ cube, onClose }) {
                     return (
                       <div key={key} className="flex items-center gap-1.5">
                         {RARITY_GEMS[key] && <img src={RARITY_GEMS[key]} alt="" className="w-3.5 h-3.5 object-contain shrink-0" />}
-                        <span className="text-xs text-gray-300 flex-1">{label}</span>
-                        <span className="text-xs text-gray-500">{count}</span>
+                        <span className="text-xs text-ink2 flex-1">{label}</span>
+                        <span className="text-xs text-faint">{count}</span>
                       </div>
                     )
                   })}
               </div>
             </div>
             <div>
-              <p className="text-xs uppercase tracking-widest text-gray-500 mb-2">Sets</p>
+              <p className="text-xs uppercase tracking-widest text-faint mb-2">Sets</p>
               <div className="space-y-1.5">
                 {Object.entries(setCounts).sort((a, b) => b[1] - a[1]).map(([abbrev, count]) => {
                   const iconCode = SET_ABBREV_ICON_CODE[abbrev]
@@ -191,8 +191,8 @@ export default function CubePreviewModal({ cube, onClose }) {
                       {iconCode && SET_ICONS[iconCode]
                         ? <img src={SET_ICONS[iconCode]} alt={abbrev} className="w-3.5 h-3.5 object-contain shrink-0" onError={e => { e.currentTarget.style.display = 'none' }} />
                         : <span className="w-3.5 shrink-0" />}
-                      <span className="text-xs text-gray-300 flex-1 truncate">{abbrev}</span>
-                      <span className="text-xs text-gray-500">{count}</span>
+                      <span className="text-xs text-ink2 flex-1 truncate">{abbrev}</span>
+                      <span className="text-xs text-faint">{count}</span>
                     </div>
                   )
                 })}
@@ -203,33 +203,33 @@ export default function CubePreviewModal({ cube, onClose }) {
           {/* Main area */}
           <div className="flex-1 flex flex-col overflow-hidden">
             {/* Controls */}
-            <div className="flex items-center gap-2 p-3 border-b border-gray-800 shrink-0">
+            <div className="flex items-center gap-2 p-3 border-b border-line shrink-0">
               <input value={search} onChange={e => setSearch(e.target.value)}
                 placeholder="Search by name, faction, set…"
-                className="flex-1 bg-gray-800 border border-gray-700 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:border-amber-500" />
+                className="flex-1 bg-surface2 border border-line rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:border-accent" />
               <div className="flex gap-1">
                 {['faction', 'set', 'rarity'].map(g => (
                   <button key={g} onClick={() => setGroupBy(g)}
-                    className={`px-2 py-1.5 rounded text-xs capitalize transition-colors ${groupBy === g ? 'bg-amber-500 text-gray-950 font-bold' : 'bg-gray-800 text-gray-400 hover:text-gray-200'}`}>
+                    className={`px-2 py-1.5 rounded text-xs capitalize transition-colors ${groupBy === g ? 'bg-accent text-on-accent font-bold' : 'bg-surface2 text-muted hover:text-ink'}`}>
                     {g}
                   </button>
                 ))}
               </div>
-              <div className="flex gap-1 border-l border-gray-700 pl-2">
+              <div className="flex gap-1 border-l border-line pl-2">
                 <button onClick={() => setViewMode('list')}
-                  className={`px-2 py-1.5 rounded text-xs transition-colors ${viewMode === 'list' ? 'bg-gray-700 text-gray-100' : 'text-gray-500 hover:text-gray-300'}`}
+                  className={`px-2 py-1.5 rounded text-xs transition-colors ${viewMode === 'list' ? 'bg-surface3 text-ink' : 'text-faint hover:text-ink2'}`}
                   title="List view">☰</button>
                 <button onClick={() => setViewMode('grid')}
-                  className={`px-2 py-1.5 rounded text-xs transition-colors ${viewMode === 'grid' ? 'bg-gray-700 text-gray-100' : 'text-gray-500 hover:text-gray-300'}`}
+                  className={`px-2 py-1.5 rounded text-xs transition-colors ${viewMode === 'grid' ? 'bg-surface3 text-ink' : 'text-faint hover:text-ink2'}`}
                   title="Grid view">⊞</button>
               </div>
-              <span className="text-xs text-gray-500 shrink-0">{filtered.length}</span>
+              <span className="text-xs text-faint shrink-0">{filtered.length}</span>
             </div>
 
             {/* Loading bar */}
             {loadingCards && (
-              <div className="h-0.5 bg-gray-800 shrink-0">
-                <div className="h-full bg-amber-500 animate-pulse w-1/2" />
+              <div className="h-0.5 bg-surface2 shrink-0">
+                <div className="h-full bg-accent animate-pulse w-1/2" />
               </div>
             )}
 
@@ -248,10 +248,10 @@ export default function CubePreviewModal({ cube, onClose }) {
                     <div className="grid grid-cols-6 gap-2">
                       {group.cards.map((c, i) => (
                         <div key={`${c.ref}-${i}`}
-                          className="relative rounded-lg overflow-hidden border border-gray-700 bg-gray-800 cursor-default"
+                          className="relative rounded-lg overflow-hidden border border-line bg-surface2 cursor-default"
                           onMouseEnter={() => setHoverCard(c)}
                           onMouseLeave={() => setHoverCard(null)}>
-                          <div className="aspect-[2/3] bg-gray-700 overflow-hidden">
+                          <div className="aspect-[2/3] bg-surface3 overflow-hidden">
                             {c.card?.imagePath ? (
                               <img src={c.card.imagePath} alt={c.card.name}
                                 className="w-full h-full object-cover"
@@ -259,7 +259,7 @@ export default function CubePreviewModal({ cube, onClose }) {
                                 onError={e => { e.currentTarget.style.display = 'none' }} />
                             ) : (
                               <div className="w-full h-full flex items-center justify-center p-1">
-                                <span className="text-xs text-gray-500 text-center leading-tight">
+                                <span className="text-xs text-faint text-center leading-tight">
                                   {loadingCards ? '…' : c.ref.split('_').slice(-2).join('_')}
                                 </span>
                               </div>
@@ -279,8 +279,8 @@ export default function CubePreviewModal({ cube, onClose }) {
                           {FACTION_ICONS[c.faction] && (
                             <img src={FACTION_ICONS[c.faction]} alt={c.faction} className="w-3 h-3 object-contain shrink-0" />
                           )}
-                          <span className="text-gray-300 truncate flex-1">
-                            {c.card?.name ?? (loadingCards ? <span className="text-gray-600">…</span> : c.ref)}
+                          <span className="text-ink2 truncate flex-1">
+                            {c.card?.name ?? (loadingCards ? <span className="text-faint">…</span> : c.ref)}
                           </span>
                           {RARITY_GEMS[c.rarity] && c.rarity !== 'C' && (
                             <img src={RARITY_GEMS[c.rarity]} alt={c.rarity} className="w-3 h-3 object-contain shrink-0" />
@@ -304,11 +304,11 @@ export default function CubePreviewModal({ cube, onClose }) {
 
       {/* Hover card image tooltip (grid mode) */}
       {hoverCard?.card?.imagePath && viewMode === 'grid' && (
-        <div className="fixed bottom-6 right-6 z-[60] w-48 rounded-xl overflow-hidden shadow-2xl border border-gray-700 pointer-events-none">
+        <div className="fixed bottom-6 right-6 z-[60] w-48 rounded-xl overflow-hidden shadow-2xl border border-line pointer-events-none">
           <img src={hoverCard.card.imagePath} alt={hoverCard.card.name} className="w-full" />
-          <div className="bg-gray-900 px-2 py-1.5">
-            <p className="text-xs font-medium text-gray-200">{hoverCard.card.name}</p>
-            <p className="text-xs text-gray-500">{FACTION_NAMES[hoverCard.faction]} · {RARITY_LABELS[hoverCard.rarity] ?? hoverCard.rarity}</p>
+          <div className="bg-surface px-2 py-1.5">
+            <p className="text-xs font-medium text-ink">{hoverCard.card.name}</p>
+            <p className="text-xs text-faint">{FACTION_NAMES[hoverCard.faction]} · {RARITY_LABELS[hoverCard.rarity] ?? hoverCard.rarity}</p>
           </div>
         </div>
       )}

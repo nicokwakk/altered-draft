@@ -80,7 +80,7 @@ export default function PoolGrid({ refs, cardMap, deck, poolCounts, onAdd, onRem
       return Object.entries(buckets).filter(([, v]) => v.length).map(([key, refs]) => ({
         key, label: FACTION_NAMES[key] ?? key,
         icon: FACTION_ICONS[key] ?? null,
-        colorCls: FACTION_COLORS[key] ?? 'text-gray-400 bg-gray-800 border-gray-700',
+        colorCls: FACTION_COLORS[key] ?? 'text-muted bg-surface2 border-line',
         refs,
       }))
     }
@@ -91,7 +91,7 @@ export default function PoolGrid({ refs, cardMap, deck, poolCounts, onAdd, onRem
         ;(buckets[label] = buckets[label] ?? []).push(ref)
       }
       return TYPE_ORDER.filter(t => buckets[t]).map(label => ({
-        key: label, label, icon: null, colorCls: 'text-gray-300 bg-gray-800 border-gray-700', refs: buckets[label],
+        key: label, label, icon: null, colorCls: 'text-ink2 bg-surface2 border-line', refs: buckets[label],
       }))
     }
     if (sortBy === 'cost') {
@@ -105,9 +105,9 @@ export default function PoolGrid({ refs, cardMap, deck, poolCounts, onAdd, onRem
         .sort(([a], [b]) => a === '—' ? 1 : b === '—' ? -1 : Number(a) - Number(b))
         .map(([cost, refs]) => ({
           key: cost, label: cost === '—' ? 'No cost' : `Cost ${cost}`, icon: null,
-          colorCls: 'text-gray-300 bg-gray-800 border-gray-700', refs,
+          colorCls: 'text-ink2 bg-surface2 border-line', refs,
         }))
-      if (heroes.length) groups.unshift({ key: 'HERO', label: 'Hero', icon: null, colorCls: 'text-amber-400 bg-amber-500/10 border-amber-500/30', refs: heroes })
+      if (heroes.length) groups.unshift({ key: 'HERO', label: 'Hero', icon: null, colorCls: 'text-accent bg-accent/10 border-accent/30', refs: heroes })
       return groups
     }
     if (sortBy === 'set') {
@@ -122,7 +122,7 @@ export default function PoolGrid({ refs, cardMap, deck, poolCounts, onAdd, onRem
         .sort(([a], [b]) => (setOrder.indexOf(a) + 1 || 99) - (setOrder.indexOf(b) + 1 || 99))
         .map(([abbrev, refs]) => {
           const iconCode = SET_ABBREV_ICON_CODE[abbrev]
-          return { key: abbrev, label: abbrev, icon: iconCode ? SET_ICONS[iconCode] : null, colorCls: 'text-gray-300 bg-gray-800 border-gray-700', refs }
+          return { key: abbrev, label: abbrev, icon: iconCode ? SET_ICONS[iconCode] : null, colorCls: 'text-ink2 bg-surface2 border-line', refs }
         })
     }
     return []
@@ -134,15 +134,15 @@ export default function PoolGrid({ refs, cardMap, deck, poolCounts, onAdd, onRem
   return (
     <div className="flex flex-col h-full overflow-hidden">
       {/* Faction filter */}
-      <div className="px-4 py-2 border-b border-gray-800 flex gap-1.5 flex-wrap shrink-0 bg-gray-950">
+      <div className="px-4 py-2 border-b border-line flex gap-1.5 flex-wrap shrink-0 bg-base">
         <button onClick={() => setFilterFaction('ALL')}
-          className={`px-2.5 py-1 rounded text-xs transition-colors ${filterFaction === 'ALL' ? 'bg-gray-600 text-gray-100' : 'text-gray-500 hover:text-gray-300'}`}>
+          className={`px-2.5 py-1 rounded text-xs transition-colors ${filterFaction === 'ALL' ? 'bg-surface3 text-ink' : 'text-faint hover:text-ink2'}`}>
           All
         </button>
         {FACTIONS.map(f => (
           <button key={f} onClick={() => setFilterFaction(f === filterFaction ? 'ALL' : f)}
             className={`px-2 py-1 rounded text-xs transition-colors flex items-center gap-1 border ${
-              filterFaction === f ? FACTION_COLORS[f] : 'border-transparent text-gray-500 hover:text-gray-300'}`}>
+              filterFaction === f ? FACTION_COLORS[f] : 'border-transparent text-faint hover:text-ink2'}`}>
             {FACTION_ICONS[f] && <img src={FACTION_ICONS[f]} alt={f} className="w-3 h-3 object-contain" />}
             <span className="hidden sm:inline">{FACTION_NAMES[f]}</span>
             <span className="sm:hidden">{f}</span>
@@ -151,14 +151,14 @@ export default function PoolGrid({ refs, cardMap, deck, poolCounts, onAdd, onRem
       </div>
 
       {/* Sort + count */}
-      <div className="px-4 py-2 border-b border-gray-800 flex items-center gap-2 shrink-0 bg-gray-950">
-        <span className="text-xs text-gray-500 mr-auto">
+      <div className="px-4 py-2 border-b border-line flex items-center gap-2 shrink-0 bg-base">
+        <span className="text-xs text-faint mr-auto">
           {new Set(visibleRefs).size} unique{visibleRefs.length !== new Set(visibleRefs).size && ` · ${visibleRefs.length} total`}
         </span>
-        <span className="text-xs text-gray-500">Group by:</span>
+        <span className="text-xs text-faint">Group by:</span>
         {['faction', 'type', 'cost', 'set'].map(s => (
           <button key={s} onClick={() => setSortBy(s)}
-            className={`px-2.5 py-1 rounded text-xs capitalize transition-colors ${sortBy === s ? 'bg-amber-500 text-gray-950 font-bold' : 'bg-gray-800 text-gray-400 hover:text-gray-200'}`}>
+            className={`px-2.5 py-1 rounded text-xs capitalize transition-colors ${sortBy === s ? 'bg-accent text-on-accent font-bold' : 'bg-surface2 text-muted hover:text-ink'}`}>
             {s}
           </button>
         ))}
@@ -213,40 +213,40 @@ function PoolCard({ ref_, occurrences, card, loading, deck, poolCounts, onAdd, o
   const setIcon = SET_ICONS[setCodeFromRef(ref_)]
 
   return (
-    <div className="relative flex flex-col rounded-lg border border-gray-700 bg-gray-900">
+    <div className="relative flex flex-col rounded-lg border border-line bg-surface">
       <div ref={ref} onMouseEnter={onMouseEnter} style={{ transformOrigin: origin }}
-        className="aspect-[2/3] bg-gray-800 overflow-hidden rounded-t-lg relative cursor-zoom-in
+        className="aspect-[2/3] bg-surface2 overflow-hidden rounded-t-lg relative cursor-zoom-in
         transition-transform duration-150 ease-out hover:scale-[1.6] hover:z-30 hover:shadow-xl hover:shadow-black/70">
         {card?.imagePath ? (
           <img src={card.imagePath} alt={card?.name} className="w-full h-full object-cover" loading="lazy"
             onError={e => { e.currentTarget.style.display = 'none' }} />
         ) : (
           <div className="w-full h-full flex items-center justify-center p-1">
-            <span className="text-xs text-gray-600 text-center leading-tight">{loading ? '…' : (card?.name ?? ref_)}</span>
+            <span className="text-xs text-faint text-center leading-tight">{loading ? '…' : (card?.name ?? ref_)}</span>
           </div>
         )}
         {occurrences > 1 && (
-          <div className="absolute top-1 left-1 bg-gray-900/90 text-gray-300 font-bold text-xs px-1.5 py-0.5 rounded border border-gray-600">
+          <div className="absolute top-1 left-1 bg-surface/90 text-ink2 font-bold text-xs px-1.5 py-0.5 rounded border border-line">
             ×{occurrences}
           </div>
         )}
         {inDeck > 0 && (
-          <div className="absolute top-1 right-1 bg-amber-500 text-gray-950 font-bold text-xs px-1.5 py-0.5 rounded">
+          <div className="absolute top-1 right-1 bg-accent text-on-accent font-bold text-xs px-1.5 py-0.5 rounded">
             {inDeck} in deck
           </div>
         )}
       </div>
       {/* Footer: name + controls (never overlaps the art) */}
       <div className="p-1">
-        <p className="text-xs text-gray-300 leading-tight line-clamp-1">{card?.name ?? ''}</p>
+        <p className="text-xs text-ink2 leading-tight line-clamp-1">{card?.name ?? ''}</p>
         <div className="flex items-center gap-1 mt-1">
           <button onClick={() => onRemove(ref_)} disabled={!canRemove}
-            className="w-5 h-5 rounded bg-gray-800 hover:bg-red-800 disabled:opacity-25 text-white font-bold flex items-center justify-center text-sm leading-none transition-colors">
+            className="w-5 h-5 rounded bg-surface2 hover:bg-red-800 disabled:opacity-25 text-white font-bold flex items-center justify-center text-sm leading-none transition-colors">
             −
           </button>
-          <span className={`w-4 text-center text-xs font-bold ${inDeck > 0 ? 'text-amber-400' : 'text-gray-500'}`}>{inDeck}</span>
+          <span className={`w-4 text-center text-xs font-bold ${inDeck > 0 ? 'text-accent' : 'text-faint'}`}>{inDeck}</span>
           <button onClick={() => onAdd(ref_)} disabled={!canAdd}
-            className="w-5 h-5 rounded bg-gray-800 hover:bg-green-800 disabled:opacity-25 text-white font-bold flex items-center justify-center text-sm leading-none transition-colors">
+            className="w-5 h-5 rounded bg-surface2 hover:bg-green-800 disabled:opacity-25 text-white font-bold flex items-center justify-center text-sm leading-none transition-colors">
             +
           </button>
           <span className="ml-auto flex items-center gap-1">

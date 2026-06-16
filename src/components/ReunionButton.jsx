@@ -9,16 +9,16 @@ export default function ReunionButton({ className = '' }) {
   if (!user) {
     return (
       <button onClick={() => login()}
-        className={`px-3 py-1.5 rounded-lg bg-gray-800 hover:bg-gray-700 text-sm text-gray-200 transition-colors ${className}`}>
+        className={`px-3 py-1.5 rounded-lg bg-surface2 hover:bg-surface3 text-sm text-ink transition-colors ${className}`}>
         Connect Re:Union
       </button>
     )
   }
   return (
     <div className={`flex items-center gap-2 text-sm ${className}`}>
-      <span className="text-gray-300" title="Signed in to Re:Union">{user.pseudo}</span>
+      <span className="text-ink2" title="Signed in to Re:Union">{user.pseudo}</span>
       <button onClick={logout}
-        className="px-2 py-1 rounded-lg bg-gray-800 hover:bg-gray-700 text-xs text-gray-400 transition-colors">
+        className="px-2 py-1 rounded-lg bg-surface2 hover:bg-surface3 text-xs text-muted transition-colors">
         Disconnect
       </button>
     </div>

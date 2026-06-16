@@ -9,6 +9,7 @@ import PlayerStatus from '../components/PlayerStatus.jsx'
 import CardPreview from '../components/CardPreview.jsx'
 import PickTimer from '../components/PickTimer.jsx'
 import MobileTabBar from '../components/MobileTabBar.jsx'
+import ThemeToggle from '../components/ThemeToggle.jsx'
 import DraftStats from '../components/DraftStats.jsx'
 import { COMMUNITY_CUBES } from '../lib/cubes.js'
 
@@ -17,20 +18,20 @@ import { COMMUNITY_CUBES } from '../lib/cubes.js'
 function MyHeroes({ heroes, cardMap, label = 'Your heroes' }) {
   if (!heroes?.length) return null
   return (
-    <div className="mb-4 border border-amber-500/30 bg-amber-500/5 rounded-lg px-3 py-2">
-      <p className="text-xs font-semibold text-amber-400 mb-2">{label} ({heroes.length})</p>
+    <div className="mb-4 border border-accent/30 bg-accent/5 rounded-lg px-3 py-2">
+      <p className="text-xs font-semibold text-accent mb-2">{label} ({heroes.length})</p>
       <div className="flex flex-wrap gap-2">
         {heroes.map((ref, i) => {
           const card = cardMap?.[ref]
           return (
-            <div key={`${ref}-${i}`} className="w-12 rounded overflow-hidden border border-gray-700 bg-gray-800 shrink-0"
+            <div key={`${ref}-${i}`} className="w-12 rounded overflow-hidden border border-line bg-surface2 shrink-0"
               title={card?.name ?? ref}>
               {card?.imagePath ? (
                 <img src={card.imagePath} alt={card?.name ?? ''} loading="lazy"
                   className="w-full aspect-[2/3] object-cover"
                   onError={e => { e.currentTarget.style.display = 'none' }} />
               ) : (
-                <div className="aspect-[2/3] flex items-center justify-center p-0.5 text-[8px] text-gray-500 text-center leading-tight">
+                <div className="aspect-[2/3] flex items-center justify-center p-0.5 text-[8px] text-faint text-center leading-tight">
                   {card?.name ?? ref}
                 </div>
               )}
@@ -217,27 +218,27 @@ export default function Draft() {
   if (needsRejoin && !me) {
     return (
       <div className="min-h-screen flex items-center justify-center px-4">
-        <form onSubmit={handleRejoin} className="bg-gray-900 rounded-xl p-6 w-full max-w-sm space-y-4">
+        <form onSubmit={handleRejoin} className="bg-surface rounded-xl p-6 w-full max-w-sm space-y-4">
           <h2 className="font-semibold text-lg">Rejoin draft</h2>
-          <p className="text-sm text-gray-400">Enter the name you used for room <span className="text-amber-400 font-mono">{code}</span>.</p>
+          <p className="text-sm text-muted">Enter the name you used for room <span className="text-accent font-mono">{code}</span>.</p>
           <input value={rejoinName} onChange={e => setRejoinName(e.target.value)} placeholder="Your display name" autoFocus
-            className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-amber-500" />
+            className="w-full bg-surface2 border border-line rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-accent" />
           {rejoinError && <p className="text-red-400 text-sm">{rejoinError}</p>}
           <div className="flex gap-3">
-            <button type="button" onClick={() => navigate('/')} className="flex-1 py-2 rounded-lg bg-gray-800 text-sm">Home</button>
-            <button type="submit" className="flex-1 py-2 rounded-lg bg-amber-500 text-gray-950 font-semibold text-sm">Rejoin</button>
+            <button type="button" onClick={() => navigate('/')} className="flex-1 py-2 rounded-lg bg-surface2 text-sm">Home</button>
+            <button type="submit" className="flex-1 py-2 rounded-lg bg-accent text-on-accent font-semibold text-sm">Rejoin</button>
           </div>
         </form>
       </div>
     )
   }
 
-  if (!roomState || !me) return <div className="min-h-screen flex items-center justify-center text-gray-400">Loading draft…</div>
+  if (!roomState || !me) return <div className="min-h-screen flex items-center justify-center text-muted">Loading draft…</div>
 
   if (myIndex === -1) return (
-    <div className="min-h-screen flex items-center justify-center flex-col gap-4 text-gray-400">
+    <div className="min-h-screen flex items-center justify-center flex-col gap-4 text-muted">
       <p>You are not a participant in this draft.</p>
-      <button onClick={() => navigate('/')} className="px-4 py-2 bg-gray-800 rounded-lg text-sm">Go home</button>
+      <button onClick={() => navigate('/')} className="px-4 py-2 bg-surface2 rounded-lg text-sm">Go home</button>
     </div>
   )
 
@@ -268,14 +269,15 @@ export default function Draft() {
       )}
 
       {/* Top bar */}
-      <div className="bg-gray-900 border-b border-gray-800 px-4 py-2 flex items-center gap-3 shrink-0">
-        <span className="font-mono text-amber-400 font-bold text-sm">{code}</span>
-        <span className="text-gray-500 text-xs">{isHeroPhase ? 'Hero Draft' : `Round ${roomState.round}/4`}</span>
+      <div className="bg-surface border-b border-line px-4 py-2 flex items-center gap-3 shrink-0">
+        <span className="font-mono text-accent font-bold text-sm">{code}</span>
+        <span className="text-faint text-xs">{isHeroPhase ? 'Hero Draft' : `Round ${roomState.round}/4`}</span>
         <span className="ml-auto text-sm">
           {isMyTurn
             ? <span className="text-green-400 font-medium text-sm">Your turn</span>
-            : <span className="text-gray-500 text-xs">Waiting…</span>}
+            : <span className="text-faint text-xs">Waiting…</span>}
         </span>
+        <ThemeToggle />
       </div>
 
       {/* Player status — compact on mobile */}
@@ -290,18 +292,18 @@ export default function Draft() {
           <div className="flex items-baseline gap-3 mb-3">
             {isHeroPhase ? (
               <>
-                <h2 className="font-semibold text-lg text-amber-400">Hero Draft</h2>
-                <span className="text-sm text-gray-500">You have {currentPickNum} / {totalPicks} heroes</span>
+                <h2 className="font-semibold text-lg text-accent">Hero Draft</h2>
+                <span className="text-sm text-faint">You have {currentPickNum} / {totalPicks} heroes</span>
               </>
             ) : (
               <>
                 <h2 className="font-semibold text-lg">Pack {roomState.round}</h2>
-                <span className="text-sm text-gray-500">Pick {currentPickNum}</span>
+                <span className="text-sm text-faint">Pick {currentPickNum}</span>
               </>
             )}
           </div>
           {isHeroPhase && (
-            <p className="mb-3 text-sm text-gray-400">
+            <p className="mb-3 text-sm text-muted">
               Between packs, each player snake-drafts one hero from the shared pool — {heroTarget} in total.
             </p>
           )}
@@ -311,15 +313,15 @@ export default function Draft() {
             <PickTimer deadline={roomState.pickDeadline} isMyTurn={isMyTurn} onTimeout={handleTimeout} />
           )}
           {!isMyTurn && (
-            <div className="mb-4 bg-gray-900 border border-gray-800 rounded-lg px-4 py-3 text-sm text-gray-400">
+            <div className="mb-4 bg-surface border border-line rounded-lg px-4 py-3 text-sm text-muted">
               {isHeroPhase
-                ? <>Waiting for <span className="text-gray-200">{heroPickerName}</span> to pick a hero…</>
+                ? <>Waiting for <span className="text-ink">{heroPickerName}</span> to pick a hero…</>
                 : 'Waiting for other players to pick…'}
             </div>
           )}
           <CardGrid packRefs={myPack} cardMap={cardMap} onPick={doPick} onHover={setHoverCard} disabled={!isMyTurn || picking} />
         </div>
-        <div className="w-80 border-l border-gray-800 flex flex-col">
+        <div className="w-80 border-l border-line flex flex-col">
           <DraftSidebar pickedRefs={activePicks} cardMap={cardMap} round={roomState.round} code={code} />
         </div>
       </div>
@@ -329,17 +331,17 @@ export default function Draft() {
         {mobileTab === 'pack' && (
           <div className="p-3">
             <div className="flex items-baseline gap-2 mb-2">
-              <h2 className="font-semibold">{isHeroPhase ? <span className="text-amber-400">Hero Draft</span> : `Pack ${roomState.round}`}</h2>
-              <span className="text-xs text-gray-500">{isHeroPhase ? `${currentPickNum} / ${totalPicks} heroes` : `Pick ${currentPickNum}`}</span>
+              <h2 className="font-semibold">{isHeroPhase ? <span className="text-accent">Hero Draft</span> : `Pack ${roomState.round}`}</h2>
+              <span className="text-xs text-faint">{isHeroPhase ? `${currentPickNum} / ${totalPicks} heroes` : `Pick ${currentPickNum}`}</span>
             </div>
             {myHeroPicks.length > 0 && <MyHeroes heroes={myHeroPicks} cardMap={cardMap} label={isHeroPhase ? "Heroes you've taken" : undefined} />}
             {roomState.config?.timerEnabled && roomState.pickDeadline && (
               <PickTimer deadline={roomState.pickDeadline} isMyTurn={isMyTurn} onTimeout={handleTimeout} />
             )}
             {!isMyTurn && (
-              <div className="mb-3 bg-gray-900 border border-gray-800 rounded-lg px-3 py-2 text-sm text-gray-400">
+              <div className="mb-3 bg-surface border border-line rounded-lg px-3 py-2 text-sm text-muted">
                 {isHeroPhase
-                  ? <>Waiting for <span className="text-gray-200">{heroPickerName}</span> to pick a hero…</>
+                  ? <>Waiting for <span className="text-ink">{heroPickerName}</span> to pick a hero…</>
                   : 'Waiting for other players…'}
               </div>
             )}

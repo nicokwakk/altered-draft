@@ -69,43 +69,43 @@ export default function ExportMenu({ poolRefs, deckRefs, poolDecklist, deckDeckl
   return (
     <div className="relative" ref={box}>
       <button onClick={() => setOpen(o => !o)}
-        className="px-3 py-1.5 bg-amber-500 hover:bg-amber-400 text-gray-950 font-medium text-sm rounded-lg transition-colors flex items-center gap-1.5">
+        className="px-3 py-1.5 bg-accent hover:bg-accent2 text-on-accent font-medium text-sm rounded-lg transition-colors flex items-center gap-1.5">
         Export / Save <span className="text-xs">▾</span>
       </button>
       {toast && !open && <span className="absolute right-0 top-full mt-1 text-xs text-green-400 whitespace-nowrap">{toast}</span>}
 
       {open && (
-        <div className="absolute right-0 top-full mt-2 w-72 bg-gray-900 border border-gray-700 rounded-xl shadow-2xl p-2 z-50 space-y-0.5">
-          <p className="px-3 pt-1 pb-1.5 text-xs uppercase tracking-widest text-gray-500">Copy for altered.re {toast && <span className="text-green-400 normal-case tracking-normal ml-1">{toast}</span>}</p>
-          <button className={`${item} hover:bg-gray-800 text-gray-200`} onClick={() => copy(poolDecklist, 'Card list')} disabled={!poolDecklist}>
+        <div className="absolute right-0 top-full mt-2 w-72 bg-surface border border-line rounded-xl shadow-2xl p-2 z-50 space-y-0.5">
+          <p className="px-3 pt-1 pb-1.5 text-xs uppercase tracking-widest text-faint">Copy for altered.re {toast && <span className="text-green-400 normal-case tracking-normal ml-1">{toast}</span>}</p>
+          <button className={`${item} hover:bg-surface2 text-ink`} onClick={() => copy(poolDecklist, 'Card list')} disabled={!poolDecklist}>
             <span>Copy complete card list</span>
-            <span className="text-xs text-gray-500">{poolRefs?.length ?? 0}</span>
+            <span className="text-xs text-faint">{poolRefs?.length ?? 0}</span>
           </button>
-          <button className={`${item} hover:bg-gray-800 text-gray-200`} onClick={() => copy(deckDecklist, 'Decklist')} disabled={!hasDeck}>
+          <button className={`${item} hover:bg-surface2 text-ink`} onClick={() => copy(deckDecklist, 'Decklist')} disabled={!hasDeck}>
             <span>Copy decklist</span>
-            <span className="text-xs text-gray-500">{deckRefs?.length ?? 0}</span>
+            <span className="text-xs text-faint">{deckRefs?.length ?? 0}</span>
           </button>
 
-          <div className="h-px bg-gray-800 my-1.5" />
-          <p className="px-3 pb-1.5 text-xs uppercase tracking-widest text-gray-500">Save to Re:Union</p>
+          <div className="h-px bg-surface2 my-1.5" />
+          <p className="px-3 pb-1.5 text-xs uppercase tracking-widest text-faint">Save to Re:Union</p>
 
           {!user ? (
-            <button className={`${item} hover:bg-gray-800 text-amber-400`} onClick={() => login()}>
+            <button className={`${item} hover:bg-surface2 text-accent`} onClick={() => login()}>
               Connect Re:Union to save
             </button>
           ) : (
             <>
-              <button className={`${item} hover:bg-gray-800 text-gray-200`} onClick={() => save('pool')} disabled={saving === 'pool' || !poolRefs?.length}>
+              <button className={`${item} hover:bg-surface2 text-ink`} onClick={() => save('pool')} disabled={saving === 'pool' || !poolRefs?.length}>
                 <span>{saving === 'pool' ? 'Saving…' : 'Save your pulls to Re:Union'}</span>
                 {saved.pool ? <a href={`${DECKBUILDER}/${saved.pool}`} target="_blank" rel="noopener noreferrer" className="text-xs text-green-400 hover:underline" onClick={e => e.stopPropagation()}>open ↗</a>
                   : saved.poolErr ? <span className="text-xs text-red-400" title={saved.poolErr}>failed</span> : null}
               </button>
-              <button className={`${item} hover:bg-gray-800 text-gray-200`} onClick={() => save('deck')} disabled={saving === 'deck' || !hasDeck}>
+              <button className={`${item} hover:bg-surface2 text-ink`} onClick={() => save('deck')} disabled={saving === 'deck' || !hasDeck}>
                 <span>{saving === 'deck' ? 'Saving…' : 'Save your deck to Re:Union'}</span>
                 {saved.deck ? <a href={`${DECKBUILDER}/${saved.deck}`} target="_blank" rel="noopener noreferrer" className="text-xs text-green-400 hover:underline" onClick={e => e.stopPropagation()}>open ↗</a>
                   : saved.deckErr ? <span className="text-xs text-red-400" title={saved.deckErr}>failed</span> : null}
               </button>
-              <p className="px-3 pt-1 text-xs text-gray-600">Saved as sandbox decks under {user.pseudo}.</p>
+              <p className="px-3 pt-1 text-xs text-faint">Saved as sandbox decks under {user.pseudo}.</p>
             </>
           )}
         </div>

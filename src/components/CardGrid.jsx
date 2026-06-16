@@ -3,7 +3,7 @@ import { FACTION_NAMES } from '../lib/cardData.js'
 
 export default function CardGrid({ packRefs, cardMap, onPick, onHover, disabled }) {
   if (!packRefs?.length) {
-    return <div className="text-gray-600 text-sm">No cards in this pack.</div>
+    return <div className="text-faint text-sm">No cards in this pack.</div>
   }
 
   return (
@@ -23,13 +23,13 @@ export default function CardGrid({ packRefs, cardMap, onPick, onHover, disabled 
             onMouseLeave={() => onHover(null)}
             disabled={disabled}
             className={`
-              relative flex flex-col rounded-lg overflow-hidden border border-gray-700
-              bg-gray-900 text-left transition-all duration-150
-              ${disabled ? 'opacity-60 cursor-not-allowed' : 'hover:border-amber-500 hover:shadow-lg hover:shadow-amber-500/10 hover:scale-105 cursor-pointer'}
+              relative flex flex-col rounded-lg overflow-hidden border border-line
+              bg-surface text-left transition-all duration-150
+              ${disabled ? 'opacity-60 cursor-not-allowed' : 'hover:border-accent hover:shadow-lg hover:shadow-accent/10 hover:scale-105 cursor-pointer'}
             `}
           >
             {/* Card image */}
-            <div className="aspect-[2/3] bg-gray-800 flex items-center justify-center overflow-hidden">
+            <div className="aspect-[2/3] bg-surface2 flex items-center justify-center overflow-hidden">
               {card?.imagePath ? (
                 <img
                   src={card.imagePath}
@@ -39,13 +39,13 @@ export default function CardGrid({ packRefs, cardMap, onPick, onHover, disabled 
                   onError={e => { e.currentTarget.style.display = 'none' }}
                 />
               ) : (
-                <div className="text-gray-600 text-xs px-2 text-center break-all">{card?.name ?? ref}</div>
+                <div className="text-faint text-xs px-2 text-center break-all">{card?.name ?? ref}</div>
               )}
             </div>
 
             {/* Card info bar */}
             <div className="p-1.5 space-y-1">
-              <p className="text-xs font-medium leading-tight line-clamp-1 text-gray-200">
+              <p className="text-xs font-medium leading-tight line-clamp-1 text-ink">
                 {card?.name ?? ref}
               </p>
               <div className="flex items-center gap-1">
@@ -54,7 +54,7 @@ export default function CardGrid({ packRefs, cardMap, onPick, onHover, disabled 
                     className="w-4 h-4 object-contain shrink-0"
                     onError={e => { e.currentTarget.style.display = 'none' }} />
                 ) : (
-                  <span className="text-xs text-gray-500 font-mono">{faction}</span>
+                  <span className="text-xs text-faint font-mono">{faction}</span>
                 )}
                 {rarityGem && card?.cardType !== 'HERO' ? (
                   <img src={rarityGem} alt={rarity}

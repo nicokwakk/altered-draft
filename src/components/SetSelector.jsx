@@ -18,13 +18,13 @@ export default function SetSelector({ selectedSets, onChange, disabled }) {
 
   return (
     <div>
-      <label className="block text-sm text-gray-400 mb-2">Sets to draft from</label>
+      <label className="block text-sm text-muted mb-2">Sets to draft from</label>
       <div className="space-y-2">
         {SETS.filter(s => !s.hidden).map(set => {
           const selected = !!selectedSets[set.code]
           return (
             <div key={set.code} className={`flex items-center gap-3 p-3 rounded-lg border transition-colors ${
-              selected ? 'border-amber-500/40 bg-amber-500/5' : 'border-gray-700 bg-gray-800'
+              selected ? 'border-accent/40 bg-accent/5' : 'border-line bg-surface2'
             }`}>
               <input
                 type="checkbox"
@@ -32,14 +32,14 @@ export default function SetSelector({ selectedSets, onChange, disabled }) {
                 checked={selected}
                 onChange={() => !disabled && toggleSet(set.code)}
                 disabled={disabled}
-                className="accent-amber-500"
+                className="accent-accent"
               />
               <label htmlFor={`set-${set.code}`} className="flex-1 cursor-pointer">
-                <span className="text-sm text-gray-300">{set.name}</span>
+                <span className="text-sm text-ink2">{set.name}</span>
               </label>
               {selected && (
                 <div className="flex items-center gap-1.5">
-                  <span className="text-xs text-gray-500">packs:</span>
+                  <span className="text-xs text-faint">packs:</span>
                   <input
                     type="number"
                     min={1}
@@ -47,7 +47,7 @@ export default function SetSelector({ selectedSets, onChange, disabled }) {
                     value={selectedSets[set.code]}
                     onChange={e => updateCount(set.code, e.target.value)}
                     disabled={disabled}
-                    className="w-12 bg-gray-700 border border-gray-600 rounded px-2 py-0.5 text-sm text-center focus:outline-none focus:border-amber-500"
+                    className="w-12 bg-surface3 border border-line rounded px-2 py-0.5 text-sm text-center focus:outline-none focus:border-accent"
                   />
                 </div>
               )}

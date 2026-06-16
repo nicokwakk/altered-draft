@@ -11,14 +11,14 @@ export default function CardPreview({ card }) {
 
   return createPortal(
     <div
-      className="fixed bottom-6 right-6 z-50 w-64 bg-gray-900 border border-gray-700 rounded-xl shadow-2xl overflow-hidden pointer-events-none"
+      className="fixed bottom-6 right-6 z-50 w-64 bg-surface border border-line rounded-xl shadow-2xl overflow-hidden pointer-events-none"
       style={{ boxShadow: '0 0 40px rgba(0,0,0,0.8)' }}
     >
       {card.imagePath ? (
         <img src={card.imagePath} alt={card.name} className="w-full object-cover"
           onError={e => { e.currentTarget.style.display = 'none' }} />
       ) : (
-        <div className="aspect-[2/3] bg-gray-800 flex items-center justify-center text-gray-600 text-sm px-4 text-center">
+        <div className="aspect-[2/3] bg-surface2 flex items-center justify-center text-faint text-sm px-4 text-center">
           {card.name ?? card.reference}
         </div>
       )}
@@ -32,9 +32,9 @@ export default function CardPreview({ card }) {
               className="w-5 h-5 object-contain"
               onError={e => { e.currentTarget.style.display = 'none' }} />
           )}
-          <span className="text-xs text-gray-400">{FACTION_NAMES[faction] ?? faction}</span>
+          <span className="text-xs text-muted">{FACTION_NAMES[faction] ?? faction}</span>
           {card.cardType && (
-            <span className="text-xs text-gray-600 ml-auto">{card.cardType.replace('_PERMANENT', '')}</span>
+            <span className="text-xs text-faint ml-auto">{card.cardType.replace('_PERMANENT', '')}</span>
           )}
           {rarityGem && card.cardType !== 'HERO' && (
             <img src={rarityGem} alt={card.rarity} className="w-5 h-5 object-contain"
@@ -43,14 +43,14 @@ export default function CardPreview({ card }) {
         </div>
 
         {(card.mainCost != null || card.recallCost != null) && (
-          <div className="flex gap-3 text-xs text-gray-400">
-            {card.mainCost != null && <span>Cost: <strong className="text-gray-200">{card.mainCost}</strong></span>}
-            {card.recallCost != null && <span>Recall: <strong className="text-gray-200">{card.recallCost}</strong></span>}
+          <div className="flex gap-3 text-xs text-muted">
+            {card.mainCost != null && <span>Cost: <strong className="text-ink">{card.mainCost}</strong></span>}
+            {card.recallCost != null && <span>Recall: <strong className="text-ink">{card.recallCost}</strong></span>}
           </div>
         )}
 
         {(card.forestPower != null || card.mountainPower != null || card.oceanPower != null) && (
-          <div className="flex gap-2 text-xs text-gray-400">
+          <div className="flex gap-2 text-xs text-muted">
             {card.forestPower != null && <span>🌲 {card.forestPower}</span>}
             {card.mountainPower != null && <span>⛰️ {card.mountainPower}</span>}
             {card.oceanPower != null && <span>🌊 {card.oceanPower}</span>}

@@ -26,12 +26,12 @@ export default function MultiSetSelector({ mix, onChange, equalPacks, onEqualCha
     <div className="space-y-4">
       {/* Distribution toggle */}
       <label className={`flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${
-        equalPacks ? 'border-amber-500/40 bg-amber-500/5' : 'border-gray-700 bg-gray-800'}`}>
+        equalPacks ? 'border-accent/40 bg-accent/5' : 'border-line bg-surface2'}`}>
         <input type="checkbox" checked={equalPacks} disabled={disabled}
-          onChange={e => onEqualChange(e.target.checked)} className="accent-amber-500 w-4 h-4 mt-0.5 shrink-0" />
+          onChange={e => onEqualChange(e.target.checked)} className="accent-accent w-4 h-4 mt-0.5 shrink-0" />
         <span>
-          <span className="block text-sm text-gray-200 font-medium">All players receive the same packs</span>
-          <span className="block text-xs text-gray-500 mt-0.5">
+          <span className="block text-sm text-ink font-medium">All players receive the same packs</span>
+          <span className="block text-xs text-faint mt-0.5">
             {equalPacks
               ? 'Every player drafts the same single-set boosters — one set per round.'
               : 'Build the whole booster bag — all boosters are shuffled and dealt at random.'}
@@ -41,13 +41,13 @@ export default function MultiSetSelector({ mix, onChange, equalPacks, onEqualCha
 
       <div>
         <div className="flex items-center justify-between mb-2">
-          <label className="block text-sm text-gray-400">{equalPacks ? 'Packs per player' : 'Booster bag'}</label>
+          <label className="block text-sm text-muted">{equalPacks ? 'Packs per player' : 'Booster bag'}</label>
           <span className={`text-sm font-mono font-bold ${
-            reached ? 'text-green-400' : total > target ? 'text-red-400' : 'text-amber-400'}`}>
+            reached ? 'text-green-400' : total > target ? 'text-red-400' : 'text-accent'}`}>
             {total} / {target}
           </span>
         </div>
-        <p className="text-xs text-gray-500 mb-3">
+        <p className="text-xs text-faint mb-3">
           {equalPacks
             ? `Choose how many of each set make up one player's ${target} packs.`
             : `Choose how many single-set boosters of each set go in the bag (total = ${target}).`}
@@ -60,25 +60,25 @@ export default function MultiSetSelector({ mix, onChange, equalPacks, onEqualCha
             const icon = SET_ASSETS[set.code]?.icon
             return (
               <div key={set.code} className={`flex items-center gap-3 p-3 rounded-lg border transition-colors ${
-                selected ? 'border-amber-500/40 bg-amber-500/5' : 'border-gray-700 bg-gray-800'
+                selected ? 'border-accent/40 bg-accent/5' : 'border-line bg-surface2'
               }`}>
                 {icon
                   ? <img src={icon} alt="" className="w-6 h-6 object-contain shrink-0" onError={e => { e.currentTarget.style.display = 'none' }} />
                   : <span className="w-6 h-6 shrink-0" />}
-                <span className="flex-1 text-sm text-gray-300">{set.name}</span>
+                <span className="flex-1 text-sm text-ink2">{set.name}</span>
                 <div className="flex items-center gap-1.5">
                   <button type="button" onClick={() => !disabled && setCount(set.code, count - 1)} disabled={disabled || count <= 0}
-                    className="w-7 h-7 rounded bg-gray-700 hover:bg-gray-600 disabled:opacity-30 text-white font-bold flex items-center justify-center leading-none">
+                    className="w-7 h-7 rounded bg-surface3 hover:bg-surface3 disabled:opacity-30 text-white font-bold flex items-center justify-center leading-none">
                     −
                   </button>
                   <input
                     type="number" min={0} max={target} value={count}
                     onChange={e => setCount(set.code, parseInt(e.target.value) || 0)}
                     disabled={disabled}
-                    className="w-12 bg-gray-700 border border-gray-600 rounded px-2 py-0.5 text-sm text-center focus:outline-none focus:border-amber-500"
+                    className="w-12 bg-surface3 border border-line rounded px-2 py-0.5 text-sm text-center focus:outline-none focus:border-accent"
                   />
                   <button type="button" onClick={() => !disabled && setCount(set.code, count + 1)} disabled={disabled || total >= target}
-                    className="w-7 h-7 rounded bg-gray-700 hover:bg-gray-600 disabled:opacity-30 text-white font-bold flex items-center justify-center leading-none">
+                    className="w-7 h-7 rounded bg-surface3 hover:bg-surface3 disabled:opacity-30 text-white font-bold flex items-center justify-center leading-none">
                     +
                   </button>
                 </div>
@@ -88,7 +88,7 @@ export default function MultiSetSelector({ mix, onChange, equalPacks, onEqualCha
         </div>
 
         {!reached && (
-          <p className={`text-xs mt-3 ${total > target ? 'text-red-400' : 'text-gray-500'}`}>
+          <p className={`text-xs mt-3 ${total > target ? 'text-red-400' : 'text-faint'}`}>
             {total > target
               ? `Remove ${total - target} ${total - target === 1 ? 'pack' : 'packs'} — the total must equal ${target}.`
               : `Add ${target - total} more ${target - total === 1 ? 'pack' : 'packs'} — the total must equal ${target}.`}

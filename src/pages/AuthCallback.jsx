@@ -28,9 +28,9 @@ export default function AuthCallback() {
         ? <div className="text-center">
             <p className="text-red-400 mb-3">{error}</p>
             <button onClick={() => navigate('/', { replace: true })}
-              className="px-4 py-2 rounded-lg bg-gray-800 hover:bg-gray-700 text-sm">Back to home</button>
+              className="px-4 py-2 rounded-lg bg-surface2 hover:bg-surface3 text-sm">Back to home</button>
           </div>
-        : <p className="text-gray-400">Signing you in…</p>}
+        : <p className="text-muted">Signing you in…</p>}
     </div>
   )
 }

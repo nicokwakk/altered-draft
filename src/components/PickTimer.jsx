@@ -26,16 +26,16 @@ export default function PickTimer({ deadline, isMyTurn, onTimeout }) {
   return (
     <div className="mb-3">
       <div className="flex items-center justify-between mb-1">
-        <span className={`text-xs font-mono font-bold ${urgent ? 'text-red-400 animate-pulse' : 'text-gray-400'}`}>
+        <span className={`text-xs font-mono font-bold ${urgent ? 'text-red-400 animate-pulse' : 'text-muted'}`}>
           {remaining}s
         </span>
         {isMyTurn && (
-          <span className="text-xs text-gray-500">Auto-pick in {remaining}s</span>
+          <span className="text-xs text-faint">Auto-pick in {remaining}s</span>
         )}
       </div>
-      <div className="h-1.5 bg-gray-800 rounded-full overflow-hidden">
+      <div className="h-1.5 bg-surface2 rounded-full overflow-hidden">
         <div
-          className={`h-full rounded-full transition-all duration-300 ${urgent ? 'bg-red-500' : 'bg-amber-500'}`}
+          className={`h-full rounded-full transition-all duration-300 ${urgent ? 'bg-red-500' : 'bg-accent'}`}
           style={{ width: `${pct}%` }}
         />
       </div>

@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase.js'
 import { generateRoomCode } from '../lib/roomCode.js'
-import ReunionButton from '../components/ReunionButton.jsx'
+import TopNav from '../components/TopNav.jsx'
 
 export default function Home() {
   const navigate = useNavigate()
@@ -98,14 +98,15 @@ export default function Home() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center px-4">
-      <div className="fixed top-4 right-4 z-10"><ReunionButton /></div>
+    <div className="min-h-screen flex flex-col">
+      <TopNav />
+      <div className="flex-1 flex flex-col items-center justify-center px-4">
       <div className="max-w-md w-full">
         <div className="text-center mb-10">
-          <h1 className="text-4xl font-bold tracking-tight mb-2">
-            <span className="text-amber-400">Altered</span> Draft
+          <h1 className="text-4xl font-display tracking-wide mb-2">
+            <span className="text-accent">Altered</span> Draft
           </h1>
-          <p className="text-gray-400 text-sm">
+          <p className="text-muted text-sm">
             Multiplayer booster draft simulator for the Altered TCG.
             Open a room, share the code, draft together in real time.
           </p>
@@ -114,32 +115,32 @@ export default function Home() {
         {!mode && (
           <div className="flex gap-4">
             <button onClick={() => setMode('create')}
-              className="flex-1 bg-amber-500 hover:bg-amber-400 text-gray-950 font-semibold py-3 rounded-lg transition-colors">
+              className="flex-1 bg-accent hover:bg-accent2 text-on-accent font-semibold py-3 rounded-lg transition-colors">
               Create a room
             </button>
             <button onClick={() => setMode('join')}
-              className="flex-1 bg-gray-800 hover:bg-gray-700 text-gray-100 font-semibold py-3 rounded-lg transition-colors">
+              className="flex-1 bg-surface2 hover:bg-surface3 text-ink font-semibold py-3 rounded-lg transition-colors">
               Join a room
             </button>
           </div>
         )}
 
         {mode === 'create' && (
-          <form onSubmit={handleCreate} className="bg-gray-900 rounded-xl p-6 space-y-4">
+          <form onSubmit={handleCreate} className="bg-surface rounded-xl p-6 space-y-4">
             <h2 className="font-semibold text-lg">Create a draft room</h2>
             <div>
-              <label className="block text-sm text-gray-400 mb-1">Your display name</label>
+              <label className="block text-sm text-muted mb-1">Your display name</label>
               <input value={createName} onChange={e => setCreateName(e.target.value)}
                 placeholder="e.g. Alice"
-                className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-amber-500"
+                className="w-full bg-surface2 border border-line rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-accent"
                 autoFocus />
             </div>
             {error && <p className="text-red-400 text-sm">{error}</p>}
             <div className="flex gap-3">
               <button type="button" onClick={() => { setMode(null); setError('') }}
-                className="flex-1 py-2 rounded-lg bg-gray-800 hover:bg-gray-700 text-sm transition-colors">Back</button>
+                className="flex-1 py-2 rounded-lg bg-surface2 hover:bg-surface3 text-sm transition-colors">Back</button>
               <button type="submit" disabled={loading}
-                className="flex-1 py-2 rounded-lg bg-amber-500 hover:bg-amber-400 text-gray-950 font-semibold text-sm transition-colors disabled:opacity-50">
+                className="flex-1 py-2 rounded-lg bg-accent hover:bg-accent2 text-on-accent font-semibold text-sm transition-colors disabled:opacity-50">
                 {loading ? 'Creating…' : 'Create room'}
               </button>
             </div>
@@ -147,32 +148,33 @@ export default function Home() {
         )}
 
         {mode === 'join' && (
-          <form onSubmit={handleJoin} className="bg-gray-900 rounded-xl p-6 space-y-4">
+          <form onSubmit={handleJoin} className="bg-surface rounded-xl p-6 space-y-4">
             <h2 className="font-semibold text-lg">Join a draft room</h2>
             <div>
-              <label className="block text-sm text-gray-400 mb-1">Room code</label>
+              <label className="block text-sm text-muted mb-1">Room code</label>
               <input value={joinCode} onChange={e => setJoinCode(e.target.value.toUpperCase())}
                 placeholder="e.g. XKQZ" maxLength={6}
-                className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm font-mono tracking-widest uppercase focus:outline-none focus:border-amber-500"
+                className="w-full bg-surface2 border border-line rounded-lg px-3 py-2 text-sm font-mono tracking-widest uppercase focus:outline-none focus:border-accent"
                 autoFocus />
             </div>
             <div>
-              <label className="block text-sm text-gray-400 mb-1">Your display name</label>
+              <label className="block text-sm text-muted mb-1">Your display name</label>
               <input value={joinName} onChange={e => setJoinName(e.target.value)}
                 placeholder="e.g. Bob"
-                className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-amber-500" />
+                className="w-full bg-surface2 border border-line rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-accent" />
             </div>
             {error && <p className="text-red-400 text-sm">{error}</p>}
             <div className="flex gap-3">
               <button type="button" onClick={() => { setMode(null); setError('') }}
-                className="flex-1 py-2 rounded-lg bg-gray-800 hover:bg-gray-700 text-sm transition-colors">Back</button>
+                className="flex-1 py-2 rounded-lg bg-surface2 hover:bg-surface3 text-sm transition-colors">Back</button>
               <button type="submit" disabled={loading}
-                className="flex-1 py-2 rounded-lg bg-amber-500 hover:bg-amber-400 text-gray-950 font-semibold text-sm transition-colors disabled:opacity-50">
+                className="flex-1 py-2 rounded-lg bg-accent hover:bg-accent2 text-on-accent font-semibold text-sm transition-colors disabled:opacity-50">
                 {loading ? 'Joining…' : 'Join room'}
               </button>
             </div>
           </form>
         )}
+      </div>
       </div>
     </div>
   )
