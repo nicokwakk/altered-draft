@@ -6,6 +6,7 @@ import { COMMUNITY_CUBES } from '../lib/cubes.js'
 import { SET_ICONS, setCodeFromRef } from '../lib/assets.js'
 import { buildDecklist } from '../lib/exportFormat.js'
 import ExportButton from '../components/ExportButton.jsx'
+import SaveToReunion from '../components/SaveToReunion.jsx'
 import DraftStats from '../components/DraftStats.jsx'
 import PoolGrid, { SimpleCardGrid } from '../components/PoolGrid.jsx'
 import DeckList from '../components/DeckList.jsx'
@@ -130,7 +131,8 @@ export default function Sealed() {
       <div className="bg-gray-900 border-b border-gray-800 px-4 py-2 flex items-center gap-3 shrink-0">
         <span className="font-mono text-amber-400 font-bold text-sm">{code}</span>
         <span className="text-gray-400 text-sm">Sealed</span>
-        <div className="ml-auto flex gap-2">
+        <div className="ml-auto flex gap-2 items-center">
+          <SaveToReunion poolRefs={allRefs} deckRefs={deckRefs} name={code} />
           {tab === 'deck'
             ? <ExportButton decklist={deckDecklist} />
             : <ExportButton decklist={allDecklist} />}

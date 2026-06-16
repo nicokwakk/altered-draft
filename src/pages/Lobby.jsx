@@ -1,13 +1,16 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase.js'
-import { fetchSet, SETS, apiSetCode, fetchUniques, isUniqueRef, canonicalCardRef } from '../lib/cardData.js'
+import { fetchSet, SETS, apiSetCode, fetchUniques, isUniqueRef } from '../lib/cardData.js'
 import { SET_ASSETS } from '../lib/assets.js'
 import { COMMUNITY_CUBES, setsForCube } from '../lib/cubes.js'
 import CubePreviewModal from '../components/CubePreviewModal.jsx'
 import { generateAllPacks, generatePacksFromPool, generateChaosPacks, generateCubeRecipePacks, generateStructuredPacks, generateCubeDraftPacks, dealHeroSlots } from '../lib/packGenerator.js'
 import { buildInitialState } from '../lib/draftLogic.js'
 import { parseDecklist } from '../lib/cubeParser.js'
+import { resolveCubeRefs } from '../lib/cubeResolve.js'
+import { listDecks, getDeck, deckCardsToRefs } from '../lib/decks.js'
+import { useAuth } from '../auth/AuthProvider.jsx'
 import SetSelector from '../components/SetSelector.jsx'
 import MultiSetSelector from '../components/MultiSetSelector.jsx'
 
@@ -27,6 +30,7 @@ function shuffle(arr) {
 export default function Lobby() {
   const { code } = useParams()
   const navigate = useNavigate()
+  const { user, login } = useAuth()
 
   const [roomState, setRoomState] = useState(null)
   const [me, setMe] = useState(null)
@@ -47,6 +51,10 @@ export default function Lobby() {
   const [customCubeName, setCustomCubeName] = useState('')
   const [parsingCube, setParsingCube] = useState(false)
   const [parseMsg, setParseMsg] = useState('')
+  // Load-a-cube-from-Re:Union-decks (Cubes tab)
+  const [myDecks, setMyDecks] = useState(null) // null = not loaded yet; [] = loaded, empty
+  const [loadingDecks, setLoadingDecks] = useState(false)
+  const [decksMsg, setDecksMsg] = useState('')
   const [selectedSets, setSelectedSets] = useState({ CORE: 1 })
   const [multiSetMix, setMultiSetMix] = useState({ CORE: 4 }) // per-player pack counts (sum = 4) for the Multi-Set draft tab
   const [equalPacks, setEqualPacks] = useState(true) // ON = same single-set boosters for all; OFF = random bag
@@ -112,40 +120,52 @@ export default function Lobby() {
   // resolve from the bundled snapshot only.
   async function handleParseCube() {
     setParseMsg('')
-    const { refs: rawRefs } = parseDecklist(customCubeText)
-    // Canonicalize alt-art / promo printings (e.g. ALT_DUSTEROP_A_AX_98_C) to their
-    // standard B card so they resolve from set data instead of being dropped.
-    const refs = rawRefs.map(canonicalCardRef)
+    const { refs } = parseDecklist(customCubeText)
     if (!refs.length) {
       setParseMsg('No card references found. Paste lines like "1 ALT_CORE_B_YZ_03_C".')
       return
     }
     setParsingCube(true)
     try {
-      const rawCodes = [...new Set(setsForCube(refs))]
-      const results = await Promise.all(rawCodes.map(s => fetchSet(s, lang).catch(() => [])))
-      const byRef = new Map(results.flat().map(c => [c.reference, c]))
-      const uniqueCards = await fetchUniques(refs.filter(isUniqueRef), lang)
-      for (const c of uniqueCards) byRef.set(c.reference, c)
-
-      const resolved = [], unresolved = []
-      for (const r of refs) (byRef.has(r) ? resolved : unresolved).push(r)
-      const heroes = resolved.filter(r => byRef.get(r).cardType === 'HERO')
-      const cards = resolved.filter(r => byRef.get(r).cardType !== 'HERO')
+      // resolveCubeRefs canonicalizes alt-art/promo printings, fetches sets + uniques,
+      // and splits heroes — shared with the load-from-Re:Union-decks flow below.
+      const { cards, heroes, unresolved } = await resolveCubeRefs(refs, lang)
       if (!cards.length) {
         setParseMsg('No draftable (non-hero) cards resolved — check your references.')
         setParsingCube(false); return
       }
-      setCustomCube({
-        name: customCubeName.trim() || 'Custom cube',
-        cards, heroes,
-        unresolved: [...new Set(unresolved)],
-      })
+      setCustomCube({ name: customCubeName.trim() || 'Custom cube', cards, heroes, unresolved, source: 'paste' })
       setSelectedCube(null) // custom + built-in cubes are mutually exclusive
     } catch (e) {
       setParseMsg('Could not load card data: ' + e.message)
     }
     setParsingCube(false)
+  }
+
+  // Load the signed-in user's Re:Union decks (Cubes tab).
+  async function handleLoadDecks() {
+    setDecksMsg(''); setLoadingDecks(true)
+    try {
+      const decks = await listDecks()
+      setMyDecks(decks)
+      if (!decks.length) setDecksMsg('No decks found in your Re:Union account.')
+    } catch (e) { setDecksMsg(e.message) }
+    setLoadingDecks(false)
+  }
+
+  // Turn one chosen Re:Union deck into a custom cube (same shape as a pasted cube).
+  async function handleSelectDeck(deck) {
+    setDecksMsg(''); setLoadingDecks(true)
+    try {
+      const refs = deckCardsToRefs(await getDeck(deck.id ?? deck.uuid))
+      if (!refs.length) { setDecksMsg('That deck has no cards.'); setLoadingDecks(false); return }
+      const { cards, heroes, unresolved } = await resolveCubeRefs(refs, lang)
+      if (!cards.length) { setDecksMsg('No draftable cards resolved from that deck.'); setLoadingDecks(false); return }
+      setCustomCube({ name: deck.name || 'Re:Union deck', cards, heroes, unresolved, source: 'reunion' })
+      setSelectedCube(null)
+      setMyDecks(null) // collapse the picker
+    } catch (e) { setDecksMsg(e.message) }
+    setLoadingDecks(false)
   }
 
   const handleStart = async () => {
@@ -581,12 +601,61 @@ export default function Lobby() {
                     )
                   })}
 
+                  {/* Load from your Re:Union decks */}
+                  <div className={`rounded-xl border-2 p-4 space-y-3 transition-all ${
+                    customCube?.source === 'reunion' ? 'border-amber-500 bg-amber-500/5' : 'border-dashed border-gray-700 bg-gray-800/40'}`}>
+                    <div className="flex items-center justify-between">
+                      <p className="font-semibold text-sm text-gray-100">⬇ Load from your Re:Union decks</p>
+                      {customCube?.source === 'reunion' && (
+                        <span className="w-5 h-5 rounded-full bg-amber-500 flex items-center justify-center text-xs text-gray-950 font-bold shrink-0">✓</span>
+                      )}
+                    </div>
+                    {!user ? (
+                      <div className="space-y-2">
+                        <p className="text-xs text-gray-500 leading-relaxed">Connect your Re:Union account to pick one of your decks and draft or seal with it as a cube.</p>
+                        <button onClick={() => login()}
+                          className="px-3 py-1.5 rounded-lg text-sm font-medium bg-gray-700 hover:bg-gray-600 text-gray-100 transition-colors">
+                          Connect Re:Union
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-3">
+                          <button onClick={handleLoadDecks} disabled={loadingDecks}
+                            className="px-3 py-1.5 rounded-lg text-sm font-medium bg-gray-700 hover:bg-gray-600 disabled:opacity-40 text-gray-100 transition-colors">
+                            {loadingDecks ? 'Loading…' : myDecks ? 'Refresh decks' : 'Load my decks'}
+                          </button>
+                          <span className="text-xs text-gray-500">as {user.pseudo}</span>
+                        </div>
+                        {myDecks && myDecks.length > 0 && (
+                          <div className="max-h-48 overflow-y-auto space-y-1 pr-1">
+                            {myDecks.map((d, i) => (
+                              <button key={d.id ?? d.uuid ?? i} onClick={() => handleSelectDeck(d)}
+                                className="w-full text-left px-3 py-1.5 rounded-lg bg-gray-800 hover:bg-gray-700 text-sm text-gray-200 truncate transition-colors">
+                                {d.name || 'Untitled deck'}
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                        {customCube?.source === 'reunion' && (
+                          <p className="text-xs text-green-400">
+                            ✓ Loaded “{customCube.name}” — {customCube.cards.length} card{customCube.cards.length !== 1 ? 's' : ''}
+                            {customCube.heroes.length > 0 && ` · ${customCube.heroes.length} hero${customCube.heroes.length !== 1 ? 'es' : ''}`}
+                            {customCube.unresolved.length > 0 && ` (${customCube.unresolved.length} unresolved, skipped)`}.
+                            <button onClick={() => setCustomCube(null)} className="text-gray-500 hover:text-gray-300 ml-2">Clear</button>
+                          </p>
+                        )}
+                        {decksMsg && <p className="text-xs text-amber-400">{decksMsg}</p>}
+                      </div>
+                    )}
+                  </div>
+
                   {/* Paste your own cube */}
                   <div className={`rounded-xl border-2 p-4 space-y-3 transition-all ${
-                    customCube ? 'border-amber-500 bg-amber-500/5' : 'border-dashed border-gray-700 bg-gray-800/40'}`}>
+                    customCube?.source === 'paste' ? 'border-amber-500 bg-amber-500/5' : 'border-dashed border-gray-700 bg-gray-800/40'}`}>
                     <div className="flex items-center justify-between">
                       <p className="font-semibold text-sm text-gray-100">＋ Paste your own cube</p>
-                      {customCube && (
+                      {customCube?.source === 'paste' && (
                         <span className="w-5 h-5 rounded-full bg-amber-500 flex items-center justify-center text-xs text-gray-950 font-bold shrink-0">✓</span>
                       )}
                     </div>
@@ -604,9 +673,9 @@ export default function Lobby() {
                     <div className="flex items-center gap-3">
                       <button onClick={handleParseCube} disabled={parsingCube || !customCubeText.trim()}
                         className="px-3 py-1.5 rounded-lg text-sm font-medium bg-gray-700 hover:bg-gray-600 disabled:opacity-40 text-gray-100 transition-colors">
-                        {parsingCube ? 'Parsing…' : customCube ? 'Re-parse' : 'Parse & preview'}
+                        {parsingCube ? 'Parsing…' : customCube?.source === 'paste' ? 'Re-parse' : 'Parse & preview'}
                       </button>
-                      {customCube && (
+                      {customCube?.source === 'paste' && (
                         <>
                           <button onClick={() => setPreviewCube({ name: customCube.name, author: 'You', cardCount: customCube.cards.length + customCube.heroes.length, refs: [...customCube.cards, ...customCube.heroes] })}
                             className="text-xs text-amber-400 hover:text-amber-300 transition-colors">
@@ -620,7 +689,7 @@ export default function Lobby() {
                       )}
                     </div>
                     {parseMsg && <p className="text-xs text-red-400">{parseMsg}</p>}
-                    {customCube && (
+                    {customCube?.source === 'paste' && (
                       <div className="text-xs space-y-1">
                         <p className="text-green-400">
                           ✓ {customCube.cards.length} card{customCube.cards.length !== 1 ? 's' : ''}

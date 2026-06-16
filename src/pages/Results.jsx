@@ -6,6 +6,7 @@ import { buildDecklist } from '../lib/exportFormat.js'
 import { FACTIONS, FACTION_NAMES, FACTION_COLORS } from '../lib/cardData.js'
 import { FACTION_ICONS } from '../lib/assets.js'
 import ExportButton from '../components/ExportButton.jsx'
+import SaveToReunion from '../components/SaveToReunion.jsx'
 import DraftStats from '../components/DraftStats.jsx'
 import PoolGrid from '../components/PoolGrid.jsx'
 import DeckList from '../components/DeckList.jsx'
@@ -110,7 +111,8 @@ export default function Results() {
       <div className="bg-gray-900 border-b border-gray-800 px-4 py-2 flex items-center gap-3 shrink-0">
         <span className="font-mono text-amber-400 font-bold">{code}</span>
         <span className="text-gray-400 text-sm">Draft Complete · {myPicks.length} picks</span>
-        <div className="ml-auto flex gap-2">
+        <div className="ml-auto flex gap-2 items-center">
+          <SaveToReunion poolRefs={myPicks} deckRefs={deckRefs} name={code} />
           {tab === 'deck'
             ? <ExportButton decklist={deckDecklist} />
             : <ExportButton decklist={allDecklist} />}
