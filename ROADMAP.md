@@ -31,10 +31,16 @@ deployed; the proxy layer is verified live (no-auth → our 401; bogus token →
 forwarding). Decks API `https://decks.alteredcore.org` via same-origin Vercel proxies
 (`api/decks/index.js` GET list/POST create, `api/decks/[id].js` GET detail) forwarding the Bearer token
 (no browser CORS). **Load a cube from your decks** (Lobby Cubes tab) and **save pool + final deck**
-(`SaveToReunion` on Results/Sealed). Shared `resolveCubeRefs` (`src/lib/cubeResolve.js`) turns deck cards
-into a cube like paste. **Remaining = live test with a real account:** load a deck → draft/seal it; save →
-confirm pool + deck land in the account. Watch for (a) a 403 → add a deck scope to `SCOPES` in `reunion.js`;
-(b) the pool POST rejected for legality even as `isDraft:true` → fall back to deck-only.
+(one `ExportMenu` dropdown on Results/Sealed). Shared `resolveCubeRefs` (`src/lib/cubeResolve.js`) turns
+deck cards into a cube like paste. **UX pass shipped (17 Jun 2026)** after first live testing: deck picker
+now fetches the WHOLE list (`itemsPerPage=1000&order[name]=asc`) with a name-search box + format-filter
+chips + a Preview-cube button; the 4 export/save buttons collapsed into one **Export / Save** dropdown
+(copy card list, copy decklist, save pulls, save deck); saves use **`format:'sandbox'`** and are named
+`"<code> · <Draft|Sealed> <pool|deck> · DDMM"`. Decks-API contract (format enum, query filters) confirmed
+from the live OpenAPI `https://decks.alteredcore.org/api/docs.json`. **Still watch on live save:** (a) a 403
+→ add a deck scope to `SCOPES` in `reunion.js`; (b) a sandbox pool/deck rejected → surface the API error
+(the dropdown shows "failed" with the message). **Not feasible:** a deck-size (≥80 cards) picker filter —
+the list endpoint returns no card count (only the per-deck detail does).
 _Hardening fast-follow: move the refresh token to an httpOnly cookie._
 
 **Auth setup (provided by the Re:Union dev):**
