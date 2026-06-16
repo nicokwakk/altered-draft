@@ -78,7 +78,7 @@ Player identity in **localStorage** (`player_{code}`) — survives refresh. Draf
 
 ## Conventions
 - Plain React hooks, no useCallback for handlers that read changing state (caused a stale-closure bug where cube sealed always used CORE — avoid).
-- Tailwind dark theme, amber accent (`amber-500`), faction colors in `tailwind.config.js` + `FACTION_COLORS`/bar colors.
+- **Theming: light + dark via semantic tokens** (mirrors alteredcore.org). Components use semantic Tailwind colors — `base`/`surface`/`surface2`/`surface3` (backgrounds), `ink`/`ink2`/`muted`/`faint` (text), `line` (borders), `accent`/`accent2`/`on-accent` (gold) — defined in `tailwind.config.js` as `rgb(var(--c-*) / <alpha-value>)`. The two palettes live in `src/index.css` (`:root` = dark default, `:root[data-theme="light"]` = parchment); the active theme is set on `<html data-theme>` by `src/lib/theme.js` (+ anti-FOUC inline script in `index.html`). **Do NOT use raw `gray-*`/`amber-*`** for chrome — use the tokens so both themes work. Status (green/red) + faction colors (`ax/br/ly/mu/or/yz`, `FACTION_COLORS`) stay literal/theme-independent. `ThemeToggle` (☀/☾) sits in `TopNav` (the rounded "menu pill" on Home/Lobby) and the Draft/Sealed/Results top bars. Cinzel = `font-display` (wordmark/titles).
 - Mobile: `md:` breakpoint splits desktop/mobile layouts. Responsive grids `grid-cols-3 sm:4 md:5 lg:6`.
 
 ## Roadmap (remaining)
