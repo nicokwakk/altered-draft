@@ -75,12 +75,20 @@ integration end-to-end without waiting on the dev:
 - 🔴 **card-data API (strategic)** — if Re:Union exposes card + unique data, it can replace the
   dying `api.altered.gg` and largely dissolve priority #2 below. Uncertain — treat #2 as a hedge.
 
-### 2. Bundle more uniques locally — data source FOUND, art still time-sensitive
-Today only **24 cube uniques** are bundled (`src/lib/uniquesData.js` `UNIQUES_EN` + images in
-`public/uniques/<ref>.jpg`); any other unique resolves *only while a live API is up*, then is
-dropped (surfaced in the "unresolved refs" callout). Multiple community members want
-**unique-heavy cubes** (CptKawaii's "cube unique", wordcandy70's "Uniques Cube") — exactly the
-at-risk case.
+### 2. Uniques — dying-API dependency REMOVED ✅ (bundling now just an offline hedge)
+**✅ Shipped (June 2026):** `fetchUnique` was the last live caller of the retiring
+`api.altered.gg` (hit for any non-bundled unique or non-EN locale). Repointed it to
+**`cards.alteredcore.org/api/cards?reference=<ref>`** — the durable community API that resolves
+**any** unique. New `normalizeAlteredCore` adapter for its JSON shape; `prodImage()` host-swaps
+the locked `altered-dev` S3 bucket → public `altered-prod-eu`; CORS verified; bundled EN snapshot
+kept as offline/fast path + failure fallback. `api.altered.gg` is no longer referenced anywhere.
+So unique-heavy community cubes (CptKawaii's "cube unique", wordcandy70's "Uniques Cube") now
+resolve durably, not just our 24.
+
+**Remaining (optional, no deadline):** bundle MORE unique images locally as a resilience/perf
+hedge (in case the prod S3 bucket later locks down too). Only 24 are bundled
+(`src/lib/uniquesData.js` `UNIQUES_EN` + `public/uniques/<ref>.jpg`); everything else now loads
+live from `cards.alteredcore.org` + prod bucket.
 
 **New durable data source (tested June 2026):** `api.altered.gg` is being retired, but the
 community site **`cards.alteredcore.org`** serves the same data and should outlive it.
