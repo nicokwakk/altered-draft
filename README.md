@@ -142,3 +142,11 @@ Each pack is **13 cards**: 1 Hero · 9 Commons (1 per faction + 3 paired-faction
 ## Tech
 
 React (Vite) · Tailwind CSS · Supabase (Postgres + Realtime) · Vercel serverless functions · Keycloak OIDC (Re:Union). Contributions welcome — see the Architecture section for the lay of the land.
+
+---
+
+## License
+
+The project's **source code** is released under the [MIT License](LICENSE).
+
+This is an **unofficial, non-commercial fan project** and is not affiliated with or endorsed by the publisher of Altered TCG. The MIT license covers this repo's own code only — it does **not** cover any Altered TCG game assets (card images, card names/text, set and faction names, logos). Those belong to their respective owners (Equinox / the publisher) and are included here only as a community convenience; see the note at the bottom of [LICENSE](LICENSE). In particular the snapshots under `card-images-backup/` are Equinox-owned art, not MIT-licensed.

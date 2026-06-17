@@ -15,3 +15,7 @@ is not wired into a fallback. To refresh/extend after editing the cubes, re-run
     bash scripts/snapshot-cube-images.sh
 
 Filenames are `<CARD_REFERENCE>.webp` (English art).
+
+**Rights:** these images are Equinox / Altered TCG property, included here only as a
+community backup for this unofficial fan project. They are **not** covered by the repo's
+MIT license — see the asset note in the root `LICENSE`.

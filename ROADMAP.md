@@ -252,12 +252,24 @@ function reads the cookie + rotates it); a readable `reunion_auth=1` hint cookie
 skip the refresh probe for anonymous loads; logout clears both. Proper BFF pattern — closes the one
 real auth-flow security debt and unblocks open-sourcing.
 
-### Open-source under Altered-Community — when ready (user confirmed)
-The Re:Union dev offered to host the project open-source (with a license) on the official
-[Altered-Community](https://github.com/Altered-Community) GitHub org. **Move when ready** — after the
-integration is solid and the httpOnly hardening above. Before any public push: (1) choose a license,
-(2) **scan the full git history to confirm no secret was ever committed** (the Supabase
-publishable/anon key is fine; verify no secret key, no `.env`, no Keycloak secret).
+### Open-source under Altered-Community — REPO PREPPED ✅, move pending (user confirmed)
+The Re:Union dev offered to host the project open-source on the official
+[Altered-Community](https://github.com/Altered-Community) GitHub org.
+
+**✅ Repo made public-ready (Jun 2026):**
+- **License = MIT** (`LICENSE` + `package.json` `"license":"MIT"`). The MIT grant covers our **code
+  only**; a NOTICE block in `LICENSE` (and a README License section + `card-images-backup/README.md`)
+  makes explicit that **Altered TCG game assets — card art, names, text, logos — are Equinox property
+  and NOT MIT-licensed**, included only as an unofficial/non-commercial fan-project convenience.
+- **Secret history scan = CLEAN** (re-run Jun 2026): `git log --all -S` for `service_role`, `sb_secret`,
+  `client_secret=`, `KEYCLOAK_CLIENT_SECRET=`, `-----BEGIN`/private keys → **0 commits each**; `.env`
+  never tracked; `.env.example` blank; Supabase **publishable/anon** key only (env-injected, safe).
+- **Card art = LEFT IN by choice (user's call).** `card-images-backup/` (641 Equinox WebP, ~53MB) stays
+  committed; covered by the asset-rights carve-out above rather than removed. (It also remains in history
+  — a future fresh/squashed push could drop it if ever wanted.)
+
+**Move when ready — the remaining step is on GitHub, user-driven:** transfer/create the repo under the
+Altered-Community org (or push there). Nothing left to prep in-repo.
 
 ### LuigiNico's newest cube (set 1–5) — PARKED by choice
 Author shared a now-public [Google Sheet](https://docs.google.com/spreadsheets/d/1a3ZZ2AzzPp05rWJq9Mzt6torBro4noEC74Pn27KXxX0/edit?gid=0)
