@@ -127,6 +127,12 @@ kept as offline/fast path + failure fallback. `api.altered.gg` is no longer refe
 So unique-heavy community cubes (CptKawaii's "cube unique", wordcandy70's "Uniques Cube") now
 resolve durably, not just our 24.
 
+**✅ Community-cube art backed up (Jun 2026).** All 640 cards across `COMMUNITY_CUBES` are
+snapshotted as ~720px WebP in `card-images-backup/` (~53MB) via the committed, resumable
+`scripts/snapshot-cube-images.sh` (pulls compressed copies through `images.weserv.nl` — no local
+image tools needed). **Backup only** — NOT wired into app rendering (still loads full-res from
+Equinox at runtime); `.vercelignore`'d so it stays git-only, not served. Re-run after editing cubes.
+
 **Remaining (optional, no deadline):** bundle MORE unique images locally as a resilience/perf
 hedge. Only 24 are bundled (`src/lib/uniquesData.js` `UNIQUES_EN` + `public/uniques/<ref>.jpg`);
 everything else now loads live from `cards.alteredcore.org` (data) + the prod S3 bucket (art).
