@@ -42,13 +42,24 @@ and a Sealed deck to their Re:Union account — both appear in the deckbuilder. 
 token is accepted as-is, no extra scope needed); sandbox pool/deck not rejected. **Fixed same day:**
 connect was only reachable inside the Export/Save dropdown, so users mid-session couldn't log in to save —
 added `ReunionButton` to the Sealed + Results top bars (login redirect is safe; pool/picks are in Supabase
-room state, deck + identity in localStorage, so they survive the round-trip). **Observed (NOT our bug):**
-clicking a saved deck's "open ↗" link shows "Erreur chargement deck : 401" on Re:Union's *deckbuilder*
-(`deckbuilder.alteredcore.org`) — a different origin where the user has no session; the save itself
-succeeded and the deck renders. The deckbuilder shares the `players` Keycloak realm, so it could silently
-SSO — worth flagging to the Re:Union dev. **Not feasible:** a deck-size (≥80 cards) picker filter — the
-list endpoint returns no card count (only the per-deck detail does).
-_Hardening fast-follow: move the refresh token to an httpOnly cookie._
+room state, deck + identity in localStorage, so they survive the round-trip). **✅ Saved-deck "open ↗"
+links reworked (Jun 2026):** a finished **deck** opens in **altered.re's** clean per-deck viewer
+(`altered.re/pages/deck?id={id}` — altered.re IS Re:Union, same deck data, handles its own login so no
+raw 401); a saved **pool** opens in the **deckbuilder** (`deckbuilder.alteredcore.org/decks/{id}`), which
+lists the full pool incl. every hero (altered.re's legality-lens deck view only surfaces ONE hero, which
+made a multi-hero pool look like it lost heroes — but the decks API stores all heroes as `deckCards`, no
+single-hero field; verified via OpenAPI, nothing dropped on save). **The earlier deckbuilder-401 → flag a
+silent-SSO to the Re:Union dev is NO LONGER NEEDED** (user's call) — the altered.re link sidesteps it.
+**Priority note:** **saving the built DECK is the headline feature; the POOL save is secondary** — don't
+over-invest in pool polish. **Not feasible:** a deck-size (≥80 cards) picker filter — the list endpoint
+returns no card count (only the per-deck detail does).
+_Hardening fast-follow: move the refresh token to an httpOnly cookie._ ✅ done.
+
+**Re:Union site plugin integration (NEW thread, Jun 2026).** noobiwow [ALTR] reached out: Re:Union has a
+**plugin system** to add community tools directly onto the Re:Union site, and invited the project into the
+`software-dev-website` channel to discuss with their web dev team. **Status: intro + project updates posted
+to Discord (dev channel + cube channel), Jun 2026** — awaiting the dev team on how the plugin system works
+and what's needed from our side. This is the likely next concrete integration step.
 
 **Auth setup (provided by the Re:Union dev):**
 - Protocol: **OpenID Connect** via **Keycloak**.
