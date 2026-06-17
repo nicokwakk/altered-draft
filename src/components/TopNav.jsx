@@ -1,6 +1,9 @@
+import { useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import ReunionButton from './ReunionButton.jsx'
 import ThemeToggle from './ThemeToggle.jsx'
+import HelpModal from './HelpModal.jsx'
+import { FEEDBACK_URL, ALTERED_CORE_URL } from '../lib/links.js'
 
 // Top "menu pill" inspired by alteredcore.org's .altered-navbar: a rounded, bordered
 // bar with the wordmark, ecosystem links, and the Re:Union + theme controls on the
@@ -10,21 +13,29 @@ export default function TopNav() {
   // player back to the create/join screen.
   const { code } = useParams()
   const home = code ? `/room/${code}` : '/'
+  const [showHelp, setShowHelp] = useState(false)
+  const linkCls = 'text-sm text-ink2 hover:text-accent transition-colors'
   return (
     <header className="w-full px-4 pt-4">
-      <nav className="max-w-5xl mx-auto px-4 py-2 rounded-2xl bg-surface2 border border-line shadow-lg flex items-center gap-2">
+      <nav className="max-w-5xl mx-auto px-4 py-2 rounded-2xl bg-surface2 border border-line shadow-lg flex items-center gap-3">
         <Link to={home} className="font-display tracking-wide text-lg text-ink hover:text-accent transition-colors">
           <span className="text-accent">Altered</span> Draft
         </Link>
-        <a href="https://alteredcore.org" target="_blank" rel="noopener noreferrer"
-          className="hidden sm:inline ml-3 text-sm text-ink2 hover:text-accent transition-colors">
+        <a href={ALTERED_CORE_URL} target="_blank" rel="noopener noreferrer" className={`hidden sm:inline ${linkCls}`}>
           Altered Core ↗
         </a>
+        <button onClick={() => setShowHelp(true)} className={linkCls}>Help</button>
+        {FEEDBACK_URL && (
+          <a href={FEEDBACK_URL} target="_blank" rel="noopener noreferrer" className={`hidden sm:inline ${linkCls}`}>
+            Feedback ↗
+          </a>
+        )}
         <div className="ml-auto flex items-center gap-2">
           <ReunionButton />
           <ThemeToggle />
         </div>
       </nav>
+      {showHelp && <HelpModal onClose={() => setShowHelp(false)} />}
     </header>
   )
 }

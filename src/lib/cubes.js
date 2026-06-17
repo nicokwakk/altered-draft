@@ -138,3 +138,12 @@ export function setsForCube(refs) {
   }
   return [...codes]
 }
+
+// "Cube of the Month" spotlight shown atop the Cubes tab. To feature a cube, set
+// `cubeId` to a COMMUNITY_CUBES id (or add a new built-in cube and point at it) and
+// fill `title`/`blurb`. While `cubeId` is null the slot shows a "coming soon" teaser.
+export const SPOTLIGHT = {
+  cubeId: null,
+  title: 'Cube of the Month',
+  blurb: '',
+}

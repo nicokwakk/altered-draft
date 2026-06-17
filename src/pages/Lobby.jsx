@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase.js'
 import { fetchSet, SETS, apiSetCode, fetchUniques, isUniqueRef } from '../lib/cardData.js'
 import { SET_ASSETS } from '../lib/assets.js'
-import { COMMUNITY_CUBES, setsForCube } from '../lib/cubes.js'
+import { COMMUNITY_CUBES, setsForCube, SPOTLIGHT } from '../lib/cubes.js'
 import CubePreviewModal from '../components/CubePreviewModal.jsx'
 import { generateAllPacks, generatePacksFromPool, generateChaosPacks, generateCubeRecipePacks, generateStructuredPacks, generateCubeDraftPacks, dealHeroSlots } from '../lib/packGenerator.js'
 import { buildInitialState } from '../lib/draftLogic.js'
@@ -596,6 +596,38 @@ export default function Lobby() {
               {/* CUBES TAB */}
               {configTab === 'cubes' && (
                 <div className="space-y-3">
+                  {/* Cube of the Month spotlight */}
+                  {(() => {
+                    const featured = SPOTLIGHT.cubeId ? COMMUNITY_CUBES.find(c => c.id === SPOTLIGHT.cubeId) : null
+                    return (
+                      <div className="rounded-xl border border-accent/40 bg-accent/5 p-4">
+                        <p className="text-xs uppercase tracking-widest text-accent font-semibold mb-1">🏆 {SPOTLIGHT.title}</p>
+                        {featured ? (
+                          <div className="space-y-2">
+                            <div className="flex items-center justify-between gap-3">
+                              <div>
+                                <p className="font-display text-base text-ink">{featured.name}</p>
+                                <p className="text-xs text-faint">by {featured.author} · {featured.cardCount} cards</p>
+                              </div>
+                              <span className="w-2.5 h-2.5 rounded-full bg-accent shrink-0" />
+                            </div>
+                            {(SPOTLIGHT.blurb || featured.description) && (
+                              <p className="text-xs text-ink2 leading-relaxed">{SPOTLIGHT.blurb || featured.description}</p>
+                            )}
+                            <div className="flex items-center gap-3 pt-1">
+                              <button onClick={() => { setSelectedCube(featured.id); setCustomCube(null) }}
+                                className="px-3 py-1.5 rounded-lg text-sm font-medium bg-accent hover:bg-accent2 text-on-accent transition-colors">
+                                Use this cube
+                              </button>
+                              <button onClick={() => setPreviewCube(featured)} className="text-xs text-accent hover:text-accent2 transition-colors">Preview →</button>
+                            </div>
+                          </div>
+                        ) : (
+                          <p className="text-sm text-muted">A featured community cube, refreshed each month — coming soon. 👀</p>
+                        )}
+                      </div>
+                    )
+                  })()}
                   <p className="text-sm text-muted">Community cubes — curated card pools ready to draft.</p>
                   {COMMUNITY_CUBES.map(cube => {
                     const selected = selectedCube === cube.id
