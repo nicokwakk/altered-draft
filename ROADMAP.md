@@ -140,9 +140,13 @@ snapshotted as ~720px WebP in `card-images-backup/` (~53MB) via the committed, r
 image tools needed). **Backup only** — NOT wired into app rendering (still loads full-res from
 Equinox at runtime); `.vercelignore`'d so it stays git-only, not served. Re-run after editing cubes.
 
-**Remaining (optional, no deadline):** bundle MORE unique images locally as a resilience/perf
-hedge. Only 24 are bundled (`src/lib/uniquesData.js` `UNIQUES_EN` + `public/uniques/<ref>.jpg`);
-everything else now loads live from `cards.alteredcore.org` (data) + the prod S3 bucket (art).
+**Remaining (DROPPED FOR NOW — user's call, Jun 2026):** bundling MORE unique images locally was the
+last open thread here. Dropped: the community-cube art is already snapshotted (above), both Equinox
+buckets currently serve art (200), and the whole ecosystem (incl. Re:Union's deckbuilder) shares the
+same dependency — so this isn't worth doing pre-emptively. Revisit only if the prod S3 bucket actually
+goes dark (data stays fine regardless). The how-to below is kept for reference if that day comes.
+Only 24 are bundled (`src/lib/uniquesData.js` `UNIQUES_EN` + `public/uniques/<ref>.jpg`); everything
+else loads live from `cards.alteredcore.org` (data) + the prod S3 bucket (art).
 - **⚠️ Why this is the residual risk — `altered-prod-eu.s3.amazonaws.com` is Equinox's OWN
   production image bucket** (same company/infra as the retiring `api.altered.gg`), NOT the community
   `cards.alteredcore.org`. So: card **data** is community-rebuilt and durable, but card **art** still
@@ -186,9 +190,11 @@ Prioritise refs from the community cubes people are actually pasting. Needs Node
   superseded if Re:Union ships its own card-data + image API (1🔴), but that's not guaranteed.
 - Possible enhancement: accept a pasted list of unique refs and snapshot them on demand.
 
-### 3. Import Marcus' cube (data-only) — LOWER PRIORITY (user's call), blocked on the full card list
+### 3. Import Marcus' cube (data-only) — ON HOLD until functionality feedback (user's call, Jun 2026)
 A cube by a game designer (MarcusK, engaged on Discord). Add it the manual way, like LuigiNico's.
-**Deprioritised — may pick up later** (was "active"); still blocked on the author's full list anyway.
+**On hold:** new cubes wait until there's user feedback on the recently-shipped functionality
+(free-hero pool, full boosters, Re:Union save, etc.) — no point importing more cubes before the
+current cube experience is validated. Also still blocked on the author's full card list regardless.
 - **Blocker:** the current list is **missing a few cards** — author is completing it. Don't
   finalise `refs[]`/`cardCount` until the full list lands.
 - Add an object to `COMMUNITY_CUBES` in `src/lib/cubes.js` (`id, name, author, description,
@@ -290,8 +296,9 @@ Altered-Community org (or push there). Nothing left to prep in-repo.
 ### LuigiNico's newest cube (set 1–5) — PARKED by choice
 Author shared a now-public [Google Sheet](https://docs.google.com/spreadsheets/d/1a3ZZ2AzzPp05rWJq9Mzt6torBro4noEC74Pn27KXxX0/edit?gid=0)
 with tag-column notes, but it's **missing some uniques** ("add any six you feel like") and a bit
-out of date. **Parked until set 6 is playable on BGA** (user's call). This is a DIFFERENT, newer
-cube than the LuigiNico cube already in the app.
+out of date. **Parked** until set 6 is playable on BGA **and** there's feedback on the new
+functionality (user's call, Jun 2026) — new cubes wait on validating the current experience first.
+This is a DIFFERENT, newer cube than the LuigiNico cube already in the app.
 
 ---
 
