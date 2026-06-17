@@ -6,18 +6,18 @@ import { SET_ASSETS } from '../lib/assets.js'
 import { COMMUNITY_CUBES, setsForCube, SPOTLIGHT } from '../lib/cubes.js'
 import CubePreviewModal from '../components/CubePreviewModal.jsx'
 import { generateAllPacks, generatePacksFromPool, generateChaosPacks, generateCubeRecipePacks, generateStructuredPacks, generateCubeDraftPacks, dealHeroSlots } from '../lib/packGenerator.js'
-import { buildInitialState } from '../lib/draftLogic.js'
+import { buildDraftState } from '../lib/draftLogic.js'
 import { parseDecklist } from '../lib/cubeParser.js'
 import { resolveCubeRefs } from '../lib/cubeResolve.js'
 import { listDecks, getDeck, deckCardsToRefs } from '../lib/decks.js'
 import { useAuth } from '../auth/AuthProvider.jsx'
 import SetSelector from '../components/SetSelector.jsx'
 import MultiSetSelector from '../components/MultiSetSelector.jsx'
+import StartSettingsModal from '../components/StartSettingsModal.jsx'
+import { DEFAULT_FORMAT } from '../lib/draftFormats.js'
 import TopNav from '../components/TopNav.jsx'
 
 const TAB_LABELS = { presets: 'Presets', cubes: 'Cubes', advanced: 'Advanced', multiset: 'Multi-Set' }
-
-const LANGS = ['EN', 'FR', 'ES', 'DE', 'IT']
 
 function shuffle(arr) {
   const a = [...arr]
@@ -40,6 +40,23 @@ function uniqueHeroRefs(cards) {
     seen.add(key); out.push(c.reference)
   }
   return out
+}
+
+// Resolve how heroes are handled for set/pool-based draft branches from the Heroes control:
+//  'free'  → seed one of each into every pool (freeHeroPool); none drafted.
+//  'draft' → snake-draft them in-app when there are at least as many as players; too few →
+//            seed them instead (graceful fallback, same plumbing as 'free').
+//  'packs' → heroes already live in the generated packs; nothing extra.
+// (Cube branches that load heroes separately handle this inline.)
+function resolveDraftHeroes(heroRefs, playerCount, heroMode) {
+  const uniq = [...new Set(heroRefs)]
+  if (heroMode === 'free') return { heroPool: null, freeHeroPool: uniq }
+  if (heroMode === 'draft') {
+    return uniq.length >= playerCount
+      ? { heroPool: shuffle(uniq), freeHeroPool: [] }
+      : { heroPool: null, freeHeroPool: uniq }
+  }
+  return { heroPool: null, freeHeroPool: [] }
 }
 
 export default function Lobby() {
@@ -87,6 +104,9 @@ export default function Lobby() {
   const [timerSeconds, setTimerSeconds] = useState(60)
   const [showCustomPool, setShowCustomPool] = useState(false)
   const [customPoolText, setCustomPoolText] = useState('')
+  // Draft format (booster | rochester | …) + the pre-flight settings modal toggle.
+  const [draftFormat, setDraftFormat] = useState(DEFAULT_FORMAT)
+  const [showStart, setShowStart] = useState(false)
 
   const joinUrl = `${window.location.origin}/?join=${code}`
   const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=140x140&data=${encodeURIComponent(joinUrl)}&bgcolor=111827&color=f59e0b`
@@ -102,7 +122,7 @@ export default function Lobby() {
       .then(({ data, error }) => {
         if (error || !data) { navigate('/'); return }
         setRoomState(data.state)
-        if (data.state.phase === 'drafting' || data.state.phase === 'heroDraft') navigate(`/room/${code}/draft`)
+        if (['drafting', 'heroDraft', 'rochester'].includes(data.state.phase)) navigate(`/room/${code}/draft`)
         else if (data.state.phase === 'sealed') navigate(`/room/${code}/sealed`)
         else if (data.state.phase === 'done') navigate(`/room/${code}/results`)
       })
@@ -115,7 +135,7 @@ export default function Lobby() {
         payload => {
           const state = payload.new.state
           setRoomState(state)
-          if (state.phase === 'drafting' || state.phase === 'heroDraft') navigate(`/room/${code}/draft`)
+          if (['drafting', 'heroDraft', 'rochester'].includes(state.phase)) navigate(`/room/${code}/draft`)
           else if (state.phase === 'sealed') navigate(`/room/${code}/sealed`)
         })
       .subscribe()
@@ -331,10 +351,11 @@ export default function Lobby() {
         for (const c of uniqueCards) byRef.set(c.reference, c)
 
         const heroUnique = [...new Set(customCube.heroes)]
-        // Free-hero: heroes leave the pool entirely (picked at deckbuild). Otherwise
-        // snake-draft them when there are enough, else fold them into the card packs.
-        const useHeroDraft = !freeHero && heroUnique.length >= playerCount
-        const cardRefs = (useHeroDraft || freeHero) ? customCube.cards : [...customCube.cards, ...customCube.heroes]
+        // Heroes control: 'draft' → snake-draft when there are enough; 'free' (or 'draft'
+        // with too few) → seed one of each into every pool; 'packs' → fold into card packs.
+        const useHeroDraft = heroMode === 'draft' && heroUnique.length >= playerCount
+        const seedHeroes = freeHero || (heroMode === 'draft' && !useHeroDraft)
+        const cardRefs = (useHeroDraft || seedHeroes) ? customCube.cards : [...customCube.cards, ...customCube.heroes]
         const cardPool = cardRefs.map(r => byRef.get(r)).filter(Boolean)
         const totalPacks = playerCount * 4
         if (cardPool.length < totalPacks) {
@@ -343,9 +364,9 @@ export default function Lobby() {
         }
         const packs = generateCubeDraftPacks(cardPool, totalPacks)
         const heroPool = useHeroDraft ? shuffle(heroUnique) : null
-        const freeHeroPool = freeHero ? [...new Set(customCube.heroes)] : []
-        const state = buildInitialState(
-          { sets: apiCodes, playerCount, lang, freeHero, includeHeroes: false, freeHeroPool, timerEnabled, timerSeconds, customCube: { name: customCube.name, cards: customCube.cards, heroes: customCube.heroes } },
+        const freeHeroPool = seedHeroes ? heroUnique : []
+        const state = buildDraftState(
+          { sets: apiCodes, playerCount, lang, freeHero, includeHeroes: false, freeHeroPool, draftFormat, timerEnabled, timerSeconds, customCube: { name: customCube.name, cards: customCube.cards, heroes: customCube.heroes } },
           shuffledPlayers, packs, heroPool
         )
         const { error: upErr } = await supabase.from('draft_rooms').update({ state }).eq('id', code)
@@ -369,6 +390,7 @@ export default function Lobby() {
         // Free-hero pool: heroDraft cubes use their curated hero list; other cubes use
         // the HERO cards within the pool. Seeded (one of each) into every player's pool.
         let freeHeroPool = []
+        let cubeHeroPool = null // snake-draft pool for non-heroDraft cubes when heroMode='draft'
         if (cube.heroDraft) {
           // Multi-copy cube: preserve duplicate refs (mapping each to its card object),
           // deal equal packs. Heroes are not in these packs — they're drafted in-app
@@ -389,14 +411,19 @@ export default function Lobby() {
           const allCards = results.flat().filter(c => cubeRefSet.has(c.reference))
           if (!allCards.length) { setStartError('Could not load cube card data.'); setLoading(false); return }
           packs = generateAllPacks(allCards, playerCount, 4, { includeHeroes: packHeroes, cubeMode: true })
-          if (freeHero) freeHeroPool = uniqueHeroRefs(allCards)
+          // 'free'/'draft' on a non-heroDraft cube use the HERO cards within the pool.
+          const hh = resolveDraftHeroes(uniqueHeroRefs(allCards), playerCount, heroMode)
+          freeHeroPool = hh.freeHeroPool
+          cubeHeroPool = hh.heroPool
         }
-        // Hero-draft cubes draft heroes in-app from one shared pool (all the cube's
-        // heroes), snake-drafted one-per-player after each card round until each has
-        // min(3, …) heroes. Pass the shuffled hero pool; buildInitialState does the rest.
-        const heroPool = (!freeHero && cube.heroDraft && cube.heroes?.length) ? shuffle(cube.heroes) : null
-        const state = buildInitialState(
-          { sets: apiCodes, playerCount, lang, freeHero, cubeId: cube.id, includeHeroes, freeHeroPool, timerEnabled, timerSeconds },
+        // Hero-draft cubes draft heroes in-app from one shared pool (all the cube's heroes),
+        // snake-drafted one-per-player after each card round until each has min(3, …) heroes —
+        // unless 'free' (seeded). Non-heroDraft cubes draft only when heroMode='draft'.
+        const heroPool = cube.heroDraft
+          ? ((heroMode !== 'free' && cube.heroes?.length) ? shuffle(cube.heroes) : null)
+          : cubeHeroPool
+        const state = buildDraftState(
+          { sets: apiCodes, playerCount, lang, freeHero, cubeId: cube.id, includeHeroes, freeHeroPool, draftFormat, timerEnabled, timerSeconds },
           shuffledPlayers, packs, heroPool
         )
         {
@@ -418,10 +445,10 @@ export default function Lobby() {
           ? generateAllPacks(allCards, playerCount, 4, { includeHeroes: packHeroes })
           : generatePacksFromPool(refs, playerCount, 4) // fallback if fetch fails
         const apiCodes = [...new Set(rawCodes.map(apiSetCode))]
-        const freeHeroPool = freeHero ? uniqueHeroRefs(allCards) : []
-        const state = buildInitialState(
-          { sets: apiCodes, playerCount, lang, freeHero, customPool: true, includeHeroes, freeHeroPool, timerEnabled, timerSeconds },
-          shuffledPlayers, packs
+        const { heroPool, freeHeroPool } = resolveDraftHeroes(uniqueHeroRefs(allCards), playerCount, heroMode)
+        const state = buildDraftState(
+          { sets: apiCodes, playerCount, lang, freeHero, customPool: true, includeHeroes, freeHeroPool, draftFormat, timerEnabled, timerSeconds },
+          shuffledPlayers, packs, heroPool
         )
         {
           const { error: upErr } = await supabase.from('draft_rooms').update({ state }).eq('id', code)
@@ -453,10 +480,10 @@ export default function Lobby() {
           ? generateStructuredPacks(cardsBySet, mix, playerCount, { includeHeroes: packHeroes })
           : generateChaosPacks(cardsBySet, mix, { includeHeroes: packHeroes })
         const apiCodes = [...new Set(setCodes.map(apiSetCode))]
-        const freeHeroPool = freeHero ? uniqueHeroRefs(Object.values(cardsBySet).flat()) : []
-        const state = buildInitialState(
-          { sets: apiCodes, playerCount, lang, freeHero, includeHeroes, freeHeroPool, timerEnabled, timerSeconds, multiSetMix: mix, equalPacks },
-          shuffledPlayers, packs
+        const { heroPool, freeHeroPool } = resolveDraftHeroes(uniqueHeroRefs(Object.values(cardsBySet).flat()), playerCount, heroMode)
+        const state = buildDraftState(
+          { sets: apiCodes, playerCount, lang, freeHero, includeHeroes, freeHeroPool, draftFormat, timerEnabled, timerSeconds, multiSetMix: mix, equalPacks },
+          shuffledPlayers, packs, heroPool
         )
         {
           const { error: upErr } = await supabase.from('draft_rooms').update({ state }).eq('id', code)
@@ -479,10 +506,10 @@ export default function Lobby() {
       if (!allCards.length) { setStartError('No cards loaded. Check set selection.'); setLoading(false); return }
 
       const packs = generateAllPacks(allCards, playerCount, 4, { includeHeroes: packHeroes })
-      const freeHeroPool = freeHero ? uniqueHeroRefs(allCards) : []
-      const state = buildInitialState(
-        { sets: setCodes, playerCount, lang, freeHero, includeHeroes, freeHeroPool, timerEnabled, timerSeconds },
-        shuffledPlayers, packs
+      const { heroPool, freeHeroPool } = resolveDraftHeroes(uniqueHeroRefs(allCards), playerCount, heroMode)
+      const state = buildDraftState(
+        { sets: setCodes, playerCount, lang, freeHero, includeHeroes, freeHeroPool, draftFormat, timerEnabled, timerSeconds },
+        shuffledPlayers, packs, heroPool
       )
       const { error: upErr } = await supabase.from('draft_rooms').update({ state }).eq('id', code)
       if (upErr) { setStartError('Could not start: ' + upErr.message); setLoading(false); return }
@@ -561,6 +588,8 @@ export default function Lobby() {
                     // The Multi-Set tab is draft-only; sealed keeps the classic Advanced tab.
                     if (m.id === 'sealed' && configTab === 'multiset') setConfigTab('advanced')
                     if (m.id === 'draft' && configTab === 'advanced') setConfigTab('multiset')
+                    // 'Draft' heroes is meaningless in sealed (no draft phase) — fall back.
+                    if (m.id === 'sealed' && heroMode === 'draft') setHeroMode('packs')
                   }}
                   className={`py-3 px-4 text-left transition-colors ${
                     draftMode === m.id ? 'bg-accent/10 border-b-2 border-accent' : 'hover:bg-surface2/50'}`}>
@@ -917,91 +946,20 @@ export default function Lobby() {
                 </div>
               )}
 
-              {/* Shared settings */}
-              <div className="pt-2 border-t border-line space-y-4">
-                <div>
-                  <label className="block text-sm text-muted mb-2">Card language</label>
-                  <div className="flex gap-2 flex-wrap">
-                    {LANGS.map(l => (
-                      <button key={l} onClick={() => setLang(l)}
-                        className={`px-3 py-1 rounded text-sm font-mono transition-colors ${lang === l
-                          ? 'bg-accent text-on-accent font-bold'
-                          : 'bg-surface2 hover:bg-surface3 text-ink2'}`}>
-                        {l}
-                      </button>
-                    ))}
-                  </div>
-                </div>
+              {startError && !showStart && <p className="text-red-400 text-sm">{startError}</p>}
 
-                <div>
-                  <label className="block text-sm text-ink2 mb-2">Heroes</label>
-                  <div className="space-y-1.5">
-                    {[
-                      { v: 'packs', label: 'In packs', desc: 'Hero cards appear in boosters — draft or open them.' },
-                      { v: 'free', label: 'Free choice', desc: 'Every available hero is added to your pool — pick one at deckbuild. None appear in packs.' },
-                    ].map(o => {
-                      const active = heroMode === o.v
-                      return (
-                        <button key={o.v} type="button" onClick={() => setHeroMode(o.v)}
-                          className={`w-full flex items-start gap-2.5 text-left px-3 py-2 rounded-lg border transition-colors ${
-                            active ? 'border-accent bg-accent/5' : 'border-line bg-surface2 hover:bg-surface3'}`}>
-                          <span className={`mt-0.5 w-4 h-4 rounded-full border shrink-0 flex items-center justify-center ${
-                            active ? 'border-accent' : 'border-faint'}`}>
-                            {active && <span className="w-2 h-2 rounded-full bg-accent" />}
-                          </span>
-                          <span>
-                            <span className={`text-sm ${active ? 'text-ink' : 'text-ink2'}`}>{o.label}</span>
-                            <span className="block text-xs text-faint">{o.desc}</span>
-                          </span>
-                        </button>
-                      )
-                    })}
-                  </div>
-                </div>
-
-                {/* Pick timer — draft only (sealed has no pick passing) */}
-                {draftMode === 'draft' && (
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-3">
-                      <input type="checkbox" id="timer-enabled" checked={timerEnabled}
-                        onChange={e => setTimerEnabled(e.target.checked)}
-                        className="accent-accent w-4 h-4" />
-                      <label htmlFor="timer-enabled" className="text-sm text-ink2 cursor-pointer">
-                        Pick timer
-                      </label>
-                    </div>
-                    {timerEnabled && (
-                      <div className="flex items-center gap-3 pl-7">
-                        <span className="text-sm text-muted">Time per pick:</span>
-                        <div className="flex gap-2">
-                          {[30, 60, 90, 120].map(s => (
-                            <button key={s} onClick={() => setTimerSeconds(s)}
-                              className={`px-2.5 py-1 rounded text-sm transition-colors ${timerSeconds === s
-                                ? 'bg-accent text-on-accent font-bold'
-                                : 'bg-surface2 hover:bg-surface3 text-ink2'}`}>
-                              {s}s
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-
-              {startError && <p className="text-red-400 text-sm">{startError}</p>}
-
+              {/* Opens the pre-flight settings modal (format · language · heroes · timer)
+                  where the host makes final choices and launches. */}
               <button
-                onClick={handleStart}
+                onClick={() => { setStartError(''); setShowStart(true) }}
                 disabled={loading
                 || (draftMode === 'draft' && roomState.players.length < 2)
-                || (configTab === 'presets' && draftMode === 'draft' && !selectedPreset)
-                || (configTab === 'presets' && draftMode === 'sealed' && !selectedPreset)
+                || (configTab === 'presets' && !selectedPreset)
                 || (configTab === 'cubes' && !selectedCube && !customCube)
                 || (configTab === 'multiset' && Object.values(multiSetMix).reduce((a, b) => a + (b || 0), 0) !== (equalPacks ? 4 : roomState.players.length * 4))}
                 className="w-full py-3 bg-accent hover:bg-accent2 disabled:opacity-40 text-on-accent font-bold rounded-lg transition-colors"
               >
-                {loading ? 'Generating packs…' : draftMode === 'sealed' ? 'Start sealed' : 'Start draft'}
+                {draftMode === 'sealed' ? 'Start sealed' : 'Start draft'}
               </button>
             </div>
           </div>
@@ -1017,6 +975,21 @@ export default function Lobby() {
 
       {previewCube && (
         <CubePreviewModal cube={previewCube} onClose={() => setPreviewCube(null)} />
+      )}
+
+      {showStart && (
+        <StartSettingsModal
+          mode={draftMode}
+          lang={lang} setLang={setLang}
+          heroMode={heroMode} setHeroMode={setHeroMode}
+          timerEnabled={timerEnabled} setTimerEnabled={setTimerEnabled}
+          timerSeconds={timerSeconds} setTimerSeconds={setTimerSeconds}
+          draftFormat={draftFormat} setDraftFormat={setDraftFormat}
+          playerCount={roomState.players.length}
+          loading={loading} startError={startError}
+          onStart={handleStart}
+          onClose={() => { if (!loading) setShowStart(false) }}
+        />
       )}
     </div>
   )

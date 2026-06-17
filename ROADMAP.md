@@ -345,31 +345,43 @@ This is a DIFFERENT, newer cube than the LuigiNico cube already in the app.
   `Draft.jsx` phase-aware. Used by LuigiNico (12 heroes, maxPlayers 4) and the All Sets cube
   (12 heroes, 324 cards, maxPlayers 6).
 
-## Alternate draft formats (planned, in priority order)
-Each is a new lobby mode + a new draft phase that produces each player's pool, then hands off to the
-EXISTING Results/deckbuilder/save flow unchanged (no changes to card data, cubes, or Re:Union). All are
-**turn-based / sequential** (one active picker at a time) — which actually *simplifies* the
-optimistic-concurrency writes (only one writer per turn, ~no contention) but adds turn-waiting downtime,
-fine at low player counts. **Architecture note:** the room `state` is a single anon-readable Supabase row,
-so **open-information formats fit cleanly** (nothing to hide); hidden-info formats can only be "honor
-system" — acceptable IF the UI never surfaces the hidden cards (so you can't cheat *through the UI*, only
-by inspecting raw network/state).
+## Alternate draft formats (in priority order)
+Each is a new draft **format** (not a new lobby tab) chosen in the pre-flight settings modal; it produces
+each player's pool, then hands off to the EXISTING Results/deckbuilder/save flow unchanged (no changes to
+card data, cubes, or Re:Union). All are **turn-based / sequential** (one active picker at a time) — which
+actually *simplifies* the optimistic-concurrency writes (only one writer per turn, ~no contention) but adds
+turn-waiting downtime, fine at low player counts. **Architecture note:** the room `state` is a single
+anon-readable Supabase row, so **open-information formats fit cleanly** (nothing to hide); hidden-info
+formats can only be "honor system" — acceptable IF the UI never surfaces the hidden cards (so you can't
+cheat *through the UI*, only by inspecting raw network/state).
 
-1. **Rochester (FIRST — easiest, most broadly useful).** One booster opened **face-up for everyone**;
-   players draft one card each in **snake order** from that single pack until it's empty, then the next
-   player opens theirs. Fully open info → perfect fit. Reuses the existing pack/card grid. New: a
-   `phase: 'rochester'` with `{ activePack, pickOrder, turnPos }`, a "your turn / waiting for X" banner,
-   and refill-from-next-pack when one empties.
-2. **Rotisserie (SECOND).** No packs — the whole cube pool is laid out face-up and players snake-draft
+**✅ Pre-flight settings modal shipped (Jun 2026).** "Start draft"/"Start sealed" no longer launches
+immediately — it opens a `StartSettingsModal` with the final choices: **Draft format**, card language,
+**Heroes** (now 3 options: In packs / Free choice / **Draft**), and pick timer. Sealed shows only language
++ Heroes (no timer/format — neither applies). Formats come from `src/lib/draftFormats.js` (`DRAFT_FORMATS`);
+`available:false` ones render greyed "Coming soon". The new **Heroes → Draft** option snake-drafts heroes
+in-app (generalizes cube hero-draft to any pool via `resolveDraftHeroes` in `Lobby.jsx`; too few heroes →
+seeded into pools as a fallback). All draft branches now build state through `buildDraftState`
+(`draftLogic.js`), which dispatches on `config.draftFormat`.
+
+1. **✅ Rochester — SHIPPED (Jun 2026).** One booster opened **face-up for everyone**; players draft one
+   card each in **snake order** from that single shared pack until it's empty, then the next pack opens
+   (opener rotates each pack for fairness). Fully open info. `src/lib/rochesterLogic.js`:
+   `phase: 'rochester'` with `{ activePack, packQueue, pickOrder, turnPos, opener, packNum, totalPacks }`;
+   `rochesterOrder` (snake), `applyRochesterPick`. `Draft.jsx` renders the shared pack with a
+   "your turn / waiting for X" banner + a pack counter, reusing `CardGrid`/`PlayerStatus`/`DraftSidebar`
+   and the existing version-retry pick loop. Heroes=Draft runs a finishing hero snake after the last pack
+   (`heroFinish` in `applyHeroPick`). **Pending live 2-player test** (verify-on-deploy below).
+2. **Rotisserie (NEXT).** No packs — the whole cube pool is laid out face-up and players snake-draft
    ANY single card until pools are full (fantasy-draft style). Fully open info; minimal new state (one
    shared pool + snake order, rendered with the existing `PoolGrid` + a pick action + turn gating).
-   Downside: long games; cube-oriented.
-3. **Winston (THIRD — 2 players).** Face-down main pile + 3 small piles; on your turn peek pile 1 and
+   Downside: long games; cube-oriented. Currently shows as "Coming soon" in the format selector.
+3. **Winston (THEN — 2 players).** Face-down main pile + 3 small piles; on your turn peek pile 1 and
    take it or decline (declining adds a face-down card to it and moves you to the next pile); decline all
    3 → take the top of the main pile blind. **Hidden info → "honor system" here (user OK with it):** the
    piles live in shared state, so the UI MUST only ever render the active player's peeked pile to that
    player and keep all other piles face-down (counts only) — cheating then requires inspecting raw state,
-   not the UI. 2-player only.
+   not the UI. 2-player only. Currently shows as "Coming soon" in the format selector.
 - (Grid draft — also open-info, the other canonical 2-player format — considered but not prioritized;
   revisit if 2-player demand shows up.)
 

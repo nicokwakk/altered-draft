@@ -4,6 +4,7 @@
  */
 
 import { makeDeadline } from '../components/PickTimer.jsx'
+import { buildRochesterState } from './rochesterLogic.js'
 
 function freshDeadline(state) {
   const seconds = state.config?.timerSeconds
@@ -163,10 +164,25 @@ export function applyHeroPick(state, playerIndex, heroReference) {
     // Same pass, next player in the snake order.
     nextState = { ...nextState, heroTurnPos: nextPos, pickDeadline: freshDeadline(nextState) }
   } else {
-    // Pass complete — everyone took one hero this round. Resume the card draft at the
-    // next round, or finish if it was the last round.
+    // Pass complete — everyone took one hero this round.
     const passesDone = (state.heroPassesDone ?? 0) + 1
-    if (state.round >= 4) {
+    if (state.heroFinish) {
+      // Rochester finishing hero snake: there are no card rounds to resume, so keep
+      // snaking passes until each player has heroTarget heroes, then end the draft.
+      const poolShort = (nextState.heroPool?.length ?? 0) < state.players.length
+      if (passesDone >= (state.heroTarget ?? 0) || poolShort) {
+        nextState = { ...nextState, phase: 'done', heroPassesDone: passesDone, heroTurnPos: 0, pickDeadline: null }
+      } else {
+        nextState = {
+          ...nextState,
+          heroPassesDone: passesDone,
+          heroOrder: heroOrderFor(state.players.length, passesDone),
+          heroTurnPos: 0,
+          pickDeadline: freshDeadline(nextState),
+        }
+      }
+    } else if (state.round >= 4) {
+      // Booster draft: resume the card draft at the next round, or finish after round 4.
       nextState = { ...nextState, phase: 'done', heroPassesDone: passesDone, heroTurnPos: 0, pickDeadline: null }
     } else {
       const remaining = state.remainingPacks ?? []
@@ -249,4 +265,17 @@ export function buildInitialState(config, players, allPacks, heroPool = null) {
 
   state.pickDeadline = freshDeadline(state)
   return state
+}
+
+/**
+ * Build the initial draft state for the chosen format (config.draftFormat). Booster draft is
+ * the default; Rochester opens one shared pack at a time (see rochesterLogic.js). Both take
+ * the same generated `allPacks` (flat array) and optional shared `heroPool`, so every Lobby
+ * draft branch can swap formats with a single call.
+ */
+export function buildDraftState(config, players, allPacks, heroPool = null) {
+  if (config?.draftFormat === 'rochester') {
+    return buildRochesterState(config, players, allPacks, heroPool)
+  }
+  return buildInitialState(config, players, allPacks, heroPool)
 }

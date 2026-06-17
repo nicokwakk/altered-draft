@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase.js'
 import { fetchSet, apiSetCode, fetchUniques, isUniqueRef, needsCardApi } from '../lib/cardData.js'
 import { applyPick, applyHeroPick } from '../lib/draftLogic.js'
+import { applyRochesterPick } from '../lib/rochesterLogic.js'
 import CardGrid from '../components/CardGrid.jsx'
 import DraftSidebar from '../components/DraftSidebar.jsx'
 import PlayerStatus from '../components/PlayerStatus.jsx'
@@ -128,18 +129,24 @@ export default function Draft() {
   }, [code, navigate])
 
   const isHeroPhase = roomState?.phase === 'heroDraft'
+  const isRochester = roomState?.phase === 'rochester'
   const myIndex = roomState && me ? roomState.players.findIndex(p => p.id === me.id) : -1
   // Card draft: simultaneous — each seat has its own pack and is in waitingFor.
   // Hero draft (between rounds): turn-based — ONE shared pool of all heroes, picked in
   // snake order, so only the seat at heroOrder[heroTurnPos] can pick.
+  // Rochester: turn-based — ONE shared face-up pack, picked in snake order, so only the
+  // seat at pickOrder[turnPos] can pick (everyone else watches the same pack).
   const heroTurnIdx = isHeroPhase ? (roomState.heroOrder?.[roomState.heroTurnPos] ?? -1) : -1
-  const isMyTurn = isHeroPhase
-    ? (myIndex !== -1 && myIndex === heroTurnIdx)
+  const rochesterTurnIdx = isRochester ? (roomState.pickOrder?.[roomState.turnPos] ?? -1) : -1
+  const turnIdx = isHeroPhase ? heroTurnIdx : isRochester ? rochesterTurnIdx : -1
+  const isMyTurn = (isHeroPhase || isRochester)
+    ? (myIndex !== -1 && myIndex === turnIdx)
     : (myIndex !== -1 && (roomState?.waitingFor?.includes(myIndex) ?? false))
-  const myCardPack = (myIndex !== -1 && roomState) ? (roomState.packs[String(myIndex)] ?? []) : []
+  const myCardPack = (myIndex !== -1 && roomState) ? (roomState.packs?.[String(myIndex)] ?? []) : []
   const myPicks = (myIndex !== -1 && roomState) ? (roomState.picks[String(myIndex)] ?? []) : []
   const myHeroPicks = (myIndex !== -1 && roomState) ? (roomState.heroPicks?.[String(myIndex)] ?? []) : []
-  const myPack = isHeroPhase ? (roomState?.heroPool ?? []) : myCardPack
+  const myPack = isHeroPhase ? (roomState?.heroPool ?? []) : isRochester ? (roomState?.activePack ?? []) : myCardPack
+  const turnPlayerName = (turnIdx >= 0 && roomState) ? (roomState.players[turnIdx]?.name ?? '') : ''
 
   const doPick = useCallback(async (ref) => {
     if (inFlightRef.current) return
@@ -148,9 +155,10 @@ export default function Draft() {
     // Whether this seat may pick `ref` right now — differs by phase. Card draft: it's
     // in your waitingFor and the card is in your pack. Hero draft: it's your turn in
     // the snake order and the hero is in the shared pool.
-    const canPick = (s, idx) => s.phase === 'heroDraft'
-      ? (s.heroOrder?.[s.heroTurnPos] === idx && (s.heroPool ?? []).includes(ref))
-      : ((s.waitingFor?.includes(idx) ?? false) && (s.packs[String(idx)] ?? []).includes(ref))
+    const canPick = (s, idx) =>
+      s.phase === 'heroDraft' ? (s.heroOrder?.[s.heroTurnPos] === idx && (s.heroPool ?? []).includes(ref))
+      : s.phase === 'rochester' ? (s.pickOrder?.[s.turnPos] === idx && (s.activePack ?? []).includes(ref))
+      : ((s.waitingFor?.includes(idx) ?? false) && (s.packs?.[String(idx)] ?? []).includes(ref))
     const idx0 = state.players.findIndex(p => p.id === me.id)
     if (idx0 === -1 || !canPick(state, idx0)) return
 
@@ -164,8 +172,8 @@ export default function Draft() {
         if (idx === -1 || !canPick(state, idx)) { setPicking(false); return }
 
         const expectedVersion = state.version ?? 0
-        const newState = state.phase === 'heroDraft'
-          ? applyHeroPick(state, idx, ref)
+        const newState = state.phase === 'heroDraft' ? applyHeroPick(state, idx, ref)
+          : state.phase === 'rochester' ? applyRochesterPick(state, idx, ref)
           : applyPick(state, idx, ref)
         newState.version = expectedVersion + 1
 
@@ -253,6 +261,9 @@ export default function Draft() {
   if (isHeroPhase) {
     currentPickNum = myHeroPicks.length // heroes you already have (target shown alongside)
     totalPicks = heroTarget
+  } else if (isRochester) {
+    currentPickNum = myPicks.length // your running pool size; the pack counter shows progress
+    totalPicks = roomState.totalPacks ?? 0
   } else {
     const fullPack = roomState.round ? Math.round((myPicks.length + packSize) / roomState.round) : packSize
     currentPickNum = Math.max(1, fullPack - packSize + 1)
@@ -271,7 +282,7 @@ export default function Draft() {
       {/* Top bar */}
       <div className="bg-surface border-b border-line px-4 py-2 flex items-center gap-3 shrink-0">
         <span className="font-mono text-accent font-bold text-sm">{code}</span>
-        <span className="text-faint text-xs">{isHeroPhase ? 'Hero Draft' : `Round ${roomState.round}/4`}</span>
+        <span className="text-faint text-xs">{isHeroPhase ? 'Hero Draft' : isRochester ? `Pack ${roomState.packNum}/${roomState.totalPacks}` : `Round ${roomState.round}/4`}</span>
         <span className="ml-auto text-sm">
           {isMyTurn
             ? <span className="text-green-400 font-medium text-sm">Your turn</span>
@@ -283,7 +294,7 @@ export default function Draft() {
       {/* Player status — compact on mobile */}
       <PlayerStatus players={roomState.players}
         picks={isHeroPhase ? (roomState.heroPicks ?? {}) : roomState.picks}
-        waitingFor={isHeroPhase ? (heroTurnIdx >= 0 ? [heroTurnIdx] : []) : roomState.waitingFor}
+        waitingFor={(isHeroPhase || isRochester) ? (turnIdx >= 0 ? [turnIdx] : []) : roomState.waitingFor}
         meId={me.id} />
 
       {/* Desktop: side-by-side layout */}
@@ -294,6 +305,11 @@ export default function Draft() {
               <>
                 <h2 className="font-semibold text-lg text-accent">Hero Draft</h2>
                 <span className="text-sm text-faint">You have {currentPickNum} / {totalPicks} heroes</span>
+              </>
+            ) : isRochester ? (
+              <>
+                <h2 className="font-semibold text-lg">Pack {roomState.packNum} / {roomState.totalPacks}</h2>
+                <span className="text-sm text-faint">{packSize} card{packSize !== 1 ? 's' : ''} left · your pool: {myPicks.length}</span>
               </>
             ) : (
               <>
@@ -307,6 +323,11 @@ export default function Draft() {
               Between packs, each player snake-drafts one hero from the shared pool — {heroTarget} in total.
             </p>
           )}
+          {isRochester && (
+            <p className="mb-3 text-sm text-muted">
+              Rochester — one shared pack, face-up. Players take turns in snake order; pick when it’s your turn.
+            </p>
+          )}
           {isHeroPhase && myHeroPicks.length > 0 && <MyHeroes heroes={myHeroPicks} cardMap={cardMap} label="Heroes you've taken" />}
           {!isHeroPhase && myHeroPicks.length > 0 && <MyHeroes heroes={myHeroPicks} cardMap={cardMap} />}
           {roomState.config?.timerEnabled && roomState.pickDeadline && (
@@ -316,7 +337,9 @@ export default function Draft() {
             <div className="mb-4 bg-surface border border-line rounded-lg px-4 py-3 text-sm text-muted">
               {isHeroPhase
                 ? <>Waiting for <span className="text-ink">{heroPickerName}</span> to pick a hero…</>
-                : 'Waiting for other players to pick…'}
+                : isRochester
+                  ? <>Waiting for <span className="text-ink">{turnPlayerName}</span> to pick…</>
+                  : 'Waiting for other players to pick…'}
             </div>
           )}
           <CardGrid packRefs={myPack} cardMap={cardMap} onPick={doPick} onHover={setHoverCard} disabled={!isMyTurn || picking} />
@@ -331,8 +354,8 @@ export default function Draft() {
         {mobileTab === 'pack' && (
           <div className="p-3">
             <div className="flex items-baseline gap-2 mb-2">
-              <h2 className="font-semibold">{isHeroPhase ? <span className="text-accent">Hero Draft</span> : `Pack ${roomState.round}`}</h2>
-              <span className="text-xs text-faint">{isHeroPhase ? `${currentPickNum} / ${totalPicks} heroes` : `Pick ${currentPickNum}`}</span>
+              <h2 className="font-semibold">{isHeroPhase ? <span className="text-accent">Hero Draft</span> : isRochester ? `Pack ${roomState.packNum}/${roomState.totalPacks}` : `Pack ${roomState.round}`}</h2>
+              <span className="text-xs text-faint">{isHeroPhase ? `${currentPickNum} / ${totalPicks} heroes` : isRochester ? `${packSize} left` : `Pick ${currentPickNum}`}</span>
             </div>
             {myHeroPicks.length > 0 && <MyHeroes heroes={myHeroPicks} cardMap={cardMap} label={isHeroPhase ? "Heroes you've taken" : undefined} />}
             {roomState.config?.timerEnabled && roomState.pickDeadline && (
@@ -342,7 +365,9 @@ export default function Draft() {
               <div className="mb-3 bg-surface border border-line rounded-lg px-3 py-2 text-sm text-muted">
                 {isHeroPhase
                   ? <>Waiting for <span className="text-ink">{heroPickerName}</span> to pick a hero…</>
-                  : 'Waiting for other players…'}
+                  : isRochester
+                    ? <>Waiting for <span className="text-ink">{turnPlayerName}</span> to pick…</>
+                    : 'Waiting for other players…'}
               </div>
             )}
             <CardGrid packRefs={myPack} cardMap={cardMap} onPick={(ref) => { doPick(ref); setMobileTab('pack') }}
