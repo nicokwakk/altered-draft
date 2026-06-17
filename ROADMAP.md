@@ -234,8 +234,8 @@ Backlog captured after the user tried the deployed app; the batch was built the 
   **Fraunces** (closest free Google match) as `font-display`. Swap in real Tiller if licensed.
 - **✅ Harden code for Re:Union — robustness pass done.** decks client: clearer 401/403 ("session
   expired") errors, empty-save guard, name trimmed to 150 chars, `toDeckCards` drops non-`ALT_`
-  refs and clamps qty 1–99 per the live OpenAPI. **Still deferred (bigger):** move refresh token to
-  an httpOnly cookie; open-sourcing under Altered-Community.
+  refs and clamps qty 1–99 per the live OpenAPI. (The bigger httpOnly-cookie hardening is now also
+  done — see its own section below; only open-sourcing remains deferred.)
 
 ### ✅ Fix: heroes in built-in cube sealed — SHIPPED (verified not happening)
 Hero-draft cubes (LuigiNico, All Sets, All Commons) used to deal **zero heroes** in sealed.
