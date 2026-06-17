@@ -77,8 +77,8 @@ export default function ExportMenu({ poolRefs, deckRefs, poolDecklist, deckDeckl
       {open && (
         <div className="absolute right-0 top-full mt-2 w-72 bg-surface border border-line rounded-xl shadow-2xl p-2 z-50 space-y-0.5">
           <p className="px-3 pt-1 pb-1.5 text-xs uppercase tracking-widest text-faint">Copy for altered.re {toast && <span className="text-green-400 normal-case tracking-normal ml-1">{toast}</span>}</p>
-          <button className={`${item} hover:bg-surface2 text-ink`} onClick={() => copy(poolDecklist, 'Pulls')} disabled={!poolDecklist}>
-            <span>Copy your pulls</span>
+          <button className={`${item} hover:bg-surface2 text-ink`} onClick={() => copy(poolDecklist, 'Pool')} disabled={!poolDecklist}>
+            <span>Copy your pool</span>
             <span className="text-xs text-faint">{poolRefs?.length ?? 0}</span>
           </button>
           <button className={`${item} hover:bg-surface2 text-ink`} onClick={() => copy(deckDecklist, 'Deck')} disabled={!hasDeck}>
@@ -96,7 +96,7 @@ export default function ExportMenu({ poolRefs, deckRefs, poolDecklist, deckDeckl
           ) : (
             <>
               <button className={`${item} hover:bg-surface2 text-ink`} onClick={() => save('pool')} disabled={saving === 'pool' || !poolRefs?.length}>
-                <span>{saving === 'pool' ? 'Saving…' : 'Save your pulls'}</span>
+                <span>{saving === 'pool' ? 'Saving…' : 'Save your pool'}</span>
                 {saved.pool ? <a href={`${DECKBUILDER}/${saved.pool}`} target="_blank" rel="noopener noreferrer" className="text-xs text-green-400 hover:underline" onClick={e => e.stopPropagation()}>open ↗</a>
                   : saved.poolErr ? <span className="text-xs text-red-400" title={saved.poolErr}>failed</span>
                   : <span className="text-xs text-faint">{poolRefs?.length ?? 0}</span>}

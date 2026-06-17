@@ -295,11 +295,14 @@ function generateOnePack(heroes, commons, rares, uniques, packIndex) {
     }
   }
 
-  // 3 rares (1-in-8 packs: one slot becomes a unique)
+  // 3 rares (1-in-8 packs: one slot becomes a unique). If the pool can't supply a
+  // rare/unique for a slot (e.g. an all-commons cube has none), backfill it with
+  // another unused common so every booster stays full size (9 + 3 = 12 body cards).
   const uniquePack = packIndex % 8 === 7
   const shuffledRares = shuffle(rares)
-  let raresAdded = 0
+  const fillerCommons = shuffle(commons)
   let rareIdx = 0
+  let fillerIdx = 0
 
   for (let slot = 0; slot < 3; slot++) {
     if (slot === 2 && uniquePack && uniques.length) {
@@ -317,6 +320,16 @@ function generateOnePack(heroes, commons, rares, uniques, packIndex) {
       pack.push(shuffledRares[rareIdx].reference)
       usedRefs.add(shuffledRares[rareIdx].reference)
       rareIdx++
+      continue
+    }
+    // No rare available for this slot — backfill with an unused common.
+    while (fillerIdx < fillerCommons.length && usedRefs.has(fillerCommons[fillerIdx].reference)) {
+      fillerIdx++
+    }
+    if (fillerIdx < fillerCommons.length) {
+      pack.push(fillerCommons[fillerIdx].reference)
+      usedRefs.add(fillerCommons[fillerIdx].reference)
+      fillerIdx++
     }
   }
 

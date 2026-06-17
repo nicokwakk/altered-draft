@@ -8,7 +8,6 @@ import { FACTION_ICONS } from '../lib/assets.js'
 import ExportMenu from '../components/ExportMenu.jsx'
 import ReunionButton from '../components/ReunionButton.jsx'
 import ThemeToggle from '../components/ThemeToggle.jsx'
-import HeroPicker from '../components/HeroPicker.jsx'
 import DraftStats from '../components/DraftStats.jsx'
 import PoolGrid from '../components/PoolGrid.jsx'
 import DeckList from '../components/DeckList.jsx'
@@ -45,8 +44,10 @@ export default function Results() {
           }))
           const cube = COMMUNITY_CUBES.find(c => c.id === data.state.config.cubeId)
           const cc = data.state.config.customCube
-          const cubeRefs = cube?.refs ?? (cc ? [...(cc.cards ?? []), ...(cc.heroes ?? [])] : null)
-          if (cubeRefs) {
+          // Include the free-hero pool so promo/unique heroes seeded into the pool resolve.
+          const freeHeroPool = data.state.config.freeHeroPool ?? []
+          const cubeRefs = [...(cube?.refs ?? (cc ? [...(cc.cards ?? []), ...(cc.heroes ?? [])] : [])), ...freeHeroPool]
+          if (cubeRefs.length) {
             const uCards = await fetchUniques(cubeRefs.filter(needsCardApi), data.state.config.lang || 'EN')
             for (const c of uCards) maps[c.reference] = c
           }
@@ -72,9 +73,12 @@ export default function Results() {
 
   const myIndex = roomState.players.findIndex(p => p.id === me.id)
   // In-app hero-draft cubes seed each player's pool with the heroes they drafted
-  // (heroes first), so they show up in All Picks / deck / export like any other card.
+  // (heroes first), so they show up in the pool / deck / export like any other card.
   const myHeroPicks = roomState.heroPicks?.[String(myIndex)] ?? []
-  const myPicks = [...myHeroPicks, ...(roomState.picks[String(myIndex)] ?? [])]
+  // Free-hero mode: seed every player's pool with one copy of each available hero, so
+  // they pick a hero from the pool like any other card (no separate hero picker UI).
+  const freeHeroPool = roomState.config?.freeHero ? (roomState.config.freeHeroPool ?? []) : []
+  const myPicks = [...myHeroPicks, ...freeHeroPool, ...(roomState.picks[String(myIndex)] ?? [])]
 
   const poolCounts = {}
   for (const ref of myPicks) poolCounts[ref] = (poolCounts[ref] ?? 0) + 1
@@ -91,18 +95,6 @@ export default function Results() {
 
   const allDecklist = buildDecklist(myPicks, cardMap)
   const deckDecklist = buildDecklist(deckRefs, cardMap)
-
-  // Free hero choice: any hero from the full roster (all heroes in the sets/cube in
-  // play) can be set as the deck's hero, even if it wasn't drafted.
-  const freeHero = !!roomState.config?.freeHero
-  const availableHeroes = freeHero ? Object.values(cardMap).filter(c => c.cardType === 'HERO') : []
-  const currentHero = deckRefs.find(r => cardMap[r]?.cardType === 'HERO') ?? null
-  function setDeckHero(ref) {
-    const next = { ...deck }
-    for (const k of Object.keys(next)) if (cardMap[k]?.cardType === 'HERO') delete next[k]
-    if (ref) next[ref] = 1
-    saveDeck(next)
-  }
 
   function addToDeck(ref) {
     const have = poolCounts[ref] ?? 0
@@ -140,7 +132,7 @@ export default function Results() {
       {/* Tabs */}
       <div className="bg-surface border-b border-line flex shrink-0">
         {[
-          { id: 'picks',   label: `All Picks (${myPicks.length})` },
+          { id: 'picks',   label: `Full Pool (${myPicks.length})` },
           { id: 'deck',    label: `Deck (${deckTotal})`, highlight: isValid },
           { id: 'stats',   label: 'Stats' },
           { id: 'players', label: 'Players' },
@@ -164,7 +156,6 @@ export default function Results() {
       {/* DECK TAB */}
       {tab === 'deck' && (
         <div className="flex-1 flex flex-col overflow-hidden">
-          {freeHero && <HeroPicker heroes={availableHeroes} selected={currentHero} onPick={setDeckHero} />}
           <div className={`px-4 py-2 border-b shrink-0 flex flex-wrap gap-3 items-center text-sm ${
             isValid ? 'border-green-800 bg-green-900/20' : 'border-line bg-surface'}`}>
             <span className={isEnough ? 'text-green-400' : 'text-red-400'}>{isEnough ? '✓' : '✗'} {deckRefs.length}/30 cards</span>
@@ -173,7 +164,7 @@ export default function Results() {
             {isValid && <span className="text-green-400 font-semibold ml-auto">Deck is valid ✓</span>}
           </div>
           {deckTotal === 0
-            ? <div className="flex-1 flex items-center justify-center text-faint text-sm">No cards in deck yet — add them from the All Picks tab.</div>
+            ? <div className="flex-1 flex items-center justify-center text-faint text-sm">No cards in deck yet — add them from the Full Pool tab.</div>
             : <div className="flex-1 overflow-y-auto" style={{ scrollbarGutter: 'stable' }}><DeckList deck={deck} cardMap={cardMap} onRemove={removeFromDeck} onAdd={addToDeck} poolCounts={poolCounts} /></div>}
         </div>
       )}
@@ -183,7 +174,7 @@ export default function Results() {
         <div className="flex-1 flex flex-col overflow-hidden">
           {deckTotal > 0 && (
             <div className="flex border-b border-line shrink-0">
-              {[['all', 'All Picks'], ['deck', 'Deck']].map(([id, label]) => (
+              {[['all', 'Full Pool'], ['deck', 'Deck']].map(([id, label]) => (
                 <button key={id} onClick={() => setStatsScope(id)}
                   className={`flex-1 py-2 text-sm transition-colors ${statsScope === id ? 'text-accent border-b-2 border-accent2' : 'text-faint hover:text-ink2'}`}>
                   {label}

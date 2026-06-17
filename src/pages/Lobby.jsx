@@ -28,6 +28,20 @@ function shuffle(arr) {
   return a
 }
 
+// Free-hero pool: one ref per distinct hero available in a set of loaded card objects
+// (deduped by name+faction, unique heroes excluded). Cube paths pass their curated hero
+// ref list instead. Used to seed every player's pool with a copy of each available hero.
+function uniqueHeroRefs(cards) {
+  const seen = new Set(), out = []
+  for (const c of cards) {
+    if (c.cardType !== 'HERO' || c.rarity === 'U') continue
+    const key = `${c.name}__${c.faction}`
+    if (seen.has(key)) continue
+    seen.add(key); out.push(c.reference)
+  }
+  return out
+}
+
 export default function Lobby() {
   const { code } = useParams()
   const navigate = useNavigate()
@@ -209,21 +223,26 @@ export default function Lobby() {
         // Pasted personal cube — sealed. Heroes STAY in the pool (sealed has no draft
         // phase) unless free-hero is on, in which case they're picked at deckbuild time.
         if (configTab === 'cubes' && customCube) {
-          const allRefs = [...customCube.cards, ...(freeHero ? [] : customCube.heroes)]
-          const rawCodes = [...new Set(setsForCube(allRefs))]
+          // Free-hero: heroes leave the booster pool and are instead seeded (one of each)
+          // into every player's pool. Pool cards = non-hero cards in that case.
+          const freeHeroPool = freeHero ? [...new Set(customCube.heroes)] : []
+          const poolRefs = [...customCube.cards, ...(freeHero ? [] : customCube.heroes)]
+          // Always load hero sets/data so the free-hero copies render in the pool.
+          const dataRefs = [...customCube.cards, ...customCube.heroes]
+          const rawCodes = [...new Set(setsForCube(dataRefs))]
           const results = await Promise.all(rawCodes.map(s => fetchSet(s, lang).catch(() => [])))
           const apiCodes = [...new Set(rawCodes.map(apiSetCode))]
           const byRef = new Map(results.flat().map(c => [c.reference, c]))
-          const uniqueCards = await fetchUniques(allRefs.filter(isUniqueRef), lang)
+          const uniqueCards = await fetchUniques(dataRefs.filter(isUniqueRef), lang)
           for (const c of uniqueCards) byRef.set(c.reference, c)
-          const pool = allRefs.map(r => byRef.get(r)).filter(Boolean)
+          const pool = poolRefs.map(r => byRef.get(r)).filter(Boolean)
           if (pool.length < SEALED_PACKS) {
             setStartError(`This cube is too small for sealed (need at least ${SEALED_PACKS} cards).`); setLoading(false); return
           }
           const sealedPacks = {}
           for (let i = 0; i < playerCount; i++) sealedPacks[String(i)] = generateCubeDraftPacks(pool, SEALED_PACKS)
           const state = {
-            config: { sets: apiCodes, playerCount, lang, freeHero, includeHeroes, mode: 'sealed', customCube: { name: customCube.name, cards: customCube.cards, heroes: customCube.heroes } },
+            config: { sets: apiCodes, playerCount, lang, freeHero, includeHeroes, freeHeroPool, mode: 'sealed', customCube: { name: customCube.name, cards: customCube.cards, heroes: customCube.heroes } },
             players: shuffledPlayers, phase: 'sealed', sealedPacks, version: 0,
           }
           const { error: upErr } = await supabase.from('draft_rooms').update({ state }).eq('id', code)
@@ -241,14 +260,18 @@ export default function Lobby() {
           const apiCodes = [...new Set(rawCodes.map(apiSetCode))]
           const byRef = new Map(results.flat().map(c => [c.reference, c]))
           // Refs fetchSet doesn't stock (uniques + promo/alt-art prints like
-          // "Sofia, First Outpost") are fetched from the cards API by reference.
-          const extraCards = await fetchUniques(cube.refs.filter(needsCardApi), lang)
+          // "Sofia, First Outpost") are fetched from the cards API by reference — heroes
+          // included so promo heroes resolve for the free-hero pool.
+          const extraCards = await fetchUniques([...cube.refs, ...(cube.heroes ?? [])].filter(needsCardApi), lang)
           for (const c of extraCards) byRef.set(c.reference, c)
           const allCards = cube.refs.map(r => byRef.get(r)).filter(Boolean)
           if (!allCards.length) { setStartError('Could not load cube card data.'); setLoading(false); return }
           // Hero-draft cubes keep heroes in a separate pool (not in refs). Sealed has no
-          // hero-draft phase, so deal one hero into each booster's first slot instead.
-          const heroRefs = (cube.heroDraft && !freeHero) ? [...new Set(cube.heroes ?? [])].filter(r => byRef.has(r)) : []
+          // hero-draft phase, so deal one hero into each booster's first slot instead —
+          // unless free-hero, where every player's pool is seeded with one of each hero.
+          const cubeHeroRefs = [...new Set(cube.heroes ?? [])].filter(r => byRef.has(r))
+          const heroRefs = (cube.heroDraft && !freeHero) ? cubeHeroRefs : []
+          const freeHeroPool = freeHero ? cubeHeroRefs : []
           const sealedPacks = {}
           for (let i = 0; i < playerCount; i++) {
             sealedPacks[String(i)] = dealHeroSlots(
@@ -258,7 +281,7 @@ export default function Lobby() {
               heroRefs)
           }
           const state = {
-            config: { sets: apiCodes, playerCount, lang, freeHero, includeHeroes, cubeId: cube.id, mode: 'sealed' },
+            config: { sets: apiCodes, playerCount, lang, freeHero, includeHeroes, freeHeroPool, cubeId: cube.id, mode: 'sealed' },
             players: shuffledPlayers, phase: 'sealed', sealedPacks, version: 0,
           }
           {
@@ -279,12 +302,13 @@ export default function Lobby() {
         const cardsBySet = Object.fromEntries(fetched)
         if (!Object.values(cardsBySet).some(c => c.length)) { setStartError('No cards loaded.'); setLoading(false); return }
         const apiCodes = [...new Set(setCodes.map(apiSetCode))]
+        const freeHeroPool = freeHero ? uniqueHeroRefs(Object.values(cardsBySet).flat()) : []
         const sealedPacks = {}
         for (let i = 0; i < playerCount; i++) {
           sealedPacks[String(i)] = generateChaosPacks(cardsBySet, mix, { includeHeroes: packHeroes })
         }
         const state = {
-          config: { sets: apiCodes, playerCount, lang, freeHero, includeHeroes, mode: 'sealed', packMix: mix },
+          config: { sets: apiCodes, playerCount, lang, freeHero, includeHeroes, freeHeroPool, mode: 'sealed', packMix: mix },
           players: shuffledPlayers, phase: 'sealed', sealedPacks, version: 0,
         }
         {
@@ -319,8 +343,9 @@ export default function Lobby() {
         }
         const packs = generateCubeDraftPacks(cardPool, totalPacks)
         const heroPool = useHeroDraft ? shuffle(heroUnique) : null
+        const freeHeroPool = freeHero ? [...new Set(customCube.heroes)] : []
         const state = buildInitialState(
-          { sets: apiCodes, playerCount, lang, freeHero, includeHeroes: false, timerEnabled, timerSeconds, customCube: { name: customCube.name, cards: customCube.cards, heroes: customCube.heroes } },
+          { sets: apiCodes, playerCount, lang, freeHero, includeHeroes: false, freeHeroPool, timerEnabled, timerSeconds, customCube: { name: customCube.name, cards: customCube.cards, heroes: customCube.heroes } },
           shuffledPlayers, packs, heroPool
         )
         const { error: upErr } = await supabase.from('draft_rooms').update({ state }).eq('id', code)
@@ -341,31 +366,37 @@ export default function Lobby() {
         const results = await Promise.all(setCodes.map(s => fetchSet(s, lang).catch(() => [])))
         const apiCodes = [...new Set(setCodes.map(apiSetCode))]
         let packs
+        // Free-hero pool: heroDraft cubes use their curated hero list; other cubes use
+        // the HERO cards within the pool. Seeded (one of each) into every player's pool.
+        let freeHeroPool = []
         if (cube.heroDraft) {
           // Multi-copy cube: preserve duplicate refs (mapping each to its card object),
           // deal equal packs. Heroes are not in these packs — they're drafted in-app
           // from the shared hero pool (see heroPool below).
           const byRef = new Map(results.flat().map(c => [c.reference, c]))
-          // Uniques + promo/alt-art prints aren't in set data — fetch them and merge.
-          const uniqueCards = await fetchUniques(cube.refs.filter(needsCardApi), lang)
+          // Uniques + promo/alt-art prints aren't in set data — fetch them and merge
+          // (heroes included so promo heroes resolve for the free-hero pool).
+          const uniqueCards = await fetchUniques([...cube.refs, ...(cube.heroes ?? [])].filter(needsCardApi), lang)
           for (const c of uniqueCards) byRef.set(c.reference, c)
           const allCards = cube.refs.map(r => byRef.get(r)).filter(Boolean)
           if (!allCards.length) { setStartError('Could not load cube card data.'); setLoading(false); return }
           packs = cube.booster
             ? generateCubeRecipePacks(allCards, playerCount * 4, cube.booster)
             : generateAllPacks(allCards, playerCount, 4, { includeHeroes: false, cubeMode: true })
+          if (freeHero) freeHeroPool = [...new Set(cube.heroes ?? [])].filter(r => byRef.has(r))
         } else {
           const cubeRefSet = new Set(cube.refs)
           const allCards = results.flat().filter(c => cubeRefSet.has(c.reference))
           if (!allCards.length) { setStartError('Could not load cube card data.'); setLoading(false); return }
           packs = generateAllPacks(allCards, playerCount, 4, { includeHeroes: packHeroes, cubeMode: true })
+          if (freeHero) freeHeroPool = uniqueHeroRefs(allCards)
         }
         // Hero-draft cubes draft heroes in-app from one shared pool (all the cube's
         // heroes), snake-drafted one-per-player after each card round until each has
         // min(3, …) heroes. Pass the shuffled hero pool; buildInitialState does the rest.
         const heroPool = (!freeHero && cube.heroDraft && cube.heroes?.length) ? shuffle(cube.heroes) : null
         const state = buildInitialState(
-          { sets: apiCodes, playerCount, lang, freeHero, cubeId: cube.id, includeHeroes, timerEnabled, timerSeconds },
+          { sets: apiCodes, playerCount, lang, freeHero, cubeId: cube.id, includeHeroes, freeHeroPool, timerEnabled, timerSeconds },
           shuffledPlayers, packs, heroPool
         )
         {
@@ -387,8 +418,9 @@ export default function Lobby() {
           ? generateAllPacks(allCards, playerCount, 4, { includeHeroes: packHeroes })
           : generatePacksFromPool(refs, playerCount, 4) // fallback if fetch fails
         const apiCodes = [...new Set(rawCodes.map(apiSetCode))]
+        const freeHeroPool = freeHero ? uniqueHeroRefs(allCards) : []
         const state = buildInitialState(
-          { sets: apiCodes, playerCount, lang, freeHero, customPool: true, includeHeroes, timerEnabled, timerSeconds },
+          { sets: apiCodes, playerCount, lang, freeHero, customPool: true, includeHeroes, freeHeroPool, timerEnabled, timerSeconds },
           shuffledPlayers, packs
         )
         {
@@ -421,8 +453,9 @@ export default function Lobby() {
           ? generateStructuredPacks(cardsBySet, mix, playerCount, { includeHeroes: packHeroes })
           : generateChaosPacks(cardsBySet, mix, { includeHeroes: packHeroes })
         const apiCodes = [...new Set(setCodes.map(apiSetCode))]
+        const freeHeroPool = freeHero ? uniqueHeroRefs(Object.values(cardsBySet).flat()) : []
         const state = buildInitialState(
-          { sets: apiCodes, playerCount, lang, freeHero, includeHeroes, timerEnabled, timerSeconds, multiSetMix: mix, equalPacks },
+          { sets: apiCodes, playerCount, lang, freeHero, includeHeroes, freeHeroPool, timerEnabled, timerSeconds, multiSetMix: mix, equalPacks },
           shuffledPlayers, packs
         )
         {
@@ -446,8 +479,9 @@ export default function Lobby() {
       if (!allCards.length) { setStartError('No cards loaded. Check set selection.'); setLoading(false); return }
 
       const packs = generateAllPacks(allCards, playerCount, 4, { includeHeroes: packHeroes })
+      const freeHeroPool = freeHero ? uniqueHeroRefs(allCards) : []
       const state = buildInitialState(
-        { sets: setCodes, playerCount, lang, freeHero, includeHeroes, timerEnabled, timerSeconds },
+        { sets: setCodes, playerCount, lang, freeHero, includeHeroes, freeHeroPool, timerEnabled, timerSeconds },
         shuffledPlayers, packs
       )
       const { error: upErr } = await supabase.from('draft_rooms').update({ state }).eq('id', code)
@@ -904,7 +938,7 @@ export default function Lobby() {
                   <div className="space-y-1.5">
                     {[
                       { v: 'packs', label: 'In packs', desc: 'Hero cards appear in boosters — draft or open them.' },
-                      { v: 'free', label: 'Free choice', desc: 'Pick any hero when building your deck; none appear in packs.' },
+                      { v: 'free', label: 'Free choice', desc: 'Every available hero is added to your pool — pick one at deckbuild. None appear in packs.' },
                     ].map(o => {
                       const active = heroMode === o.v
                       return (
