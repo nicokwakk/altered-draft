@@ -63,9 +63,10 @@ _Hardening fast-follow: move the refresh token to an httpOnly cookie._
 - Public OIDC config (issuer, realm, clientId) can be plain constants / `VITE_` vars; only the
   secret is server-side.
 
-**Local dev environment FOUND — `github.com/Altered-Community/altered-dev-environment`.**
-A .NET Aspire stack that runs the WHOLE Re:Union backend locally, so we can build AND test the
-integration end-to-end without waiting on the dev:
+**Local dev environment — DROPPED (user's call).** `github.com/Altered-Community/altered-dev-environment`
+(a .NET Aspire stack running the whole Re:Union backend locally) exists, but with `collection`/`profile`
+scopes dropped and deck read/write already shipped + verified on prod, there's nothing left that needs
+it. Verify-on-deploy is sufficient. Kept below for reference only if a future scope ever revives the need:
 - **Keycloak** (realm `players`) at `http://auth.altered.local.gd:18080`, admin `admin`/`admin`;
   test users `alice`/`bob` (pw `TestPassword1234`). `*.local.gd` → 127.0.0.1 (no hosts-file edit).
 - **decks-api** at `http://localhost:8001` (the deck-write target); **collection-api** OpenAPI at
@@ -101,18 +102,20 @@ integration end-to-end without waiting on the dev:
 - **Scope:** resource APIs validate the realm JWT signature (per dev-env README), so our `openid profile`
   token is very likely accepted as-is — confirm on the first authenticated call; add a scope only if it 403s.
 
-**Feature tiers (each maps to a Keycloak/API scope — ask for these, ship in this order):**
-- 🟢 **`deck:write`** — one-click "Save deck to my Re:Union account" at the end of a
-  draft/sealed; optionally save the whole pool as a deck. *Smallest, most-requested, highest
-  delight — ship first.*
-- 🟢 **`deck:read`** — build a custom cube/pool from one of your account decks (solves the
-  recurring "how do I import decks?" ask without a separate parser).
-- 🟡 **`collection:read`** — "draft from my collection", owned/not-owned overlay during the
-  draft, post-draft "missing cards" report, auto-build a cube from your collection.
-- 🟡 **`profile:read`** — persistent name/avatar (no retyping each room), account-based rejoin
-  across devices, draft history, optional authenticated rooms.
-- 🔴 **card-data API (strategic)** — if Re:Union exposes card + unique data, it can replace the
-  dying `api.altered.gg` and largely dissolve priority #2 below. Uncertain — treat #2 as a hedge.
+**Feature tiers (each maps to a Keycloak/API scope):**
+- 🟢 **`deck:write`** ✅ shipped — save pool + final deck to your Re:Union account.
+- 🟢 **`deck:read`** ✅ shipped — build a cube from one (or several, merged) of your account decks.
+- ✅ **`profile` (pseudo)** — display name auto-fills from your Re:Union pseudo at room creation/join
+  when logged in (Home, June 2026). **DROPPED from scope (user's call):** draft history, account-based
+  cross-device rejoin, authenticated-only rooms — not wanted.
+- ❌ **`collection:read` — DROPPED (user's call).** Reading the collection mainly helps with uniques,
+  but Re:Union's spirit is "all cards playable regardless of collection," which is exactly the
+  draft/sealed ethos. We deliberately keep play collection-agnostic; no owned/not-owned overlay,
+  no "draft from my collection."
+- ❌ **card-data API — NOT NEEDED for now (user's call).** Our current card source
+  (`cards.alteredcore.org`, see #2) is treated as the long-term solution, so we don't need Re:Union
+  to ship its own. Card-fetch stays isolated in `cardData.js` so swapping later would be a small
+  adapter change if it ever becomes worthwhile.
 
 ### 2. Uniques — dying-API dependency REMOVED ✅ (bundling now just an offline hedge)
 **✅ Shipped (June 2026):** `fetchUnique` was the last live caller of the retiring
@@ -125,9 +128,14 @@ So unique-heavy community cubes (CptKawaii's "cube unique", wordcandy70's "Uniqu
 resolve durably, not just our 24.
 
 **Remaining (optional, no deadline):** bundle MORE unique images locally as a resilience/perf
-hedge (in case the prod S3 bucket later locks down too). Only 24 are bundled
-(`src/lib/uniquesData.js` `UNIQUES_EN` + `public/uniques/<ref>.jpg`); everything else now loads
-live from `cards.alteredcore.org` + prod bucket.
+hedge. Only 24 are bundled (`src/lib/uniquesData.js` `UNIQUES_EN` + `public/uniques/<ref>.jpg`);
+everything else now loads live from `cards.alteredcore.org` (data) + the prod S3 bucket (art).
+- **⚠️ Why this is the residual risk — `altered-prod-eu.s3.amazonaws.com` is Equinox's OWN
+  production image bucket** (same company/infra as the retiring `api.altered.gg`), NOT the community
+  `cards.alteredcore.org`. So: card **data** is community-rebuilt and durable, but card **art** still
+  comes from Equinox infra that isn't guaranteed to outlive the API. If that bucket ever goes dark,
+  images break (data stays fine). Hence snapshotting art locally is the only Equinox dependency left
+  to neutralise — opportunistic, prioritise refs people actually paste. Needs Node (run on macOS).
 
 **New durable data source (tested June 2026):** `api.altered.gg` is being retired, but the
 community site **`cards.alteredcore.org`** serves the same data and should outlive it.
@@ -159,8 +167,9 @@ Prioritise refs from the community cubes people are actually pasting. Needs Node
   superseded if Re:Union ships its own card-data + image API (1🔴), but that's not guaranteed.
 - Possible enhancement: accept a pasted list of unique refs and snapshot them on demand.
 
-### 3. Import Marcus' cube (data-only) — ACTIVE, blocked on the full card list
+### 3. Import Marcus' cube (data-only) — LOWER PRIORITY (user's call), blocked on the full card list
 A cube by a game designer (MarcusK, engaged on Discord). Add it the manual way, like LuigiNico's.
+**Deprioritised — may pick up later** (was "active"); still blocked on the author's full list anyway.
 - **Blocker:** the current list is **missing a few cards** — author is completing it. Don't
   finalise `refs[]`/`cardCount` until the full list lands.
 - Add an object to `COMMUNITY_CUBES` in `src/lib/cubes.js` (`id, name, author, description,
@@ -224,45 +233,25 @@ slot 0 drawn (with repetition) from `cube.heroes`, for both recipe and non-recip
 hero sets loaded so they render in `Sealed.jsx`. Confirmed live (Jun 2026). With **Free hero
 choice** on, slot-0 heroes are skipped (you free-pick at deckbuild instead).
 
-### Community / Spotlight cubes (rotating)
-wordcandy70 & Kari (Casual Alterations) want to put up a **rotating monthly community cube**
-(first: All Commons; others: a Uniques Cube, "Opps All Jellyfish", "Six Sets, Six Factions").
-User likes the rotating-spotlight idea.
-- **Option A (zero code):** they keep pasting their cube each month; signal-boost on Discord.
-- **Option B (a feature):** a curated "Spotlight / Community cubes" section in the Cubes tab —
-  add their cubes to `COMMUNITY_CUBES` like LuigiNico's, marked as featured/rotating.
-- Note: a Uniques Cube depends hard on priority #2 (bundling uniques) to keep working.
+### Security hardening — httpOnly refresh-token cookie (TRACKED, user's call)
+Move the Re:Union **refresh token** out of `sessionStorage` (JS-readable → XSS-exposed) into an
+**httpOnly, Secure cookie** set by the Vercel function — a proper BFF pattern. Reshapes
+`api/token.js` + `reunion.js` token handling; the proxy architecture already supports it.
+Self-contained, in our control, and the **prerequisite for open-sourcing** (below) and any wider
+launch. The one genuine security debt in the auth flow.
 
-### Deck import (decklist → pool/cube)
-Recurring ask ("now have to figure how to import decks"). Pull a decklist INTO the site as a
-sealed pool or a cube. We already parse the Export format (`parseDecklist` in
-`src/lib/cubeParser.js`), so a standalone "import a decklist as a pool" is cheap. Overlaps with
-Re:Union `deck:read` (1🟢) — decide whether to do the simple paste version now or fold it into
-the Re:Union work.
-
-### Winston draft (new 2-player mode)
-A take-or-pass format, great for 2-player cube play.
-- Mechanics: shuffle the pool into a main stack; keep 3 face-down piles. On your turn, look at
-  pile 1 → **take it** (refill that pile from the main stack) or **pass** (drop the top of the
-  main stack onto that pile, move to the next). Pass all 3 → take the blind top card of the main
-  stack. Continue until the stack is empty. 2 players only.
-- Needs its own draft mode/phase + state (main stack, the 3 piles, whose turn) synced via
-  `draft_rooms` + realtime, and its own UI (not the `CardGrid` pack view). Pure transitions in
-  `src/lib/draftLogic.js`, seeded by a `buildInitialState`-style helper. Works naturally with a
-  cube's single shuffled pool.
+### Open-source under Altered-Community — when ready (user confirmed)
+The Re:Union dev offered to host the project open-source (with a license) on the official
+[Altered-Community](https://github.com/Altered-Community) GitHub org. **Move when ready** — after the
+integration is solid and the httpOnly hardening above. Before any public push: (1) choose a license,
+(2) **scan the full git history to confirm no secret was ever committed** (the Supabase
+publishable/anon key is fine; verify no secret key, no `.env`, no Keycloak secret).
 
 ### LuigiNico's newest cube (set 1–5) — PARKED by choice
 Author shared a now-public [Google Sheet](https://docs.google.com/spreadsheets/d/1a3ZZ2AzzPp05rWJq9Mzt6torBro4noEC74Pn27KXxX0/edit?gid=0)
 with tag-column notes, but it's **missing some uniques** ("add any six you feel like") and a bit
 out of date. **Parked until set 6 is playable on BGA** (user's call). This is a DIFFERENT, newer
 cube than the LuigiNico cube already in the app.
-
-### Open-source under Altered-Community — eventually, not yet
-The Re:Union dev offered to host the project open-source (with a license) on the official
-[Altered-Community](https://github.com/Altered-Community) GitHub org. **Decision: move later, not
-immediately** — get the Re:Union integration working first, then migrate. Before any public push:
-(1) choose a license, (2) **scan the full git history to confirm no secret was ever committed**
-(the Supabase publishable/anon key is fine; verify no secret key, no `.env`, no Keycloak secret).
 
 ---
 

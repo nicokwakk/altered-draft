@@ -1,11 +1,13 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase.js'
 import { generateRoomCode } from '../lib/roomCode.js'
+import { useAuth } from '../auth/AuthProvider.jsx'
 import TopNav from '../components/TopNav.jsx'
 
 export default function Home() {
   const navigate = useNavigate()
+  const { user } = useAuth()
   const params = new URLSearchParams(window.location.search)
   const prefillCode = params.get('join') ?? ''
 
@@ -15,6 +17,14 @@ export default function Home() {
   const [mode, setMode] = useState(prefillCode ? 'join' : null)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+
+  // Logged in to Re:Union → prefill the display name with your pseudo (without
+  // overwriting anything you've already typed).
+  useEffect(() => {
+    if (!user?.pseudo) return
+    setCreateName(n => n || user.pseudo)
+    setJoinName(n => n || user.pseudo)
+  }, [user])
 
   async function handleCreate(e) {
     e.preventDefault()
