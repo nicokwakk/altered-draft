@@ -244,12 +244,13 @@ slot 0 drawn (with repetition) from `cube.heroes`, for both recipe and non-recip
 hero sets loaded so they render in `Sealed.jsx`. Confirmed live (Jun 2026). With **Free hero
 choice** on, slot-0 heroes are skipped (you free-pick at deckbuild instead).
 
-### Security hardening — httpOnly refresh-token cookie (TRACKED, user's call)
-Move the Re:Union **refresh token** out of `sessionStorage` (JS-readable → XSS-exposed) into an
-**httpOnly, Secure cookie** set by the Vercel function — a proper BFF pattern. Reshapes
-`api/token.js` + `reunion.js` token handling; the proxy architecture already supports it.
-Self-contained, in our control, and the **prerequisite for open-sourcing** (below) and any wider
-launch. The one genuine security debt in the auth flow.
+### ✅ Security hardening — httpOnly refresh-token cookie (SHIPPED Jun 2026)
+The Re:Union **refresh token** no longer touches JS: `api/token.js` stores it in an **httpOnly,
+Secure, SameSite=Strict cookie** (`reunion_rt`, `Path=/api/token`) and the browser keeps only the
+short-lived **access token in memory** (`reunion.js` `session`). Refresh sends no token from JS (the
+function reads the cookie + rotates it); a readable `reunion_auth=1` hint cookie lets `isLoggedIn()`
+skip the refresh probe for anonymous loads; logout clears both. Proper BFF pattern — closes the one
+real auth-flow security debt and unblocks open-sourcing.
 
 ### Open-source under Altered-Community — when ready (user confirmed)
 The Re:Union dev offered to host the project open-source (with a license) on the official

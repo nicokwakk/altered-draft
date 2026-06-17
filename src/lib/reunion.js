@@ -1,16 +1,20 @@
 // Re:Union (Keycloak OIDC) client — Authorization Code + PKCE against a CONFIDENTIAL
-// client. The code→token exchange runs server-side in /api/token (which holds the
+// client. The code↔token exchange runs server-side in /api/token (which holds the
 // secret); everything here is browser-side. Login is optional/additive — the app works
-// fully without it. Tokens live in sessionStorage (survive reload within a tab, cleared
-// on tab close); the access token is refreshed via /api/token when near expiry.
+// fully without it.
+//
+// Token handling (BFF hardening): the REFRESH token never touches JS — it lives only in
+// an httpOnly cookie managed by /api/token. The browser keeps just the short-lived
+// ACCESS token in memory (below), refreshing it through the cookie when near expiry or
+// on a fresh page load. A readable `reunion_auth` hint cookie tells us a session exists.
 const ISSUER = 'https://auth.altered.re/realms/players'
 const CLIENT_ID = 'altered-draft'
 const SCOPES = 'openid profile'
 const AUTHORIZE = `${ISSUER}/protocol/openid-connect/auth`
 const USERINFO = `${ISSUER}/protocol/openid-connect/userinfo`
 
-const STORE_KEY = 'reunion_tokens' // { access_token, refresh_token, id_token, expires_at }
 const PKCE_KEY = 'reunion_pkce'    // transient during the redirect dance
+const HINT_COOKIE = 'reunion_auth' // readable "has session" hint set by /api/token
 
 const redirectUri = () => `${window.location.origin}/auth/callback`
 
@@ -30,22 +34,25 @@ async function challengeFor(verifier) {
   return base64url(new Uint8Array(digest))
 }
 
-// ---- token storage ----
-function readTokens() {
-  try { return JSON.parse(sessionStorage.getItem(STORE_KEY) || 'null') } catch { return null }
-}
+// ---- in-memory access token (NOT persisted; the refresh token lives in an httpOnly cookie) ----
+let session = null // { access_token, id_token, expires_at } | null
+
 function storeFromResponse(data) {
-  const t = {
+  session = {
     access_token: data.access_token,
-    refresh_token: data.refresh_token,
     id_token: data.id_token,
     expires_at: Date.now() + (data.expires_in ?? 60) * 1000,
   }
-  sessionStorage.setItem(STORE_KEY, JSON.stringify(t))
-  return t
+  return session
 }
-export function clearTokens() { sessionStorage.removeItem(STORE_KEY) }
-export function isLoggedIn() { return !!readTokens()?.refresh_token }
+export function clearTokens() { session = null }
+
+// True when a session likely exists: an in-memory token, or the readable hint cookie set
+// by /api/token (the httpOnly refresh token itself is invisible to JS by design).
+export function isLoggedIn() {
+  if (session) return true
+  return document.cookie.split(';').some(c => c.trim().startsWith(`${HINT_COOKIE}=`))
+}
 
 // ---- public API ----
 export async function login(returnPath) {
@@ -85,28 +92,28 @@ export async function handleCallback() {
   })
   const data = await res.json()
   if (!res.ok) throw new Error(data.error_description || data.error || 'Sign-in failed.')
-  storeFromResponse(data)
+  storeFromResponse(data) // the refresh token was set as an httpOnly cookie by the function
   return pkce.returnPath || '/'
 }
 
+// Exchange the httpOnly refresh-token cookie for a fresh access token. No token is sent
+// from JS — the function reads it from the cookie. Returns the new session or null.
 async function refresh() {
-  const t = readTokens()
-  if (!t?.refresh_token) return null
   const res = await fetch('/api/token', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ grant: 'refresh_token', refresh_token: t.refresh_token }),
+    body: JSON.stringify({ grant: 'refresh_token' }),
   })
-  const data = await res.json()
   if (!res.ok) { clearTokens(); return null }
-  return storeFromResponse(data)
+  return storeFromResponse(await res.json())
 }
 
-// Returns a valid access token (refreshing if within 30s of expiry), or null.
+// Returns a valid access token (refreshing via the cookie if needed), or null. Also
+// covers fresh page loads, where the in-memory token is gone but the cookie persists.
 export async function getAccessToken() {
-  let t = readTokens()
-  if (!t) return null
-  if (Date.now() > t.expires_at - 30_000) t = await refresh()
+  if (session && Date.now() < session.expires_at - 30_000) return session.access_token
+  if (!isLoggedIn()) return null
+  const t = await refresh()
   return t?.access_token ?? null
 }
 
@@ -121,6 +128,17 @@ export async function fetchProfile() {
   } catch { return null }
 }
 
-// Soft logout: clear local tokens (the Keycloak SSO session persists, so re-connecting
-// is one click). Full RP-initiated logout can be added later if wanted.
-export function logout() { clearTokens() }
+// Soft logout: drop the in-memory token + readable hint immediately for snappy UI, and
+// ask the function to clear the httpOnly refresh cookie. The Keycloak SSO session
+// persists, so reconnecting is one click.
+export async function logout() {
+  clearTokens()
+  document.cookie = `${HINT_COOKIE}=; Max-Age=0; Path=/`
+  try {
+    await fetch('/api/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ grant: 'logout' }),
+    })
+  } catch { /* ignore */ }
+}
