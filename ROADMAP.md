@@ -194,9 +194,16 @@ Backlog captured after the user tried the deployed app; the batch was built the 
   !freeHero` gates pack generation; cube hero-draft / sealed slot-0 / custom-cube hero folding are
   all skipped when on.
 - **✅ Cube of the Month spotlight — live with "All Commons".** `SPOTLIGHT` in `cubes.js` points at
-  the new `all-commons` cube (191 commons, all 6 factions, 12 heroes snake-drafted); banner atop the
-  Cubes tab features it. Swap `SPOTLIGHT.cubeId`/`blurb` to rotate next month. (BR is 31 vs 32 others —
-  `ALT_COREKS_B_BR_03_C` was actually Basira, a hero, so it was dropped from the commons.)
+  the `all-commons` cube (192 commons, exactly 32 per faction, 12 heroes snake-drafted); banner atop
+  the Cubes tab features it. Swap `SPOTLIGHT.cubeId`/`blurb` to rotate next month. Hero names were
+  resolved to refs via `cards.alteredcore.org`; `ALT_COREKS_B_BR_03_C` stays OUT (it's Basira, a hero,
+  already in the 12).
+- **✅ Promo/alt-art cards in cubes.** `cardData.needsCardApi(ref)` (uniques + any non-booster print)
+  now drives the cube "extra fetch" everywhere (Lobby draft+sealed, Draft, Sealed, Results,
+  CubePreviewModal), so promo-ONLY cards with no booster print resolve from the cards API — e.g.
+  "Sofia, First Outpost" (`ALT_BISE_P_BR_64_C`), the 32nd Bravos common in All Commons.
+- **✅ Export/Save menu harmonized.** Parallel verb-noun labels (Copy/Save your pulls · your deck)
+  with a count on every row.
 - **◑ Graphic polish — first pass done.** Light-mode page background deepened so panels separate;
   more look-and-feel work (card grids, spacing, iconography) can continue once eyeballed.
 - **◑ Menu improvements — Help + Feedback added.** `TopNav` now has a Help modal (`HelpModal`) and
