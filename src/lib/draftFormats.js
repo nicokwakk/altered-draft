@@ -21,7 +21,7 @@ export const DRAFT_FORMATS = [
     id: 'rotisserie',
     name: 'Rotisserie',
     players: '2+',
-    available: false,
+    available: true,
     blurb: 'No packs — the entire pool is face-up. Players take turns drafting any single card (snake order) until pools are full. Maximum control, longer games.',
   },
   {

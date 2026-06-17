@@ -122,7 +122,7 @@ export default function Lobby() {
       .then(({ data, error }) => {
         if (error || !data) { navigate('/'); return }
         setRoomState(data.state)
-        if (['drafting', 'heroDraft', 'rochester'].includes(data.state.phase)) navigate(`/room/${code}/draft`)
+        if (['drafting', 'heroDraft', 'rochester', 'rotisserie'].includes(data.state.phase)) navigate(`/room/${code}/draft`)
         else if (data.state.phase === 'sealed') navigate(`/room/${code}/sealed`)
         else if (data.state.phase === 'done') navigate(`/room/${code}/results`)
       })
@@ -135,7 +135,7 @@ export default function Lobby() {
         payload => {
           const state = payload.new.state
           setRoomState(state)
-          if (['drafting', 'heroDraft', 'rochester'].includes(state.phase)) navigate(`/room/${code}/draft`)
+          if (['drafting', 'heroDraft', 'rochester', 'rotisserie'].includes(state.phase)) navigate(`/room/${code}/draft`)
           else if (state.phase === 'sealed') navigate(`/room/${code}/sealed`)
         })
       .subscribe()

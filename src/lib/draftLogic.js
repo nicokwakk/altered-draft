@@ -5,6 +5,7 @@
 
 import { makeDeadline } from '../components/PickTimer.jsx'
 import { buildRochesterState } from './rochesterLogic.js'
+import { buildRotisserieState } from './rotisserieLogic.js'
 
 function freshDeadline(state) {
   const seconds = state.config?.timerSeconds
@@ -276,6 +277,9 @@ export function buildInitialState(config, players, allPacks, heroPool = null) {
 export function buildDraftState(config, players, allPacks, heroPool = null) {
   if (config?.draftFormat === 'rochester') {
     return buildRochesterState(config, players, allPacks, heroPool)
+  }
+  if (config?.draftFormat === 'rotisserie') {
+    return buildRotisserieState(config, players, allPacks, heroPool)
   }
   return buildInitialState(config, players, allPacks, heroPool)
 }

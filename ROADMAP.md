@@ -372,11 +372,15 @@ seeded into pools as a fallback). All draft branches now build state through `bu
    "your turn / waiting for X" banner + a pack counter, reusing `CardGrid`/`PlayerStatus`/`DraftSidebar`
    and the existing version-retry pick loop. Heroes=Draft runs a finishing hero snake after the last pack
    (`heroFinish` in `applyHeroPick`). **Pending live 2-player test** (verify-on-deploy below).
-2. **Rotisserie (NEXT).** No packs — the whole cube pool is laid out face-up and players snake-draft
-   ANY single card until pools are full (fantasy-draft style). Fully open info; minimal new state (one
-   shared pool + snake order, rendered with the existing `PoolGrid` + a pick action + turn gating).
-   Downside: long games; cube-oriented. Currently shows as "Coming soon" in the format selector.
-3. **Winston (THEN — 2 players).** Face-down main pile + 3 small piles; on your turn peek pile 1 and
+2. **✅ Rotisserie — SHIPPED (Jun 2026).** No packs — the whole draftable pool is laid out face-up and
+   players snake-draft ANY single card until each has `target` cards (`ROTISSERIE_CAP = 45`, adapts down
+   for small pools). Fully open info. `src/lib/rotisserieLogic.js`: `phase: 'rotisserie'` with
+   `{ pool, pickOrder, turnPos, target }`; `buildRotisserieState` flattens the generated packs into one
+   shared pool (so it works for any config, not just cubes); `applyRotisseriePick` reuses
+   `rochesterOrder` (snake) + the same `heroFinish` finishing hero snake. New `RotisserieGrid.jsx` (the
+   pool is too big / has duplicates for `CardGrid`) — faction-filtered, deduped with ×N, click-to-draft on
+   your turn. `Draft.jsx` shares turn logic with Rochester (`isSnakePick`). **Pending live test.**
+3. **Winston (NEXT — 2 players).** Face-down main pile + 3 small piles; on your turn peek pile 1 and
    take it or decline (declining adds a face-down card to it and moves you to the next pile); decline all
    3 → take the top of the main pile blind. **Hidden info → "honor system" here (user OK with it):** the
    piles live in shared state, so the UI MUST only ever render the active player's peeked pile to that
