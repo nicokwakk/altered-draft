@@ -28,7 +28,7 @@ export const DRAFT_FORMATS = [
     id: 'winston',
     name: 'Winston',
     players: '2',
-    available: false,
+    available: true,
     blurb: '2-player. Three small face-down piles: peek the first, take it or pass (passing adds a card to it). Pass all three and draw blind from the deck.',
   },
 ]

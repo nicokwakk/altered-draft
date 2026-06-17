@@ -122,7 +122,7 @@ export default function Lobby() {
       .then(({ data, error }) => {
         if (error || !data) { navigate('/'); return }
         setRoomState(data.state)
-        if (['drafting', 'heroDraft', 'rochester', 'rotisserie'].includes(data.state.phase)) navigate(`/room/${code}/draft`)
+        if (['drafting', 'heroDraft', 'rochester', 'rotisserie', 'winston'].includes(data.state.phase)) navigate(`/room/${code}/draft`)
         else if (data.state.phase === 'sealed') navigate(`/room/${code}/sealed`)
         else if (data.state.phase === 'done') navigate(`/room/${code}/results`)
       })
@@ -135,7 +135,7 @@ export default function Lobby() {
         payload => {
           const state = payload.new.state
           setRoomState(state)
-          if (['drafting', 'heroDraft', 'rochester', 'rotisserie'].includes(state.phase)) navigate(`/room/${code}/draft`)
+          if (['drafting', 'heroDraft', 'rochester', 'rotisserie', 'winston'].includes(state.phase)) navigate(`/room/${code}/draft`)
           else if (state.phase === 'sealed') navigate(`/room/${code}/sealed`)
         })
       .subscribe()
@@ -226,6 +226,9 @@ export default function Lobby() {
   const handleStart = async () => {
     if (!roomState) return
     if (draftMode === 'draft' && roomState.players.length < 2) { setStartError('Need at least 2 players to start a draft.'); return }
+    if (draftMode === 'draft' && draftFormat === 'winston' && roomState.players.length !== 2) {
+      setStartError('Winston is a 2-player format. Start it with exactly 2 players.'); return
+    }
     setLoading(true)
     setStartError('')
 

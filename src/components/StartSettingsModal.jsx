@@ -19,6 +19,11 @@ export default function StartSettingsModal({
 }) {
   const panel = useRef(null)
   const isDraft = mode === 'draft'
+  // Block launch if the chosen draft format can't run with the current table (e.g. Winston
+  // needs exactly 2 players, or a format isn't built yet).
+  const selectedFormat = DRAFT_FORMATS.find(f => f.id === draftFormat)
+  const formatBlocked = isDraft && selectedFormat
+    && (!selectedFormat.available || (selectedFormat.players === '2' && playerCount !== 2))
 
   useEffect(() => {
     const onKey = e => { if (e.key === 'Escape' && !loading) onClose() }
@@ -55,7 +60,8 @@ export default function StartSettingsModal({
               <div className="space-y-2">
                 {DRAFT_FORMATS.map(f => {
                   const active = draftFormat === f.id
-                  const disabled = !f.available
+                  const needs2 = f.players === '2' && playerCount !== 2
+                  const disabled = !f.available || needs2
                   return (
                     <button key={f.id} type="button"
                       onClick={() => { if (!disabled) setDraftFormat(f.id) }}
@@ -71,7 +77,8 @@ export default function StartSettingsModal({
                         </span>
                         <span className={`text-sm font-medium ${active ? 'text-ink' : 'text-ink2'}`}>{f.name}</span>
                         <span className="text-[10px] uppercase tracking-wide text-faint border border-line rounded px-1 py-0.5">{f.players} players</span>
-                        {disabled && <span className="ml-auto text-[10px] uppercase tracking-wide text-accent2">Coming soon</span>}
+                        {!f.available && <span className="ml-auto text-[10px] uppercase tracking-wide text-accent2">Coming soon</span>}
+                        {f.available && needs2 && <span className="ml-auto text-[10px] uppercase tracking-wide text-accent2">Needs exactly 2</span>}
                       </div>
                       <p className="text-xs text-faint mt-1.5 leading-relaxed pl-6">{f.blurb}</p>
                     </button>
@@ -147,6 +154,9 @@ export default function StartSettingsModal({
             </div>
           )}
 
+          {formatBlocked && selectedFormat?.players === '2' && (
+            <p className="text-accent2 text-sm">{selectedFormat.name} needs exactly 2 players (you have {playerCount}).</p>
+          )}
           {startError && <p className="text-red-400 text-sm">{startError}</p>}
         </div>
 
@@ -156,7 +166,7 @@ export default function StartSettingsModal({
             className="px-4 py-2 rounded-lg bg-surface2 hover:bg-surface3 disabled:opacity-40 text-ink2 text-sm font-medium transition-colors">
             Cancel
           </button>
-          <button onClick={onStart} disabled={loading}
+          <button onClick={onStart} disabled={loading || formatBlocked}
             className="flex-1 py-2.5 bg-accent hover:bg-accent2 disabled:opacity-40 text-on-accent font-bold rounded-lg transition-colors">
             {loading ? 'Generating packs…' : isDraft ? 'Start draft' : 'Start sealed'}
           </button>

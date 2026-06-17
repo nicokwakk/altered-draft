@@ -396,14 +396,22 @@ seeded into pools as a fallback). All draft branches now build state through `bu
    `rochesterOrder` (snake) + the same `heroFinish` finishing hero snake. New `RotisserieGrid.jsx` (the
    pool is too big / has duplicates for `CardGrid`) — faction-filtered, deduped with ×N, click-to-draft on
    your turn. `Draft.jsx` shares turn logic with Rochester (`isSnakePick`). **Pending live test.**
-3. **Winston (NEXT — 2 players).** Face-down main pile + 3 small piles; on your turn peek pile 1 and
-   take it or decline (declining adds a face-down card to it and moves you to the next pile); decline all
-   3 → take the top of the main pile blind. **Hidden info → "honor system" here (user OK with it):** the
-   piles live in shared state, so the UI MUST only ever render the active player's peeked pile to that
-   player and keep all other piles face-down (counts only) — cheating then requires inspecting raw state,
-   not the UI. 2-player only. Currently shows as "Coming soon" in the format selector.
+3. **✅ Winston — SHIPPED (Jun 2026, 2 players).** Face-down main `deck` + 3 small `piles` (seeded 1 card
+   each). On your turn you look at the current pile and **Take** it (into your pool, then refill from the
+   deck) or **Pass** (adds a face-down card to it and moves you to the next pile); pass all 3 and you draw
+   the top of the deck blind. `src/lib/winstonLogic.js`: `phase: 'winston'` with `{ deck, piles, turn,
+   peekIndex }`; `applyWinstonAction(state, seat, 'take'|'decline')`, plus the same `heroFinish` finishing
+   hero snake. Termination is guaranteed (when the deck empties, Pass walks to the next non-empty pile and
+   the last pile must be taken). **Honor system enforced in the UI:** `WinstonBoard.jsx` reveals pile
+   contents ONLY to the active player and ONLY for `piles[peekIndex]`; every other pile (and all piles, to
+   the waiting player) renders face-down as a count. 2-player only — the format is disabled in the selector
+   and `handleStart` guards unless exactly 2 players. `Draft.jsx` uses a separate `doWinstonAction` (same
+   optimistic-concurrency commit as picks, but the move is an action not a card ref). **Pending live test.**
 - (Grid draft — also open-info, the other canonical 2-player format — considered but not prioritized;
   revisit if 2-player demand shows up.)
+
+All three alternate formats (Rochester, Rotisserie, Winston) are now built. Next: **the user reviews all
+the new modes over the coming days**, then we explore the Re:Union plugin feasibility (see Now #1).
 
 ## Other candidate / backlog (ideas from other drafting sites)
 - **Draft log & replay** — record each seat's picks *and* passes; review after the draft.
