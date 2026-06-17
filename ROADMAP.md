@@ -219,9 +219,10 @@ Backlog captured after the user tried the deployed app; the batch was built the 
 - **✅ Free hero choice (all heroes available).** A single **Heroes** control in the lobby (radio:
   **In packs** | **Free choice**, replacing the two overlapping checkboxes) drives `heroMode` →
   `includeHeroes`/`config.freeHero`. Free choice keeps heroes out of all packs/boosters (every mode,
-  draft + sealed); the player picks any hero from the full roster at deckbuild via `HeroPicker`
-  (Results + Sealed Deck tab). `packHeroes = includeHeroes && !freeHero` gates pack generation; cube
-  hero-draft / sealed slot-0 / custom-cube hero folding are all skipped when on.
+  draft + sealed). `packHeroes = includeHeroes && !freeHero` gates pack generation; cube hero-draft /
+  sealed slot-0 / custom-cube hero folding are all skipped when on. **NOTE: the original `HeroPicker`
+  deckbuild UI was REPLACED (17 Jun 2026) by pool-seeding** — see "Cube booster fixes" below; the
+  picker component is deleted.
 - **✅ Cube of the Month spotlight — live with "All Commons".** `SPOTLIGHT` in `cubes.js` points at
   the `all-commons` cube (192 commons, exactly 32 per faction, 12 heroes snake-drafted); banner atop
   the Cubes tab features it. Swap `SPOTLIGHT.cubeId`/`blurb` to rotate next month. Hero names were
