@@ -233,6 +233,14 @@ Backlog captured after the user tried the deployed app; the batch was built the 
   "Sofia, First Outpost" (`ALT_BISE_P_BR_64_C`), the 32nd Bravos common in All Commons.
 - **✅ Export/Save menu harmonized.** Parallel verb-noun labels (Copy/Save your pulls · your deck)
   with a count on every row.
+- **✅ Cube booster fixes (17 Jun 2026).** Three issues from live cube play: (1) **full-size
+  boosters** — `generateOnePack` backfilled nothing when a cube had no rares/uniques (e.g. All
+  Commons), giving 9-card boosters; it now backfills empty rare slots with unused commons → 12 body
+  cards (+ hero = 13). (2) **Free-hero = pool seeding, not a picker** — removed the `HeroPicker`
+  deckbuild UI; "Free choice" now seeds every player's pool with one copy of each *available* hero
+  (the cube's hero list, or the played sets' heroes — not the whole roster), picked like any card.
+  `handleStart` computes `config.freeHeroPool` per mode; Results/Sealed merge it into the pool + load
+  its data. (3) **Naming** — unified "pulls" → "pool" (Copy/Save your pool; Results tab "Full Pool").
 - **◑ Graphic polish — first pass done.** Light-mode page background deepened so panels separate;
   more look-and-feel work (card grids, spacing, iconography) can continue once eyeballed.
 - **✅ Menu improvements — Help + Feedback live.** `TopNav` has a Help modal (`HelpModal`) and a
