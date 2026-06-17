@@ -2,7 +2,10 @@ import { useState, useRef, useEffect } from 'react'
 import { useAuth } from '../auth/AuthProvider.jsx'
 import { createDeck, toDeckCards } from '../lib/decks.js'
 
-const DECKBUILDER = 'https://deckbuilder.alteredcore.org/decks'
+// Per-deck view on the Re:Union main site (altered.re). Same deck id our save returns;
+// friendlier than the alteredcore deckbuilder deep link (handles its own login instead
+// of throwing a raw 401 when you're not signed in on that origin).
+const deckUrl = id => `https://altered.re/pages/deck?id=${encodeURIComponent(id)}`
 
 // DDMM for saved-deck names (e.g. 1706).
 function ddmm() {
@@ -97,13 +100,13 @@ export default function ExportMenu({ poolRefs, deckRefs, poolDecklist, deckDeckl
             <>
               <button className={`${item} hover:bg-surface2 text-ink`} onClick={() => save('pool')} disabled={saving === 'pool' || !poolRefs?.length}>
                 <span>{saving === 'pool' ? 'Saving…' : 'Save your pool'}</span>
-                {saved.pool ? <a href={`${DECKBUILDER}/${saved.pool}`} target="_blank" rel="noopener noreferrer" className="text-xs text-green-400 hover:underline" onClick={e => e.stopPropagation()}>open ↗</a>
+                {saved.pool ? <a href={deckUrl(saved.pool)} target="_blank" rel="noopener noreferrer" className="text-xs text-green-400 hover:underline" onClick={e => e.stopPropagation()}>open ↗</a>
                   : saved.poolErr ? <span className="text-xs text-red-400" title={saved.poolErr}>failed</span>
                   : <span className="text-xs text-faint">{poolRefs?.length ?? 0}</span>}
               </button>
               <button className={`${item} hover:bg-surface2 text-ink`} onClick={() => save('deck')} disabled={saving === 'deck' || !hasDeck}>
                 <span>{saving === 'deck' ? 'Saving…' : 'Save your deck'}</span>
-                {saved.deck ? <a href={`${DECKBUILDER}/${saved.deck}`} target="_blank" rel="noopener noreferrer" className="text-xs text-green-400 hover:underline" onClick={e => e.stopPropagation()}>open ↗</a>
+                {saved.deck ? <a href={deckUrl(saved.deck)} target="_blank" rel="noopener noreferrer" className="text-xs text-green-400 hover:underline" onClick={e => e.stopPropagation()}>open ↗</a>
                   : saved.deckErr ? <span className="text-xs text-red-400" title={saved.deckErr}>failed</span>
                   : <span className="text-xs text-faint">{deckRefs?.length ?? 0}</span>}
               </button>
