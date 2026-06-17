@@ -193,9 +193,10 @@ Backlog captured after the user tried the deployed app; the batch was built the 
   roster at deckbuild via `HeroPicker` (Results + Sealed Deck tab). `packHeroes = includeHeroes &&
   !freeHero` gates pack generation; cube hero-draft / sealed slot-0 / custom-cube hero folding are
   all skipped when on.
-- **◑ Cube of the Month spotlight — slot BUILT, content pending.** `SPOTLIGHT` in `cubes.js` +
-  a banner atop the Cubes tab (features a cube when `cubeId` is set, else a "coming soon" teaser).
-  **Remaining: supply the first month's cube** (user chose "build slot, fill later").
+- **✅ Cube of the Month spotlight — live with "All Commons".** `SPOTLIGHT` in `cubes.js` points at
+  the new `all-commons` cube (191 commons, all 6 factions, 12 heroes snake-drafted); banner atop the
+  Cubes tab features it. Swap `SPOTLIGHT.cubeId`/`blurb` to rotate next month. (BR is 31 vs 32 others —
+  `ALT_COREKS_B_BR_03_C` was actually Basira, a hero, so it was dropped from the commons.)
 - **◑ Graphic polish — first pass done.** Light-mode page background deepened so panels separate;
   more look-and-feel work (card grids, spacing, iconography) can continue once eyeballed.
 - **◑ Menu improvements — Help + Feedback added.** `TopNav` now has a Help modal (`HelpModal`) and
