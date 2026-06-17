@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase.js'
-import { fetchSet, SETS, apiSetCode, fetchUniques, isUniqueRef } from '../lib/cardData.js'
+import { fetchSet, SETS, apiSetCode, fetchUniques, isUniqueRef, needsCardApi } from '../lib/cardData.js'
 import { SET_ASSETS } from '../lib/assets.js'
 import { COMMUNITY_CUBES, setsForCube, SPOTLIGHT } from '../lib/cubes.js'
 import CubePreviewModal from '../components/CubePreviewModal.jsx'
@@ -238,27 +238,22 @@ export default function Lobby() {
           const results = await Promise.all(rawCodes.map(s => fetchSet(s, lang).catch(() => [])))
           const apiCodes = [...new Set(rawCodes.map(apiSetCode))]
           const byRef = new Map(results.flat().map(c => [c.reference, c]))
+          // Refs fetchSet doesn't stock (uniques + promo/alt-art prints like
+          // "Sofia, First Outpost") are fetched from the cards API by reference.
+          const extraCards = await fetchUniques(cube.refs.filter(needsCardApi), lang)
+          for (const c of extraCards) byRef.set(c.reference, c)
+          const allCards = cube.refs.map(r => byRef.get(r)).filter(Boolean)
+          if (!allCards.length) { setStartError('Could not load cube card data.'); setLoading(false); return }
           // Hero-draft cubes keep heroes in a separate pool (not in refs). Sealed has no
           // hero-draft phase, so deal one hero into each booster's first slot instead.
           const heroRefs = (cube.heroDraft && !freeHero) ? [...new Set(cube.heroes ?? [])].filter(r => byRef.has(r)) : []
           const sealedPacks = {}
-          if (cube.booster) {
-            // Recipe cube (e.g. LuigiNico's): SAME fixed booster as draft. Use the
-            // multiset pool incl. uniques (which aren't in set data — fetch them).
-            const uniqueCards = await fetchUniques(cube.refs.filter(isUniqueRef), lang)
-            for (const c of uniqueCards) byRef.set(c.reference, c)
-            const allCards = cube.refs.map(r => byRef.get(r)).filter(Boolean)
-            if (!allCards.length) { setStartError('Could not load cube card data.'); setLoading(false); return }
-            for (let i = 0; i < playerCount; i++) {
-              sealedPacks[String(i)] = dealHeroSlots(generateCubeRecipePacks(allCards, SEALED_PACKS, cube.booster), heroRefs)
-            }
-          } else {
-            const cubeRefSet = new Set(cube.refs)
-            const allCards = results.flat().filter(c => cubeRefSet.has(c.reference))
-            if (!allCards.length) { setStartError('Could not load cube card data.'); setLoading(false); return }
-            for (let i = 0; i < playerCount; i++) {
-              sealedPacks[String(i)] = dealHeroSlots(generateAllPacks(allCards, 1, SEALED_PACKS, { includeHeroes: packHeroes }), heroRefs)
-            }
+          for (let i = 0; i < playerCount; i++) {
+            sealedPacks[String(i)] = dealHeroSlots(
+              cube.booster
+                ? generateCubeRecipePacks(allCards, SEALED_PACKS, cube.booster)
+                : generateAllPacks(allCards, 1, SEALED_PACKS, { includeHeroes: packHeroes }),
+              heroRefs)
           }
           const state = {
             config: { sets: apiCodes, playerCount, lang, freeHero, includeHeroes, cubeId: cube.id, mode: 'sealed' },
@@ -349,8 +344,8 @@ export default function Lobby() {
           // deal equal packs. Heroes are not in these packs — they're drafted in-app
           // from the shared hero pool (see heroPool below).
           const byRef = new Map(results.flat().map(c => [c.reference, c]))
-          // Uniques aren't in set data — fetch them from the Altered API and merge.
-          const uniqueCards = await fetchUniques(cube.refs.filter(isUniqueRef), lang)
+          // Uniques + promo/alt-art prints aren't in set data — fetch them and merge.
+          const uniqueCards = await fetchUniques(cube.refs.filter(needsCardApi), lang)
           for (const c of uniqueCards) byRef.set(c.reference, c)
           const allCards = cube.refs.map(r => byRef.get(r)).filter(Boolean)
           if (!allCards.length) { setStartError('Could not load cube card data.'); setLoading(false); return }

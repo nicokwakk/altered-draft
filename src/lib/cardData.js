@@ -33,6 +33,16 @@ export function isUniqueRef(ref) {
   return /_U_\d+$/.test(ref ?? '')
 }
 
+// Refs that `fetchSet` doesn't stock, so they must be pulled from the cards API by
+// reference: uniques (`_U_`) plus non-booster printings — promo (`_P_`), alt-art
+// (`_A_`), or promo/OP set codes — which can be a promo-ONLY card with no standard
+// booster (`_B_`) equivalent (e.g. "Sofia, First Outpost" = ALT_BISE_P_BR_64_C).
+export function needsCardApi(ref) {
+  if (isUniqueRef(ref)) return true
+  const parts = (ref ?? '').split('_')
+  return parts[0] === 'ALT' && parts.length >= 3 && parts[2] !== 'B'
+}
+
 // Cube refs may list non-standard printings — alternate-art (`_A_`), promo (`_P_`),
 // or promo / organized-play set codes like `DUSTEROP` (= DUSTER OP). These are the SAME
 // gameplay card as the standard booster (`B`) printing, but `fetchSet` only stocks `B`

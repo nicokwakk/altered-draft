@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase.js'
-import { fetchSet, apiSetCode, fetchUniques, isUniqueRef } from '../lib/cardData.js'
+import { fetchSet, apiSetCode, fetchUniques, isUniqueRef, needsCardApi } from '../lib/cardData.js'
 import { applyPick, applyHeroPick } from '../lib/draftLogic.js'
 import CardGrid from '../components/CardGrid.jsx'
 import DraftSidebar from '../components/DraftSidebar.jsx'
@@ -100,7 +100,7 @@ export default function Draft() {
           const cc = state.config.customCube
           const cubeRefs = cube?.refs ?? (cc ? [...(cc.cards ?? []), ...(cc.heroes ?? [])] : null)
           if (cubeRefs) {
-            const uCards = await fetchUniques(cubeRefs.filter(isUniqueRef), state.config.lang || 'EN')
+            const uCards = await fetchUniques(cubeRefs.filter(needsCardApi), state.config.lang || 'EN')
             for (const c of uCards) maps[c.reference] = c
           }
           setCardMap(maps)

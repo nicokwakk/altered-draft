@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase.js'
-import { fetchSet, apiSetCode, SET_ABBREV, SET_FULL_NAMES, fetchUniques, isUniqueRef } from '../lib/cardData.js'
+import { fetchSet, apiSetCode, SET_ABBREV, SET_FULL_NAMES, fetchUniques, isUniqueRef, needsCardApi } from '../lib/cardData.js'
 import { COMMUNITY_CUBES } from '../lib/cubes.js'
 import { SET_ICONS, setCodeFromRef } from '../lib/assets.js'
 import { buildDecklist } from '../lib/exportFormat.js'
@@ -47,7 +47,7 @@ export default function Sealed() {
         const cc = data.state.config.customCube
         const cubeRefs = cube?.refs ?? (cc ? [...(cc.cards ?? []), ...(cc.heroes ?? [])] : null)
         if (cubeRefs) {
-          const uCards = await fetchUniques(cubeRefs.filter(isUniqueRef), data.state.config.lang || 'EN')
+          const uCards = await fetchUniques(cubeRefs.filter(needsCardApi), data.state.config.lang || 'EN')
           for (const c of uCards) maps[c.reference] = c
         }
         setCardMap(maps)

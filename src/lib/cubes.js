@@ -8,8 +8,8 @@ export const COMMUNITY_CUBES = [
     id: 'all-commons',
     name: 'All Commons',
     author: 'nicokwakk',
-    description: 'A level playing field: 191 commons spanning all six factions (no rares, no uniques). 12 heroes — 2 per faction — are snake-drafted in-app from a shared pool. Great for learning fundamentals or a pure, even draft.',
-    cardCount: 191,
+    description: 'A level playing field: 192 commons, exactly 32 per faction (no rares, no uniques). 12 heroes — 2 per faction — are snake-drafted in-app from a shared pool. Great for learning fundamentals or a pure, even draft.',
+    cardCount: 192,
     heroDraft: true,
     maxPlayers: 6,
     heroes: [
@@ -50,6 +50,7 @@ export const COMMUNITY_CUBES = [
       'ALT_DUSTER_B_OR_100_C','ALT_DUSTER_B_LY_102_C','ALT_BISE_B_AX_63_C','ALT_CYCLONE_B_BR_81_C','ALT_CYCLONE_B_AX_77_C','ALT_CYCLONE_B_AX_82_C',
       'ALT_BISE_B_YZ_62_C','ALT_CYCLONE_B_BR_82_C','ALT_CYCLONE_B_AX_78_C','ALT_ALIZE_B_YZ_45_C','ALT_DUSTER_B_MU_102_C','ALT_DUSTER_B_LY_101_C',
       'ALT_ALIZE_B_OR_45_C','ALT_ALIZE_B_MU_44_C','ALT_ALIZE_B_LY_43_C','ALT_BISE_B_AX_62_C','ALT_ALIZE_B_LY_44_C',
+      'ALT_BISE_P_BR_64_C',
     ],
   },
   {

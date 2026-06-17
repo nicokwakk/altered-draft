@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from 'react'
 import { createPortal } from 'react-dom'
-import { FACTIONS, FACTION_NAMES, FACTION_COLORS, SET_ABBREV, SET_FULL_NAMES, SET_ABBREV_ICON_CODE, fetchSet, apiSetCode, fetchUniques, isUniqueRef } from '../lib/cardData.js'
+import { FACTIONS, FACTION_NAMES, FACTION_COLORS, SET_ABBREV, SET_FULL_NAMES, SET_ABBREV_ICON_CODE, fetchSet, apiSetCode, fetchUniques, isUniqueRef, needsCardApi } from '../lib/cardData.js'
 import { FACTION_ICONS, RARITY_GEMS, SET_ICONS } from '../lib/assets.js'
 import { setsForCube } from '../lib/cubes.js'
 
@@ -44,7 +44,7 @@ export default function CubePreviewModal({ cube, onClose }) {
         for (const cards of results) {
           for (const c of cards) map[c.reference] = c
         }
-        const uCards = await fetchUniques(cube.refs.filter(isUniqueRef), 'EN')
+        const uCards = await fetchUniques(cube.refs.filter(needsCardApi), 'EN')
         for (const c of uCards) map[c.reference] = c
         setCardMap(map)
         setLoadingCards(false)
