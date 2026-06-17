@@ -6,6 +6,7 @@ import { COMMUNITY_CUBES } from '../lib/cubes.js'
 import { SET_ICONS, setCodeFromRef } from '../lib/assets.js'
 import { buildDecklist } from '../lib/exportFormat.js'
 import ExportMenu from '../components/ExportMenu.jsx'
+import ReunionButton from '../components/ReunionButton.jsx'
 import ThemeToggle from '../components/ThemeToggle.jsx'
 import HeroPicker from '../components/HeroPicker.jsx'
 import DraftStats from '../components/DraftStats.jsx'
@@ -144,6 +145,7 @@ export default function Sealed() {
         <span className="font-mono text-accent font-bold text-sm">{code}</span>
         <span className="text-muted text-sm">Sealed</span>
         <div className="ml-auto flex gap-2 items-center">
+          <ReunionButton />
           <ExportMenu poolRefs={allRefs} deckRefs={deckRefs}
             poolDecklist={allDecklist} deckDecklist={deckDecklist} name={code} format="Sealed" />
           <ThemeToggle />
