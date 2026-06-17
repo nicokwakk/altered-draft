@@ -28,7 +28,7 @@ export default function ExportButton({ decklist, small }) {
   }
 
   const label = state === 'copied' ? '✓ Copied!'
-    : state === 'error' ? 'Copy failed — select text manually'
+    : state === 'error' ? 'Copy failed. Select text manually'
     : 'Copy decklist for altered.re'
 
   return (

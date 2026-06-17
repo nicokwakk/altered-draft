@@ -220,7 +220,7 @@ export default function Sealed() {
             {isValid && <span className="text-green-400 font-semibold ml-auto">Deck is valid ✓</span>}
           </div>
           {deckTotal === 0
-            ? <div className="flex-1 flex items-center justify-center text-faint text-sm">No cards in deck yet — use + on cards to add them.</div>
+            ? <div className="flex-1 flex items-center justify-center text-faint text-sm">No cards in deck yet. Use + on cards to add them.</div>
             : <div className="flex-1 overflow-y-auto" style={{ scrollbarGutter: 'stable' }}><DeckList deck={deck} cardMap={cardMap} onRemove={removeFromDeck} onAdd={addToDeck} poolCounts={poolCounts} /></div>}
         </div>
       )}

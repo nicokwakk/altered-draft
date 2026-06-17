@@ -174,7 +174,7 @@ export default function Lobby() {
       // and splits heroes — shared with the load-from-Re:Union-decks flow below.
       const { cards, heroes, unresolved } = await resolveCubeRefs(refs, lang)
       if (!cards.length) {
-        setParseMsg('No draftable (non-hero) cards resolved — check your references.')
+        setParseMsg('No draftable (non-hero) cards resolved. Check your references.')
         setParsingCube(false); return
       }
       setCustomCube({ name: customCubeName.trim() || 'Custom cube', cards, heroes, unresolved, source: 'paste' })
@@ -359,7 +359,7 @@ export default function Lobby() {
         const cardPool = cardRefs.map(r => byRef.get(r)).filter(Boolean)
         const totalPacks = playerCount * 4
         if (cardPool.length < totalPacks) {
-          setStartError(`This cube is too small for ${playerCount} players — needs at least ${totalPacks} non-hero cards (has ${cardPool.length}).`)
+          setStartError(`This cube is too small for ${playerCount} players. Needs at least ${totalPacks} non-hero cards (has ${cardPool.length}).`)
           setLoading(false); return
         }
         const packs = generateCubeDraftPacks(cardPool, totalPacks)
@@ -469,8 +469,8 @@ export default function Lobby() {
         const target = equalPacks ? 4 : playerCount * 4
         if (total !== target) {
           setStartError(equalPacks
-            ? `Each player drafts exactly 4 packs — you have ${total}.`
-            : `The bag needs exactly ${target} boosters (${playerCount} players × 4) — you have ${total}.`)
+            ? `Each player drafts exactly 4 packs. You have ${total}.`
+            : `The bag needs exactly ${target} boosters (${playerCount} players × 4). You have ${total}.`)
           setLoading(false); return
         }
         const fetched = await Promise.all(setCodes.map(async s => [s, await fetchSet(s, lang).catch(() => [])]))
@@ -617,7 +617,7 @@ export default function Lobby() {
               {configTab === 'presets' && (
                 <div>
                   <p className="text-sm text-muted mb-3">
-                    Select a set — each player receives 4 packs of that set.
+                    Select a set. Each player receives {draftMode === 'sealed' ? 7 : 4} packs of that set.
                   </p>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     {SETS.filter(s => !s.hidden).map(set => {
@@ -683,12 +683,12 @@ export default function Lobby() {
                             </div>
                           </div>
                         ) : (
-                          <p className="text-sm text-muted">A featured community cube, refreshed each month — coming soon. 👀</p>
+                          <p className="text-sm text-muted">A featured community cube, refreshed each month. Coming soon. 👀</p>
                         )}
                       </div>
                     )
                   })()}
-                  <p className="text-sm text-muted">Community cubes — curated card pools ready to draft.</p>
+                  <p className="text-sm text-muted">Community cubes: curated card pools ready to draft.</p>
                   {COMMUNITY_CUBES.map(cube => {
                     const selected = selectedCube === cube.id
                     return (
@@ -794,14 +794,14 @@ export default function Lobby() {
                                   <button onClick={() => setSelectedDeckIds([])} className="text-xs text-faint hover:text-ink2 transition-colors">Clear selection</button>
                                 )}
                               </div>
-                              <p className="text-[11px] text-faint">Tick one or more decks — multiple decks merge into a single, bigger cube.</p>
+                              <p className="text-[11px] text-faint">Tick one or more decks. Multiple decks merge into a single, bigger cube.</p>
                             </div>
                           )
                         })()}
                         {customCube?.source === 'reunion' && (
                           <div className="text-xs space-y-1.5">
                             <p className="text-green-400">
-                              ✓ Loaded “{customCube.name}” — {customCube.cards.length} card{customCube.cards.length !== 1 ? 's' : ''}
+                              ✓ Loaded “{customCube.name}”: {customCube.cards.length} card{customCube.cards.length !== 1 ? 's' : ''}
                               {customCube.heroes.length > 0 && ` · ${customCube.heroes.length} hero${customCube.heroes.length !== 1 ? 'es' : ''}`}
                               {customCube.unresolved.length > 0 && ` (${customCube.unresolved.length} unresolved, skipped)`}.
                             </p>
@@ -828,7 +828,7 @@ export default function Lobby() {
                     </div>
                     <p className="text-xs text-faint leading-relaxed">
                       One card per line as <span className="font-mono text-muted">qty REF</span> (e.g.{' '}
-                      <span className="font-mono text-muted">3 ALT_CORE_B_MU_06_R2</span>) — the same format as Export.
+                      <span className="font-mono text-muted">3 ALT_CORE_B_MU_06_R2</span>), the same format as Export.
                       Heroes in the list are detected automatically and snake-drafted in-app. Nothing is saved; keep your own list.
                     </p>
                     <input value={customCubeName} onChange={e => setCustomCubeName(e.target.value)}

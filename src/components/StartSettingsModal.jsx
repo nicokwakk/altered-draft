@@ -28,9 +28,9 @@ export default function StartSettingsModal({
 
   // 'Draft' heroes only applies to a draft (no pick phase in sealed).
   const heroOptions = [
-    { v: 'packs', label: 'In packs', desc: 'Hero cards appear in boosters — draft or open them.' },
-    { v: 'free', label: 'Free choice', desc: 'Every available hero is added to your pool — pick one at deckbuild. None appear in packs.' },
-    ...(isDraft ? [{ v: 'draft', label: 'Draft', desc: 'Heroes are snake-drafted in-app — take turns picking from a shared hero pool. (Needs at least as many heroes as players, else they’re added to your pool instead.)' }] : []),
+    { v: 'packs', label: 'In packs', desc: 'Hero cards appear in boosters. Draft or open them.' },
+    { v: 'free', label: 'Free choice', desc: 'Every available hero is added to your pool. Pick one at deckbuild; none appear in packs.' },
+    ...(isDraft ? [{ v: 'draft', label: 'Draft', desc: 'Heroes are snake-drafted in-app: take turns picking from a shared hero pool. (Needs at least as many heroes as players, else they’re added to your pool instead.)' }] : []),
   ]
 
   return (

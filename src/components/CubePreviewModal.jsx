@@ -113,7 +113,7 @@ export default function CubePreviewModal({ cube, onClose }) {
         .map(([key, cards]) => {
           const iconCode = SET_ABBREV_ICON_CODE[key]
           return {
-            key, label: `${key} — ${SET_FULL_NAMES[key] ?? key}`,
+            key, label: `${key} · ${SET_FULL_NAMES[key] ?? key}`,
             icon: iconCode ? SET_ICONS[iconCode] : null,
             colorCls: 'text-ink2 bg-surface2 border-line',
             cards: sortedByRarity(cards),

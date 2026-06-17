@@ -6,7 +6,7 @@ import { getAccessToken } from './reunion.js'
 
 async function authHeaders() {
   const token = await getAccessToken()
-  if (!token) throw new Error('Not signed in to Re:Union — reconnect your account.')
+  if (!token) throw new Error('Not signed in to Re:Union. Reconnect your account.')
   return { Authorization: `Bearer ${token}`, Accept: 'application/json' }
 }
 
@@ -14,7 +14,7 @@ async function authHeaders() {
 // revoked — surface a reconnect hint rather than a bare status code.
 function authError(status) {
   return status === 401 || status === 403
-    ? 'Your Re:Union session expired — reconnect and try again.'
+    ? 'Your Re:Union session expired. Reconnect and try again.'
     : null
 }
 
@@ -44,7 +44,7 @@ export async function getDeck(id) {
 // permissive `sandbox` format (valid enum: standard|nuc|singleton|singleton_nuc|sandbox)
 // so drafted/opened cards aren't rejected for collection/legality.
 export async function createDeck({ name, deckCards, isDraft = false, format = 'sandbox' }) {
-  if (!deckCards?.length) throw new Error('Nothing to save — the card list is empty.')
+  if (!deckCards?.length) throw new Error('Nothing to save. The card list is empty.')
   const res = await fetch('/api/decks', {
     method: 'POST',
     headers: { ...(await authHeaders()), 'Content-Type': 'application/json' },

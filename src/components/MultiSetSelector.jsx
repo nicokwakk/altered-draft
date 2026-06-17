@@ -33,8 +33,8 @@ export default function MultiSetSelector({ mix, onChange, equalPacks, onEqualCha
           <span className="block text-sm text-ink font-medium">All players receive the same packs</span>
           <span className="block text-xs text-faint mt-0.5">
             {equalPacks
-              ? 'Every player drafts the same single-set boosters — one set per round.'
-              : 'Build the whole booster bag — all boosters are shuffled and dealt at random.'}
+              ? 'Every player drafts the same single-set boosters, one set per round.'
+              : 'Build the whole booster bag; all boosters are shuffled and dealt at random.'}
           </span>
         </span>
       </label>
@@ -90,8 +90,8 @@ export default function MultiSetSelector({ mix, onChange, equalPacks, onEqualCha
         {!reached && (
           <p className={`text-xs mt-3 ${total > target ? 'text-red-400' : 'text-faint'}`}>
             {total > target
-              ? `Remove ${total - target} ${total - target === 1 ? 'pack' : 'packs'} — the total must equal ${target}.`
-              : `Add ${target - total} more ${target - total === 1 ? 'pack' : 'packs'} — the total must equal ${target}.`}
+              ? `Remove ${total - target} ${total - target === 1 ? 'pack' : 'packs'}; the total must equal ${target}.`
+              : `Add ${target - total} more ${target - total === 1 ? 'pack' : 'packs'}; the total must equal ${target}.`}
           </p>
         )}
       </div>

@@ -337,17 +337,17 @@ export default function Draft() {
           </div>
           {isHeroPhase && (
             <p className="mb-3 text-sm text-muted">
-              Between packs, each player snake-drafts one hero from the shared pool — {heroTarget} in total.
+              Between packs, each player snake-drafts one hero from the shared pool, {heroTarget} in total.
             </p>
           )}
           {isRochester && (
             <p className="mb-3 text-sm text-muted">
-              Rochester — one shared pack, face-up. Players take turns in snake order; pick when it’s your turn.
+              Rochester: one shared pack, face-up. Players take turns in snake order; pick when it’s your turn.
             </p>
           )}
           {isRotisserie && (
             <p className="mb-3 text-sm text-muted">
-              Rotisserie — the whole pool is face-up. Players take turns drafting any one card in snake order until each has {roomState.target}.
+              Rotisserie: the whole pool is face-up. Players take turns drafting any one card in snake order until each has {roomState.target}.
             </p>
           )}
           {isHeroPhase && myHeroPicks.length > 0 && <MyHeroes heroes={myHeroPicks} cardMap={cardMap} label="Heroes you've taken" />}

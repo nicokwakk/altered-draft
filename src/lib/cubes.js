@@ -8,7 +8,7 @@ export const COMMUNITY_CUBES = [
     id: 'all-commons',
     name: 'All Commons',
     author: 'nicokwakk',
-    description: 'A level playing field: 192 commons, exactly 32 per faction (no rares, no uniques). 12 heroes — 2 per faction — are snake-drafted in-app from a shared pool. Great for learning fundamentals or a pure, even draft.',
+    description: 'A level playing field: 192 commons, exactly 32 per faction (no rares, no uniques). 12 heroes (2 per faction) are snake-drafted in-app from a shared pool. Great for learning fundamentals or a pure, even draft.',
     cardCount: 192,
     heroDraft: true,
     maxPlayers: 6,
@@ -57,7 +57,7 @@ export const COMMUNITY_CUBES = [
     id: 'all-sets',
     name: 'All Sets Cube',
     author: 'nicokwakk',
-    description: 'A curated 2-6 player cube spanning all sets, focused on Lyra, Muna, Ordis, Yzmir, Bravos and Axiom synergies. Heroes are snake-drafted in-app from a shared pool of all 12 — one per player after each pack, until everyone has 3 (2 at 5-6 players).',
+    description: 'A curated 2-6 player cube spanning all sets, focused on Lyra, Muna, Ordis, Yzmir, Bravos and Axiom synergies. Heroes are snake-drafted in-app from a shared pool of all 12: one per player after each pack, until everyone has 3 (2 at 5-6 players).',
     cardCount: 324,
     heroDraft: true,
     maxPlayers: 6,
@@ -126,7 +126,7 @@ export const COMMUNITY_CUBES = [
     id: 'luiginico-cube-v2',
     name: "LuigiNico's Cube",
     author: 'LuigiNico',
-    description: 'A 2-4 player cube spanning sets 1-5 — Axiom / Bravos / Lyra / Muna only, with out-of-faction tech. Its 192 cards (27 commons, 141 rares, 24 uniques) make exactly 4 packs per player at a full table of 4. Heroes are snake-drafted in-app from a shared pool of all 12: one hero per player after each pack, until everyone has 3.',
+    description: 'A 2-4 player cube spanning sets 1-5: Axiom / Bravos / Lyra / Muna only, with out-of-faction tech. Its 192 cards (27 commons, 141 rares, 24 uniques) make exactly 4 packs per player at a full table of 4. Heroes are snake-drafted in-app from a shared pool of all 12: one hero per player after each pack, until everyone has 3.',
     cardCount: 192,
     heroDraft: true,
     maxPlayers: 4,
@@ -194,5 +194,5 @@ export function setsForCube(refs) {
 export const SPOTLIGHT = {
   cubeId: 'all-commons',
   title: 'Cube of the Month',
-  blurb: 'This month: All Commons — a pure, even draft with every faction on equal footing. No rares, no uniques, just fundamentals.',
+  blurb: 'This month: All Commons. A pure, even draft with every faction on equal footing. No rares, no uniques, just fundamentals.',
 }

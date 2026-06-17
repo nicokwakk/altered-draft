@@ -164,7 +164,7 @@ export default function Results() {
             {isValid && <span className="text-green-400 font-semibold ml-auto">Deck is valid ✓</span>}
           </div>
           {deckTotal === 0
-            ? <div className="flex-1 flex items-center justify-center text-faint text-sm">No cards in deck yet — add them from the Full Pool tab.</div>
+            ? <div className="flex-1 flex items-center justify-center text-faint text-sm">No cards in deck yet. Add them from the Full Pool tab.</div>
             : <div className="flex-1 overflow-y-auto" style={{ scrollbarGutter: 'stable' }}><DeckList deck={deck} cardMap={cardMap} onRemove={removeFromDeck} onAdd={addToDeck} poolCounts={poolCounts} /></div>}
         </div>
       )}

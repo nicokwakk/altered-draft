@@ -4,7 +4,7 @@ import { createPortal } from 'react-dom'
 export default function HelpModal({ onClose }) {
   const Section = ({ title, children }) => (
     <div>
-      <h3 className="font-display text-base text-accent mb-1">{title}</h3>
+      <h3 className="font-display text-base font-semibold text-ink mb-1">{title}</h3>
       <p className="text-sm text-ink2 leading-relaxed">{children}</p>
     </div>
   )
@@ -22,7 +22,7 @@ export default function HelpModal({ onClose }) {
             from each passing booster, then build a deck from everything you drafted.
           </Section>
           <Section title="Sealed">
-            Open a set of boosters — solo or with friends — and build the best deck you can from your pool.
+            Open a set of boosters, solo or with friends, and build the best deck you can from your pool.
             No passing; it's all yours.
           </Section>
           <Section title="Cubes">

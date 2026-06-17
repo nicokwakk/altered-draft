@@ -82,7 +82,7 @@ export default function DraftSidebar({ pickedRefs, cardMap, round, code }) {
             })}
 
             {total === 0 && (
-              <p className="text-xs text-faint italic">No picks yet — click a card to draft it.</p>
+              <p className="text-xs text-faint italic">No picks yet. Click a card to draft it.</p>
             )}
           </div>
         ) : (

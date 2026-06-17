@@ -15,14 +15,14 @@ export const DRAFT_FORMATS = [
     name: 'Rochester',
     players: '2+',
     available: true,
-    blurb: 'One pack is laid out face-up for the whole table. Players take turns picking from it in snake order until it’s empty, then the next pack opens. Everyone sees every pick — slower but very tactical.',
+    blurb: 'One pack is laid out face-up for the whole table. Players take turns picking from it in snake order until it’s empty, then the next pack opens. Everyone sees every pick. Slower but very tactical.',
   },
   {
     id: 'rotisserie',
     name: 'Rotisserie',
     players: '2+',
     available: true,
-    blurb: 'No packs — the entire pool is face-up. Players take turns drafting any single card (snake order) until pools are full. Maximum control, longer games.',
+    blurb: 'No packs: the entire pool is face-up. Players take turns drafting any single card (snake order) until pools are full. Maximum control, longer games.',
   },
   {
     id: 'winston',

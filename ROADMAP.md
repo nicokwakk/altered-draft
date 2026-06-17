@@ -57,9 +57,15 @@ _Hardening fast-follow: move the refresh token to an httpOnly cookie._ ✅ done.
 
 **Re:Union site plugin integration (NEW thread, Jun 2026).** noobiwow [ALTR] reached out: Re:Union has a
 **plugin system** to add community tools directly onto the Re:Union site, and invited the project into the
-`software-dev-website` channel to discuss with their web dev team. **Status: intro + project updates posted
-to Discord (dev channel + cube channel), Jun 2026** — awaiting the dev team on how the plugin system works
-and what's needed from our side. This is the likely next concrete integration step.
+`software-dev-website` channel to discuss with their web dev team. **Plugin docs received (Jun 2026):**
+- How-to / API: **`https://altered.re/plugins/README.html`** (also in the repo below).
+- Repo + example plugins: **`github.com/Altered-Community/alteredcore-website/tree/dev/plugins`**.
+- Devs' advice (Darigaaz, Shnk, Haalford [ALTR]): read the doc first to learn what's possible, then feed
+  the doc + the example plugins to Claude Code to get going. **Likely can't embed this app directly** (no
+  iframe / as-is drop-in); we may have to **re-implement** the features we want to port as a native plugin.
+  Shnk offered to guide the first steps (DM).
+**Status:** intro + project updates posted to Discord; docs now in hand. **Next concrete step:** read the
+plugin doc and scope which features port first (draft/sealed engine vs. just the cube/deck tooling).
 
 **Auth setup (provided by the Re:Union dev):**
 - Protocol: **OpenID Connect** via **Keycloak**.
@@ -227,6 +233,16 @@ current cube experience is validated. Also still blocked on the author's full ca
 ---
 
 ## Planned
+
+### From Dev-Discord feedback (Jun 2026) — SHIPPED
+First reactions to the alternate-formats build, from the Re:Union dev channel:
+- **✅ Sealed "4 packs" → "7 packs" helper bug** (Haalford [ALTR]). The Presets-tab helper text hard-coded
+  "4 packs"; it's now mode-aware (`draftMode === 'sealed' ? 7 : 4`) in `Lobby.jsx`.
+- **✅ Help modal headings unreadable.** `HelpModal` section titles were `text-accent` (low-contrast gold
+  on the cream/dark bg) → now `text-ink font-semibold`.
+- **✅ Em-dash sweep.** Per "the — looks too AI coded", removed em-dashes from all user-facing copy
+  (descriptions, blurbs, errors/toasts, cube descriptions, format/hero option text), using `. , : ;` or
+  parens instead. Code/JSX comments left as-is. Style preference recorded for future copy.
 
 ### From live testing (17 Jun 2026) — mostly SHIPPED
 Backlog captured after the user tried the deployed app; the batch was built the same day.
