@@ -101,9 +101,11 @@ export default function DraftStats({ pickedRefs, cardMap }) {
   }
   const rarityTotal = Object.values(rarityCounts).reduce((a, b) => a + b, 0)
 
-  // Cost curves
+  // Cost curves — hand & recall share one x-axis (0…max of both) so the two are
+  // directly comparable instead of each scaling to its own max.
   const { counts: handCounts, max: handMax } = buildCostCounts(cards, 'mainCost')
   const { counts: recallCounts, max: recallMax } = buildCostCounts(cards, 'recallCost')
+  const costMax = Math.max(handMax, recallMax)
 
   // Biome totals (sum of power values across all non-hero cards)
   let forestTotal = 0, mountainTotal = 0, oceanTotal = 0
@@ -216,8 +218,8 @@ export default function DraftStats({ pickedRefs, cardMap }) {
       <section>
         <h4 className="text-xs uppercase tracking-widest text-faint mb-3">Cost curves</h4>
         <div className="space-y-4">
-          <CostCurve title="Hand cost" counts={handCounts} maxCost={handMax} color="#f59e0b" />
-          <CostCurve title="Recall cost" counts={recallCounts} maxCost={recallMax} color="#60a5fa" />
+          <CostCurve title="Hand cost" counts={handCounts} maxCost={costMax} color="#f59e0b" />
+          <CostCurve title="Recall cost" counts={recallCounts} maxCost={costMax} color="#60a5fa" />
         </div>
       </section>
 
