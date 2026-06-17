@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom'
+import { Link, useParams } from 'react-router-dom'
 import ReunionButton from './ReunionButton.jsx'
 import ThemeToggle from './ThemeToggle.jsx'
 
@@ -6,10 +6,14 @@ import ThemeToggle from './ThemeToggle.jsx'
 // bar with the wordmark, ecosystem links, and the Re:Union + theme controls on the
 // right. Used on the setup pages (Home, Lobby).
 export default function TopNav() {
+  // Inside a room the wordmark stays in that room's lobby instead of yanking the
+  // player back to the create/join screen.
+  const { code } = useParams()
+  const home = code ? `/room/${code}` : '/'
   return (
     <header className="w-full px-4 pt-4">
       <nav className="max-w-5xl mx-auto px-4 py-2 rounded-2xl bg-surface2 border border-line shadow-lg flex items-center gap-2">
-        <Link to="/" className="font-display tracking-wide text-lg text-ink hover:text-accent transition-colors">
+        <Link to={home} className="font-display tracking-wide text-lg text-ink hover:text-accent transition-colors">
           <span className="text-accent">Altered</span> Draft
         </Link>
         <a href="https://alteredcore.org" target="_blank" rel="noopener noreferrer"

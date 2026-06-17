@@ -4,8 +4,9 @@ export default {
   theme: {
     extend: {
       fontFamily: {
-        // Engraved-caps display face for the wordmark/titles (evokes alteredcore.org).
-        display: ['Cinzel', 'ui-serif', 'Georgia', 'serif'],
+        // Display face for the wordmark/titles — Fraunces, the closest free match to
+        // Altered Core's commercial title font ("Tiller").
+        display: ['Fraunces', 'ui-serif', 'Georgia', 'serif'],
       },
       colors: {
         // Faction identity colours (theme-independent).
