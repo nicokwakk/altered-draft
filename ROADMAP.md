@@ -37,10 +37,17 @@ now fetches the WHOLE list (`itemsPerPage=1000&order[name]=asc`) with a name-sea
 chips + a Preview-cube button; the 4 export/save buttons collapsed into one **Export / Save** dropdown
 (copy card list, copy decklist, save pulls, save deck); saves use **`format:'sandbox'`** and are named
 `"<code> · <Draft|Sealed> <pool|deck> · DDMM"`. Decks-API contract (format enum, query filters) confirmed
-from the live OpenAPI `https://decks.alteredcore.org/api/docs.json`. **Still watch on live save:** (a) a 403
-→ add a deck scope to `SCOPES` in `reunion.js`; (b) a sandbox pool/deck rejected → surface the API error
-(the dropdown shows "failed" with the message). **Not feasible:** a deck-size (≥80 cards) picker filter —
-the list endpoint returns no card count (only the per-deck detail does).
+from the live OpenAPI `https://decks.alteredcore.org/api/docs.json`. **✅ Live save VERIFIED (17 Jun 2026):** logged-in user saved both a Sealed pool (91 cards / 7 heroes)
+and a Sealed deck to their Re:Union account — both appear in the deckbuilder. No 403 (our `openid profile`
+token is accepted as-is, no extra scope needed); sandbox pool/deck not rejected. **Fixed same day:**
+connect was only reachable inside the Export/Save dropdown, so users mid-session couldn't log in to save —
+added `ReunionButton` to the Sealed + Results top bars (login redirect is safe; pool/picks are in Supabase
+room state, deck + identity in localStorage, so they survive the round-trip). **Observed (NOT our bug):**
+clicking a saved deck's "open ↗" link shows "Erreur chargement deck : 401" on Re:Union's *deckbuilder*
+(`deckbuilder.alteredcore.org`) — a different origin where the user has no session; the save itself
+succeeded and the deck renders. The deckbuilder shares the `players` Keycloak realm, so it could silently
+SSO — worth flagging to the Re:Union dev. **Not feasible:** a deck-size (≥80 cards) picker filter — the
+list endpoint returns no card count (only the per-deck detail does).
 _Hardening fast-follow: move the refresh token to an httpOnly cookie._
 
 **Auth setup (provided by the Re:Union dev):**
