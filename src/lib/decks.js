@@ -6,8 +6,16 @@ import { getAccessToken } from './reunion.js'
 
 async function authHeaders() {
   const token = await getAccessToken()
-  if (!token) throw new Error('Not signed in to Re:Union.')
+  if (!token) throw new Error('Not signed in to Re:Union — reconnect your account.')
   return { Authorization: `Bearer ${token}`, Accept: 'application/json' }
+}
+
+// A 401/403 from the decks API almost always means the access token expired or was
+// revoked — surface a reconnect hint rather than a bare status code.
+function authError(status) {
+  return status === 401 || status === 403
+    ? 'Your Re:Union session expired — reconnect and try again.'
+    : null
 }
 
 // The authenticated user's decks (summaries). Fetches the whole list (the API paginates
@@ -17,7 +25,7 @@ async function authHeaders() {
 export async function listDecks(params = {}) {
   const qs = new URLSearchParams({ itemsPerPage: '1000', 'order[name]': 'asc', ...params }).toString()
   const res = await fetch(`/api/decks?${qs}`, { headers: await authHeaders() })
-  if (!res.ok) throw new Error(`Could not load your decks (HTTP ${res.status}).`)
+  if (!res.ok) throw new Error(authError(res.status) || `Could not load your decks (HTTP ${res.status}).`)
   const data = await res.json()
   for (const key of ['member', 'hydra:member', 'items', 'decks', 'data']) {
     if (Array.isArray(data?.[key])) return data[key]
@@ -28,7 +36,7 @@ export async function listDecks(params = {}) {
 // Full deck detail (incl. deckCards) for one id.
 export async function getDeck(id) {
   const res = await fetch(`/api/decks/${encodeURIComponent(id)}`, { headers: await authHeaders() })
-  if (!res.ok) throw new Error(`Could not load that deck (HTTP ${res.status}).`)
+  if (!res.ok) throw new Error(authError(res.status) || `Could not load that deck (HTTP ${res.status}).`)
   return res.json()
 }
 
@@ -36,21 +44,31 @@ export async function getDeck(id) {
 // permissive `sandbox` format (valid enum: standard|nuc|singleton|singleton_nuc|sandbox)
 // so drafted/opened cards aren't rejected for collection/legality.
 export async function createDeck({ name, deckCards, isDraft = false, format = 'sandbox' }) {
+  if (!deckCards?.length) throw new Error('Nothing to save — the card list is empty.')
   const res = await fetch('/api/decks', {
     method: 'POST',
     headers: { ...(await authHeaders()), 'Content-Type': 'application/json' },
-    body: JSON.stringify({ name, format, isPublic: false, isDraft, deckCards }),
+    // name max length is 150 per the API schema; trim to stay within it.
+    body: JSON.stringify({ name: String(name ?? '').slice(0, 150), format, isPublic: false, isDraft, deckCards }),
   })
   const data = await res.json().catch(() => ({}))
-  if (!res.ok) throw new Error(data.message || data.detail || data.error || `Save failed (HTTP ${res.status}).`)
+  if (!res.ok) {
+    throw new Error(authError(res.status) || data.message || data.detail || data.error || `Save failed (HTTP ${res.status}).`)
+  }
   return data
 }
 
-// Group a ref array → [{ cardReference, quantity }] (the deckCards shape; qty capped at 99).
+// Group a ref array → [{ cardReference, quantity }] (the deckCards shape). Only keeps
+// valid ALT_ references and clamps quantity to the API's 1–99 range.
 export function toDeckCards(refs) {
   const counts = {}
-  for (const ref of refs) counts[ref] = (counts[ref] ?? 0) + 1
-  return Object.entries(counts).map(([cardReference, quantity]) => ({ cardReference, quantity: Math.min(quantity, 99) }))
+  for (const ref of refs) {
+    if (typeof ref === 'string' && ref.startsWith('ALT_')) counts[ref] = (counts[ref] ?? 0) + 1
+  }
+  return Object.entries(counts).map(([cardReference, quantity]) => ({
+    cardReference,
+    quantity: Math.max(1, Math.min(quantity, 99)),
+  }))
 }
 
 // Expand a deck's API `deckCards` (or `cards`) into a flat ref list (ref repeated by qty).

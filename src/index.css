@@ -24,7 +24,7 @@
 }
 
 :root[data-theme="light"] {
-  --c-base:       250 245 232;   /* #FAF5E8 sand-100 */
+  --c-base:       244 236 218;   /* slightly deeper sand so panels separate clearly */
   --c-surface:    253 251 246;   /* #FDFBF6 sand-50  */
   --c-surface2:   237 227 204;   /* #EDE3CC sand-200 */
   --c-surface3:   221 208 179;   /* #DDD0B3 sand-300 */
