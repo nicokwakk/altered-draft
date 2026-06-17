@@ -7,6 +7,7 @@ import { SET_ICONS, setCodeFromRef } from '../lib/assets.js'
 import { buildDecklist } from '../lib/exportFormat.js'
 import ExportMenu from '../components/ExportMenu.jsx'
 import ThemeToggle from '../components/ThemeToggle.jsx'
+import HeroPicker from '../components/HeroPicker.jsx'
 import DraftStats from '../components/DraftStats.jsx'
 import PoolGrid, { SimpleCardGrid } from '../components/PoolGrid.jsx'
 import DeckList from '../components/DeckList.jsx'
@@ -102,6 +103,17 @@ export default function Sealed() {
   const deckTotal = Object.values(deck).reduce((a, b) => a + b, 0)
   const deckRefs = Object.entries(deck).flatMap(([ref, qty]) => Array(qty).fill(ref))
   const deckDecklist = buildDecklist(deckRefs, cardMap)
+
+  // Free hero choice: pick any hero from the full roster (all heroes in the sets/cube).
+  const freeHero = !!roomState.config?.freeHero
+  const availableHeroes = freeHero ? Object.values(cardMap).filter(c => c.cardType === 'HERO') : []
+  const currentHero = deckRefs.find(r => cardMap[r]?.cardType === 'HERO') ?? null
+  function setDeckHero(ref) {
+    const next = { ...deck }
+    for (const k of Object.keys(next)) if (cardMap[k]?.cardType === 'HERO') delete next[k]
+    if (ref) next[ref] = 1
+    saveDeck(next)
+  }
   // Hero counts toward both card total and faction limit
   const deckFactions = new Set(deckRefs.map(r => cardMap[r]?.faction).filter(Boolean))
   const deckHeroCount = deckRefs.filter(r => cardMap[r]?.cardType === 'HERO').length
@@ -204,6 +216,7 @@ export default function Sealed() {
       {/* DECK TAB */}
       {tab === 'deck' && (
         <div className="flex-1 flex flex-col overflow-hidden">
+          {freeHero && <HeroPicker heroes={availableHeroes} selected={currentHero} onPick={setDeckHero} />}
           <div className={`px-4 py-2 border-b shrink-0 flex flex-wrap gap-3 items-center text-sm ${
             isValid ? 'border-green-800 bg-green-900/20' : 'border-line bg-surface'}`}>
             <span className={isEnough ? 'text-green-400' : 'text-red-400'}>{isEnough ? '✓' : '✗'} {deckRefs.length}/30 cards</span>

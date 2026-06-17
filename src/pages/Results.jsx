@@ -7,6 +7,7 @@ import { FACTIONS, FACTION_NAMES, FACTION_COLORS } from '../lib/cardData.js'
 import { FACTION_ICONS } from '../lib/assets.js'
 import ExportMenu from '../components/ExportMenu.jsx'
 import ThemeToggle from '../components/ThemeToggle.jsx'
+import HeroPicker from '../components/HeroPicker.jsx'
 import DraftStats from '../components/DraftStats.jsx'
 import PoolGrid from '../components/PoolGrid.jsx'
 import DeckList from '../components/DeckList.jsx'
@@ -90,6 +91,18 @@ export default function Results() {
   const allDecklist = buildDecklist(myPicks, cardMap)
   const deckDecklist = buildDecklist(deckRefs, cardMap)
 
+  // Free hero choice: any hero from the full roster (all heroes in the sets/cube in
+  // play) can be set as the deck's hero, even if it wasn't drafted.
+  const freeHero = !!roomState.config?.freeHero
+  const availableHeroes = freeHero ? Object.values(cardMap).filter(c => c.cardType === 'HERO') : []
+  const currentHero = deckRefs.find(r => cardMap[r]?.cardType === 'HERO') ?? null
+  function setDeckHero(ref) {
+    const next = { ...deck }
+    for (const k of Object.keys(next)) if (cardMap[k]?.cardType === 'HERO') delete next[k]
+    if (ref) next[ref] = 1
+    saveDeck(next)
+  }
+
   function addToDeck(ref) {
     const have = poolCounts[ref] ?? 0
     const inDeck = deck[ref] ?? 0
@@ -149,6 +162,7 @@ export default function Results() {
       {/* DECK TAB */}
       {tab === 'deck' && (
         <div className="flex-1 flex flex-col overflow-hidden">
+          {freeHero && <HeroPicker heroes={availableHeroes} selected={currentHero} onPick={setDeckHero} />}
           <div className={`px-4 py-2 border-b shrink-0 flex flex-wrap gap-3 items-center text-sm ${
             isValid ? 'border-green-800 bg-green-900/20' : 'border-line bg-surface'}`}>
             <span className={isEnough ? 'text-green-400' : 'text-red-400'}>{isEnough ? '✓' : '✗'} {deckRefs.length}/30 cards</span>
