@@ -188,11 +188,12 @@ Backlog captured after the user tried the deployed app; the batch was built the 
 
 - **✅ Bug — top-nav wordmark sent in-room users to room creation.** `TopNav` now uses
   `useParams`: inside a room the wordmark links to that room's lobby instead of `/`.
-- **✅ Free hero choice (all heroes available).** Lobby toggle `config.freeHero`: heroes are kept
-  out of all packs/boosters (every mode, draft + sealed) and the player picks any hero from the full
-  roster at deckbuild via `HeroPicker` (Results + Sealed Deck tab). `packHeroes = includeHeroes &&
-  !freeHero` gates pack generation; cube hero-draft / sealed slot-0 / custom-cube hero folding are
-  all skipped when on.
+- **✅ Free hero choice (all heroes available).** A single **Heroes** control in the lobby (radio:
+  **In packs** | **Free choice**, replacing the two overlapping checkboxes) drives `heroMode` →
+  `includeHeroes`/`config.freeHero`. Free choice keeps heroes out of all packs/boosters (every mode,
+  draft + sealed); the player picks any hero from the full roster at deckbuild via `HeroPicker`
+  (Results + Sealed Deck tab). `packHeroes = includeHeroes && !freeHero` gates pack generation; cube
+  hero-draft / sealed slot-0 / custom-cube hero folding are all skipped when on.
 - **✅ Cube of the Month spotlight — live with "All Commons".** `SPOTLIGHT` in `cubes.js` points at
   the `all-commons` cube (192 commons, exactly 32 per faction, 12 heroes snake-drafted); banner atop
   the Cubes tab features it. Swap `SPOTLIGHT.cubeId`/`blurb` to rotate next month. Hero names were
@@ -216,22 +217,12 @@ Backlog captured after the user tried the deployed app; the batch was built the 
   refs and clamps qty 1–99 per the live OpenAPI. **Still deferred (bigger):** move refresh token to
   an httpOnly cookie; open-sourcing under Altered-Community.
 
-### Fix: heroes missing from built-in cube sealed (bug) — unblocked, spec locked
-Playing **LuigiNico** or **All Sets** in **Sealed** currently deals **zero heroes**: their 12
-heroes live in `cube.heroes` (not `cube.refs`), the in-app hero draft is draft-only, and the
-sealed branch ([Lobby.jsx:188](src/pages/Lobby.jsx:188)) only uses `cube.refs`. The in-app snake
-hero draft has no sealed equivalent.
-- **Decided fix:** each of the 7 sealed boosters becomes a **13-card booster** — **slot 0 = a
-  hero drawn (with repetition) from the cube's hero list (`cube.heroes`)** + 12 cards from the
-  existing generator. Player still opens **7 boosters**, keeps 1 hero for the deck.
-- **Recipe cubes** (LuigiNico, `cube.booster` {3,8,1} = 12): prepend a random hero → 13.
-- **Non-recipe cubes** (All Sets, `generateAllPacks`): fill the hero slot from `cube.heroes`
-  (its 12 heroes were moved out of `refs`, so the current `includeHeroes` path finds none).
-- Resolve `cube.heroes` as card objects and ensure their sets load (mirror the draft branch's
-  `setsForCube([...cube.refs, ...cube.heroes])`) so they render in `Sealed.jsx` pool/deck/export.
-- **Scope: built-in hero-draft cubes ONLY.** Pasted custom cubes keep folding heroes into the
-  pool (unchanged); preset/advanced sealed already put a set hero in slot 0 (unchanged).
-- Small, self-contained, **no external dependency — can ship anytime.**
+### ✅ Fix: heroes in built-in cube sealed — SHIPPED (verified not happening)
+Hero-draft cubes (LuigiNico, All Sets, All Commons) used to deal **zero heroes** in sealed.
+Resolved by `dealHeroSlots` (`src/lib/packGenerator.js`): each sealed booster gets a hero in
+slot 0 drawn (with repetition) from `cube.heroes`, for both recipe and non-recipe cubes, with the
+hero sets loaded so they render in `Sealed.jsx`. Confirmed live (Jun 2026). With **Free hero
+choice** on, slot-0 heroes are skipped (you free-pick at deckbuild instead).
 
 ### Community / Spotlight cubes (rotating)
 wordcandy70 & Kari (Casual Alterations) want to put up a **rotating monthly community cube**

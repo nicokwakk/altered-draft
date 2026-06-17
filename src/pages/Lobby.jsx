@@ -63,10 +63,12 @@ export default function Lobby() {
   const [multiSetMix, setMultiSetMix] = useState({ CORE: 4 }) // per-player pack counts (sum = 4) for the Multi-Set draft tab
   const [equalPacks, setEqualPacks] = useState(true) // ON = same single-set boosters for all; OFF = random bag
   const [lang, setLang] = useState('EN')
-  const [includeHeroes, setIncludeHeroes] = useState(true)
-  // Free hero choice: heroes are kept OUT of packs/boosters and the player instead
-  // picks any hero from the full roster when building their deck (Results/Sealed).
-  const [freeHero, setFreeHero] = useState(false)
+  // One control for how players get their hero:
+  //  'packs' → hero cards appear in boosters (draft/open them)
+  //  'free'  → none in packs; pick any hero from the full roster at deckbuild (Results/Sealed)
+  const [heroMode, setHeroMode] = useState('packs')
+  const includeHeroes = heroMode === 'packs'
+  const freeHero = heroMode === 'free'
   const [timerEnabled, setTimerEnabled] = useState(false)
   const [timerSeconds, setTimerSeconds] = useState(60)
   const [showCustomPool, setShowCustomPool] = useState(false)
@@ -897,23 +899,30 @@ export default function Lobby() {
                   </div>
                 </div>
 
-                <div className="flex items-center gap-3">
-                  <input type="checkbox" id="include-heroes" checked={includeHeroes && !freeHero} disabled={freeHero}
-                    onChange={e => setIncludeHeroes(e.target.checked)}
-                    className="accent-accent w-4 h-4 disabled:opacity-40" />
-                  <label htmlFor="include-heroes" className={`text-sm cursor-pointer ${freeHero ? 'text-faint' : 'text-ink2'}`}>
-                    Include hero cards in packs
-                  </label>
-                </div>
-
-                <div className="flex items-start gap-3">
-                  <input type="checkbox" id="free-hero" checked={freeHero}
-                    onChange={e => setFreeHero(e.target.checked)}
-                    className="accent-accent w-4 h-4 mt-0.5" />
-                  <label htmlFor="free-hero" className="text-sm text-ink2 cursor-pointer">
-                    Free hero choice
-                    <span className="block text-xs text-faint">All heroes available when building your deck — heroes won't appear in packs/boosters.</span>
-                  </label>
+                <div>
+                  <label className="block text-sm text-ink2 mb-2">Heroes</label>
+                  <div className="space-y-1.5">
+                    {[
+                      { v: 'packs', label: 'In packs', desc: 'Hero cards appear in boosters — draft or open them.' },
+                      { v: 'free', label: 'Free choice', desc: 'Pick any hero when building your deck; none appear in packs.' },
+                    ].map(o => {
+                      const active = heroMode === o.v
+                      return (
+                        <button key={o.v} type="button" onClick={() => setHeroMode(o.v)}
+                          className={`w-full flex items-start gap-2.5 text-left px-3 py-2 rounded-lg border transition-colors ${
+                            active ? 'border-accent bg-accent/5' : 'border-line bg-surface2 hover:bg-surface3'}`}>
+                          <span className={`mt-0.5 w-4 h-4 rounded-full border shrink-0 flex items-center justify-center ${
+                            active ? 'border-accent' : 'border-faint'}`}>
+                            {active && <span className="w-2 h-2 rounded-full bg-accent" />}
+                          </span>
+                          <span>
+                            <span className={`text-sm ${active ? 'text-ink' : 'text-ink2'}`}>{o.label}</span>
+                            <span className="block text-xs text-faint">{o.desc}</span>
+                          </span>
+                        </button>
+                      )
+                    })}
+                  </div>
                 </div>
 
                 {/* Pick timer — draft only (sealed has no pick passing) */}
