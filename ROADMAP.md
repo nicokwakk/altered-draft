@@ -150,10 +150,16 @@ community site **`cards.alteredcore.org`** serves the same data and should outli
   `name` / `imagePath` / `cardType.name` are **per-locale objects** (use `.en`); faction is
   `faction.code` + `faction.name`; `rarity.reference`; `cardType.reference`; and **flat integer**
   `mainCost` / `recallCost` / `forestPower` / `mountainPower` / `oceanPower` (no `#...#` markers).
-- **⚠️ Image gotcha:** the API's `imagePath.en` points at the **locked** `altered-dev.s3.eu-west-3.amazonaws.com`
-  bucket (403 AccessDenied, even with UA/referer). The **same file is public on the prod bucket** —
-  swap the host to **`altered-prod-eu.s3.amazonaws.com`** (path + filename hash identical) → 200
-  JPEG. (The old `api.altered.gg` also still returns the prod URL directly while it's up.)
+- **⚠️ Images = the one remaining Equinox dependency; NO community mirror exists (checked Jun 2026).**
+  The cards API only returns Equinox S3 URLs/paths (`imagePath.en` → `altered-dev.s3.eu-west-3.amazonaws.com`).
+  alteredcore.org does NOT host card art (probed cards./images./media./cdn./assets.alteredcore.org →
+  404/none) — and **Re:Union's own deckbuilder also loads art straight from the Equinox `altered-dev`
+  bucket.** So the whole ecosystem shares this dependency, not just us. Current status: **both Equinox
+  buckets serve the art (200)** — `altered-dev` AND `altered-prod-eu` (we host-swap `imagePath.en` to
+  `altered-prod-eu.s3.amazonaws.com`; identical path+hash). **Implication:** if the buckets ever go
+  dark it breaks Re:Union's deckbuilder too, so the community would likely stand up an image mirror —
+  which we'd adopt with a one-line base-URL change. Until then, our only way to be Equinox-independent
+  is self-hosting snapshots (below).
 
 **Action (snapshot script, when refs are in hand — no code yet):** for each unique ref, GET
 `cards.alteredcore.org/api/cards?reference=<ref>`, map the fields above into a `UNIQUES_EN`
