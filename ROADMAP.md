@@ -228,9 +228,8 @@ Backlog captured after the user tried the deployed app; the batch was built the 
   with a count on every row.
 - **◑ Graphic polish — first pass done.** Light-mode page background deepened so panels separate;
   more look-and-feel work (card grids, spacing, iconography) can continue once eyeballed.
-- **◑ Menu improvements — Help + Feedback added.** `TopNav` now has a Help modal (`HelpModal`) and
-  a gated Feedback link. **Remaining: provide the Feedback form URL** (`FEEDBACK_URL` in
-  `src/lib/links.js`, currently empty → item hidden).
+- **✅ Menu improvements — Help + Feedback live.** `TopNav` has a Help modal (`HelpModal`) and a
+  **Feedback ↗** link to a "Bugs & Ideas" Google Form (`FEEDBACK_URL` in `src/lib/links.js`).
 - **✅ Menu font matched to Altered Core.** AC's title font is the commercial **Tiller**; used
   **Fraunces** (closest free Google match) as `font-display`. Swap in real Tiller if licensed.
 - **✅ Harden code for Re:Union — robustness pass done.** decks client: clearer 401/403 ("session
