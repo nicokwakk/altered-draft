@@ -9,9 +9,10 @@ function nextNonEmpty(piles, from) {
   return -1
 }
 
-function MiniCard({ ref_, card, onHover }) {
+function MiniCard({ ref_, card, onHover, highlight }) {
   return (
-    <div className="w-20 sm:w-24 rounded-lg overflow-hidden border border-line bg-surface2 shrink-0"
+    <div className={`w-24 sm:w-28 rounded-lg overflow-hidden border bg-surface2 shrink-0 ${
+        highlight ? 'border-accent ring-2 ring-accent/60' : 'border-line'}`}
       title={card?.name ?? ref_}
       onMouseEnter={() => onHover?.(card ?? { reference: ref_, name: ref_ })}
       onMouseLeave={() => onHover?.(null)}>
@@ -20,7 +21,7 @@ function MiniCard({ ref_, card, onHover }) {
           className="w-full aspect-[2/3] object-cover"
           onError={e => { e.currentTarget.style.display = 'none' }} />
       ) : (
-        <div className="aspect-[2/3] flex items-center justify-center p-1 text-[10px] text-faint text-center leading-tight">
+        <div className="aspect-[2/3] flex items-center justify-center p-1 text-[11px] text-faint text-center leading-tight">
           {card?.name ?? ref_}
         </div>
       )}
@@ -28,19 +29,24 @@ function MiniCard({ ref_, card, onHover }) {
   )
 }
 
-// A face-down pile/deck: a card back with a count. `highlight` rings the pile the active
-// player is currently looking at.
+// A face-down pile/deck rendered as a stack of card backs with a big card count.
+// `highlight` rings the pile the active player is currently looking at.
 function FaceDown({ label, count, highlight }) {
+  const W = 'w-24 sm:w-28'
   return (
-    <div className="flex flex-col items-center gap-1.5">
-      <div className={`w-20 sm:w-24 aspect-[2/3] rounded-lg border flex items-center justify-center relative
-        bg-gradient-to-br from-surface3 to-surface2 ${highlight ? 'border-accent ring-2 ring-accent/50' : 'border-line'}`}>
-        <span className="text-2xl text-faint/40 font-display select-none">A</span>
-        <span className="absolute bottom-1 right-1 text-xs font-bold text-ink bg-surface/90 border border-line rounded px-1.5 py-0.5">
-          {count}
-        </span>
+    <div className="flex flex-col items-center gap-2">
+      <div className={`relative ${W}`}>
+        {/* offset backs behind, so a fuller pile reads as a thicker stack */}
+        {count > 2 && <div className={`absolute left-2 top-2 ${W} aspect-[2/3] rounded-xl border border-line bg-surface2/50`} />}
+        {count > 1 && <div className={`absolute left-1 top-1 ${W} aspect-[2/3] rounded-xl border border-line bg-surface2/70`} />}
+        <div className={`relative ${W} aspect-[2/3] rounded-xl border flex flex-col items-center justify-center gap-0.5
+          bg-gradient-to-br from-surface3 to-surface2 ${highlight ? 'border-accent ring-2 ring-accent/60' : 'border-line'}`}>
+          <span className="text-3xl text-faint/25 font-display select-none leading-none">A</span>
+          <span className="text-3xl sm:text-4xl font-bold text-ink leading-none tabular-nums">{count}</span>
+          <span className="text-[10px] text-faint uppercase tracking-widest">card{count !== 1 ? 's' : ''}</span>
+        </div>
       </div>
-      <span className={`text-xs ${highlight ? 'text-accent font-semibold' : 'text-faint'}`}>{label}</span>
+      <span className={`text-sm ${highlight ? 'text-accent font-semibold' : 'text-muted'}`}>{label}</span>
     </div>
   )
 }
@@ -105,6 +111,19 @@ export default function WinstonBoard({ state, myIndex, cardMap, isMyTurn, onActi
       ) : (
         <div className="bg-surface border border-line rounded-lg px-4 py-3 text-sm text-muted">
           Waiting for <span className="text-ink">{opponent}</span> to take or pass… (piles stay hidden until your turn)
+        </div>
+      )}
+
+      {/* The card you took blind off the deck (declined all three piles) — shown only to you. */}
+      {state.lastBlind?.seat === myIndex && (
+        <div className="bg-surface border border-accent/40 rounded-xl p-3 flex items-center gap-3">
+          <MiniCard ref_={state.lastBlind.ref} card={cardMap?.[state.lastBlind.ref]} onHover={onHover} highlight />
+          <div>
+            <p className="text-sm text-accent font-semibold">You drew this off the deck</p>
+            <p className="text-xs text-faint mt-0.5">
+              {cardMap?.[state.lastBlind.ref]?.name ?? 'A random card'} went straight into your pool, unseen.
+            </p>
+          </div>
         </div>
       )}
     </div>

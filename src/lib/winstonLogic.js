@@ -56,6 +56,7 @@ export function buildWinstonState(config, players, allPacks, heroPool = null) {
     turn: 0,
     peekIndex: 0,
     picks: { '0': [], '1': [] },
+    lastBlind: null,
     pickDeadline: null,
     version: 0,
   }
@@ -104,6 +105,10 @@ export function applyWinstonAction(state, seat, action) {
   const piles = state.piles.map(p => [...p])
   const picks = { ...state.picks }
   const seatPicks = [...(picks[String(seat)] ?? [])]
+  // The last card drawn blind from the deck, surfaced so the UI can highlight it for the
+  // player who drew it. Clear any highlight belonging to the seat now acting (they've moved
+  // on); keep the other seat's so it stays visible through their wait.
+  let lastBlind = (state.lastBlind && state.lastBlind.seat !== seat) ? state.lastBlind : null
 
   // Normalize to the pile actually in front of the player (skip emptied slots — only possible
   // once the deck has run dry).
@@ -114,12 +119,12 @@ export function applyWinstonAction(state, seat, action) {
   }
 
   const passTurn = () => finishOrHero({
-    ...state, deck, piles,
+    ...state, deck, piles, lastBlind,
     picks: { ...picks, [String(seat)]: seatPicks },
     turn: other, peekIndex: 0, pickDeadline: freshDeadline(state),
   })
   const sameTurn = (peekIndex) => finishOrHero({
-    ...state, deck, piles,
+    ...state, deck, piles, lastBlind,
     picks: { ...picks, [String(seat)]: seatPicks },
     peekIndex, pickDeadline: state.pickDeadline,
   })
@@ -138,7 +143,11 @@ export function applyWinstonAction(state, seat, action) {
     piles[i].push(deck.pop())
     if (i < PILE_COUNT - 1) return sameTurn(i + 1)
     // Declined all three → draw the top of the deck blind (if any left after growing).
-    if (deck.length) seatPicks.push(deck.pop())
+    if (deck.length) {
+      const blindRef = deck.pop()
+      seatPicks.push(blindRef)
+      lastBlind = { seat, ref: blindRef } // the one card the player took unseen
+    }
     return passTurn()
   }
 
