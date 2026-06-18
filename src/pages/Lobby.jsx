@@ -26,6 +26,10 @@ const MODES = [
   { id: 'sealed', name: 'Sealed', players: '1+', available: true,
     blurb: 'Open your boosters and build a deck from your own pool. No passing; play at your own pace.' },
 ]
+const MODE_BY_ID = Object.fromEntries(MODES.map(m => [m.id, m]))
+// The two everyday modes show first; the alternate draft formats hide behind a toggle.
+const PRIMARY_MODE_IDS = ['booster', 'sealed']
+const OTHER_MODE_IDS = ['rochester', 'rotisserie', 'winston']
 const WIZARD_STEPS = ['How to play', 'Cards', 'Settings']
 
 // Target pool size per mode, as boosters per player (~13 cards each). The mode sets how many
@@ -93,6 +97,7 @@ export default function Lobby() {
   // `mode` unifies the old draft/sealed toggle + draft-format selector into one choice.
   const [mode, setMode] = useState('booster') // 'booster'|'rochester'|'rotisserie'|'winston'|'sealed'
   const [wizardStep, setWizardStep] = useState(1) // 1 = mode, 2 = cards, 3 = settings
+  const [showOtherModes, setShowOtherModes] = useState(false) // expand alternate draft formats
   const isSealed = mode === 'sealed'
   const draftMode = isSealed ? 'sealed' : 'draft'      // derived, kept for the build logic below
   const draftFormat = isSealed ? 'booster' : mode      // sealed ignores format
@@ -620,6 +625,28 @@ export default function Lobby() {
     || (configTab === 'advanced' && Object.values(selectedSets).some(n => n > 0))
     || (configTab === 'multiset' && Object.values(multiSetMix).reduce((a, b) => a + (b || 0), 0) === poolTarget)
 
+  // Keep the alternate formats expanded if one of them is the current pick.
+  const otherModesExpanded = showOtherModes || OTHER_MODE_IDS.includes(mode)
+  const modeButton = m => {
+    const active = mode === m.id
+    const needs2 = m.players === '2' && roomState.players.length !== 2
+    return (
+      <button key={m.id} type="button" onClick={() => setMode(m.id)}
+        className={`w-full text-left px-3 py-2.5 rounded-lg border transition-colors ${
+          active ? 'border-accent bg-accent/5' : 'border-line bg-surface2 hover:bg-surface3'}`}>
+        <div className="flex items-center gap-2">
+          <span className={`w-4 h-4 rounded-full border shrink-0 flex items-center justify-center ${active ? 'border-accent' : 'border-faint'}`}>
+            {active && <span className="w-2 h-2 rounded-full bg-accent" />}
+          </span>
+          <span className={`text-sm font-semibold ${active ? 'text-ink' : 'text-ink2'}`}>{m.name}</span>
+          <span className="text-[10px] uppercase tracking-wide text-faint border border-line rounded px-1 py-0.5">{m.players} players</span>
+          {active && needs2 && <span className="ml-auto text-[10px] uppercase tracking-wide text-accent2">Needs exactly 2</span>}
+        </div>
+        <p className="text-xs text-faint mt-1.5 leading-relaxed pl-6">{m.blurb}</p>
+      </button>
+    )
+  }
+
   return (
     <div className="min-h-screen flex flex-col">
       <TopNav />
@@ -691,28 +718,17 @@ export default function Lobby() {
             </div>
 
             <div className="p-6 space-y-5">
-              {/* STEP 1 — how to play (the mode) */}
+              {/* STEP 1 — how to play (the mode). Booster Draft + Sealed up front; the
+                  alternate formats behind an "Other draft options" toggle. */}
               {wizardStep === 1 && (
                 <div className="space-y-2">
-                  {MODES.map(m => {
-                    const active = mode === m.id
-                    const needs2 = m.players === '2' && roomState.players.length !== 2
-                    return (
-                      <button key={m.id} type="button" onClick={() => setMode(m.id)}
-                        className={`w-full text-left px-3 py-2.5 rounded-lg border transition-colors ${
-                          active ? 'border-accent bg-accent/5' : 'border-line bg-surface2 hover:bg-surface3'}`}>
-                        <div className="flex items-center gap-2">
-                          <span className={`w-4 h-4 rounded-full border shrink-0 flex items-center justify-center ${active ? 'border-accent' : 'border-faint'}`}>
-                            {active && <span className="w-2 h-2 rounded-full bg-accent" />}
-                          </span>
-                          <span className={`text-sm font-semibold ${active ? 'text-ink' : 'text-ink2'}`}>{m.name}</span>
-                          <span className="text-[10px] uppercase tracking-wide text-faint border border-line rounded px-1 py-0.5">{m.players} players</span>
-                          {active && needs2 && <span className="ml-auto text-[10px] uppercase tracking-wide text-accent2">Needs exactly 2</span>}
-                        </div>
-                        <p className="text-xs text-faint mt-1.5 leading-relaxed pl-6">{m.blurb}</p>
-                      </button>
-                    )
-                  })}
+                  {PRIMARY_MODE_IDS.map(id => modeButton(MODE_BY_ID[id]))}
+                  <button type="button" onClick={() => setShowOtherModes(v => !v)}
+                    className="w-full flex items-center gap-1.5 px-3 py-2 text-sm text-muted hover:text-ink transition-colors">
+                    <span className="text-xs">{otherModesExpanded ? '▼' : '▶'}</span>
+                    Other draft options
+                  </button>
+                  {otherModesExpanded && OTHER_MODE_IDS.map(id => modeButton(MODE_BY_ID[id]))}
                 </div>
               )}
 
