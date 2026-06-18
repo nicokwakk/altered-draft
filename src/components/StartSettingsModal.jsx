@@ -140,6 +140,11 @@ export default function StartSettingsModal({
               <p className="text-xs text-faint pl-7 leading-relaxed">
                 About 1 in 6 boosters gets a real unique card (random stats, pulled live) in its last slot, like opening real packs.
               </p>
+              {addUniques && (
+                <p className="text-xs text-accent2 pl-7 leading-relaxed">
+                  Heads up: uniques are pulled live, so generating packs can take up to a minute (longer when more packs are needed).
+                </p>
+              )}
             </div>
           )}
 
