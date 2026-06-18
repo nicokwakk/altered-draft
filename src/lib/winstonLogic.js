@@ -36,6 +36,25 @@ function shuffle(arr) {
 
 const PILE_COUNT = 3
 
+// 'split' hero mode: deal each seat its own set of heroes, one per faction. Heroes are
+// grouped by faction (derived from the ref: ALT_<set>_<print>_<FACTION>_…; heroes have no
+// out-of-faction R2 prints, so the ref letters are reliable), each faction's heroes are
+// shuffled and dealt round-robin to seats, and the starting seat rotates between factions
+// so any leftover (odd counts) spreads fairly. With 2 heroes/faction and 2 seats, each seat
+// ends with exactly one hero of every faction.
+function splitHeroesPerSeat(heroRefs, seatCount) {
+  const byFaction = {}
+  for (const r of heroRefs) (byFaction[r.split('_')[3] ?? '?'] ??= []).push(r)
+  const seats = Array.from({ length: seatCount }, () => [])
+  let start = 0
+  for (const f of Object.keys(byFaction)) {
+    const hs = shuffle(byFaction[f])
+    hs.forEach((h, k) => seats[(start + k) % seatCount].push(h))
+    start = (start + hs.length) % seatCount
+  }
+  return seats
+}
+
 function nextNonEmpty(piles, from) {
   for (let k = from; k < piles.length; k++) if (piles[k].length) return k
   return -1
@@ -62,11 +81,19 @@ export function buildWinstonState(config, players, allPacks, heroPool = null) {
   }
 
   if (heroPool && heroPool.length) {
-    const ht = Math.min(2, Math.floor(heroPool.length / players.length)) // 2 players
-    state.heroPool = heroPool
-    state.heroTarget = Math.max(0, ht)
-    state.heroPassesDone = 0
-    state.heroPicks = { '0': [], '1': [] }
+    if (config?.heroMode === 'split') {
+      // Pre-deal each seat its own heroes (one per faction). They land in heroPicks, which
+      // Results already merges into the seat's pool, so the player just picks one at deckbuild.
+      const seats = splitHeroesPerSeat(heroPool, players.length)
+      state.heroPicks = Object.fromEntries(seats.map((arr, i) => [String(i), arr]))
+    } else {
+      // 'draft': in-app snake at the very end (heroFinish).
+      const ht = Math.min(2, Math.floor(heroPool.length / players.length)) // 2 players
+      state.heroPool = heroPool
+      state.heroTarget = Math.max(0, ht)
+      state.heroPassesDone = 0
+      state.heroPicks = { '0': [], '1': [] }
+    }
   }
 
   state.pickDeadline = freshDeadline(state)

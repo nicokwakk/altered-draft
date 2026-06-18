@@ -32,12 +32,25 @@ export default function StartSettingsModal({
     return () => document.removeEventListener('keydown', onKey)
   }, [onClose, loading])
 
-  // 'Draft' heroes only applies to a draft (no pick phase in sealed).
-  const heroOptions = [
-    { v: 'packs', label: 'In packs', desc: 'Hero cards appear in boosters. Draft or open them.' },
-    { v: 'free', label: 'Free choice', desc: 'Every available hero is added to your pool. Pick one at deckbuild; none appear in packs.' },
-    ...(isDraft ? [{ v: 'draft', label: 'Draft', desc: 'Heroes are snake-drafted in-app: take turns picking from a shared hero pool. (Needs at least as many heroes as players, else they’re added to your pool instead.)' }] : []),
-  ]
+  // Winston has its own hero choices (no in-app snake); other formats keep packs/free/draft.
+  // Keep the selection valid when the format changes between Winston and the rest.
+  const isWinston = isDraft && draftFormat === 'winston'
+  useEffect(() => {
+    if (isWinston && heroMode === 'draft') setHeroMode('packs')
+    if (!isWinston && heroMode === 'split') setHeroMode('packs')
+  }, [isWinston, heroMode, setHeroMode])
+
+  const heroOptions = isWinston
+    ? [
+        { v: 'packs', label: 'Shuffle into the pool', desc: 'Heroes become normal cards in the draft pool, taken via take/decline like everything else.' },
+        { v: 'free', label: 'Free pick from all', desc: 'Every hero is available to both players; pick one at deckbuild. None appear in the pool.' },
+        { v: 'split', label: 'Random split (one per faction)', desc: 'Each player is dealt their own heroes, one of each faction, to choose from at deckbuild. Best when there are two heroes per faction (e.g. the all-sets cube).' },
+      ]
+    : [
+        { v: 'packs', label: 'In packs', desc: 'Hero cards appear in boosters. Draft or open them.' },
+        { v: 'free', label: 'Free choice', desc: 'Every available hero is added to your pool. Pick one at deckbuild; none appear in packs.' },
+        ...(isDraft ? [{ v: 'draft', label: 'Draft', desc: 'Heroes are snake-drafted in-app: take turns picking from a shared hero pool. (Needs at least as many heroes as players, else they’re added to your pool instead.)' }] : []),
+      ]
 
   return (
     <div className="fixed inset-0 z-50 flex items-start sm:items-center justify-center bg-black/50 p-4 overflow-y-auto"

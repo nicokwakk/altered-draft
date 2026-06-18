@@ -56,6 +56,9 @@ function resolveDraftHeroes(heroRefs, playerCount, heroMode) {
       ? { heroPool: shuffle(uniq), freeHeroPool: [] }
       : { heroPool: null, freeHeroPool: uniq }
   }
+  // 'split' (Winston only): hand the whole hero list to the engine, which deals each seat
+  // its own half (one per faction). No global seeding, no in-app snake.
+  if (heroMode === 'split') return { heroPool: shuffle(uniq), freeHeroPool: [] }
   return { heroPool: null, freeHeroPool: [] }
 }
 
@@ -397,11 +400,13 @@ export default function Lobby() {
         for (const c of uniqueCards) byRef.set(c.reference, c)
 
         const heroUnique = [...new Set(customCube.heroes)]
-        // Heroes control: 'draft' → snake-draft when there are enough; 'free' (or 'draft'
-        // with too few) → seed one of each into every pool; 'packs' → fold into card packs.
+        // Heroes control: 'draft' → snake-draft when there are enough; 'split' (Winston) →
+        // engine deals each seat its own heroes; 'free' (or 'draft' with too few) → seed one
+        // of each into every pool; 'packs' → fold into card packs.
         const useHeroDraft = heroMode === 'draft' && heroUnique.length >= playerCount
+        const useSplit = heroMode === 'split' && draftFormat === 'winston' && heroUnique.length > 0
         const seedHeroes = freeHero || (heroMode === 'draft' && !useHeroDraft)
-        const cardRefs = (useHeroDraft || seedHeroes) ? customCube.cards : [...customCube.cards, ...customCube.heroes]
+        const cardRefs = (useHeroDraft || useSplit || seedHeroes) ? customCube.cards : [...customCube.cards, ...customCube.heroes]
         const cardPool = cardRefs.map(r => byRef.get(r)).filter(Boolean)
         const totalPacks = playerCount * 4
         if (cardPool.length < totalPacks) {
@@ -409,10 +414,10 @@ export default function Lobby() {
           setLoading(false); return
         }
         const packs = generateCubeDraftPacks(cardPool, totalPacks)
-        const heroPool = useHeroDraft ? shuffle(heroUnique) : null
+        const heroPool = (useHeroDraft || useSplit) ? shuffle(heroUnique) : null
         const freeHeroPool = seedHeroes ? heroUnique : []
         const state = buildDraftState(
-          { sets: apiCodes, playerCount, lang, freeHero, includeHeroes: false, freeHeroPool, draftFormat, timerEnabled, timerSeconds, customCube: { name: customCube.name, cards: customCube.cards, heroes: customCube.heroes } },
+          { sets: apiCodes, playerCount, lang, freeHero, includeHeroes: false, freeHeroPool, heroMode, draftFormat, timerEnabled, timerSeconds, customCube: { name: customCube.name, cards: customCube.cards, heroes: customCube.heroes } },
           shuffledPlayers, packs, heroPool
         )
         const { error: upErr } = await supabase.from('draft_rooms').update({ state }).eq('id', code)
@@ -469,7 +474,7 @@ export default function Lobby() {
           ? ((heroMode !== 'free' && cube.heroes?.length) ? shuffle(cube.heroes) : null)
           : cubeHeroPool
         const state = buildDraftState(
-          { sets: apiCodes, playerCount, lang, freeHero, cubeId: cube.id, includeHeroes, freeHeroPool, draftFormat, timerEnabled, timerSeconds },
+          { sets: apiCodes, playerCount, lang, freeHero, cubeId: cube.id, includeHeroes, freeHeroPool, heroMode, draftFormat, timerEnabled, timerSeconds },
           shuffledPlayers, packs, heroPool
         )
         {
@@ -494,7 +499,7 @@ export default function Lobby() {
         const apiCodes = [...new Set(rawCodes.map(apiSetCode))]
         const { heroPool, freeHeroPool } = resolveDraftHeroes(uniqueHeroRefs(allCards), playerCount, heroMode)
         const state = buildDraftState(
-          { sets: apiCodes, playerCount, lang, freeHero, customPool: true, includeHeroes, freeHeroPool, addUniques, draftFormat, timerEnabled, timerSeconds },
+          { sets: apiCodes, playerCount, lang, freeHero, customPool: true, includeHeroes, freeHeroPool, addUniques, heroMode, draftFormat, timerEnabled, timerSeconds },
           shuffledPlayers, packs, heroPool
         )
         {
@@ -531,7 +536,7 @@ export default function Lobby() {
         const apiCodes = [...new Set(setCodes.map(apiSetCode))]
         const { heroPool, freeHeroPool } = resolveDraftHeroes(uniqueHeroRefs(Object.values(cardsBySet).flat()), playerCount, heroMode)
         const state = buildDraftState(
-          { sets: apiCodes, playerCount, lang, freeHero, includeHeroes, freeHeroPool, addUniques, draftFormat, timerEnabled, timerSeconds, multiSetMix: mix, equalPacks },
+          { sets: apiCodes, playerCount, lang, freeHero, includeHeroes, freeHeroPool, addUniques, heroMode, draftFormat, timerEnabled, timerSeconds, multiSetMix: mix, equalPacks },
           shuffledPlayers, packs, heroPool
         )
         {
@@ -558,7 +563,7 @@ export default function Lobby() {
       const packs = generateAllPacks(allCards, playerCount, 4, { includeHeroes: packHeroes, uniquePool, randomUniqueRate: addUniques ? UNIQUE_RATE : 0 })
       const { heroPool, freeHeroPool } = resolveDraftHeroes(uniqueHeroRefs(allCards), playerCount, heroMode)
       const state = buildDraftState(
-        { sets: setCodes, playerCount, lang, freeHero, includeHeroes, freeHeroPool, addUniques, draftFormat, timerEnabled, timerSeconds },
+        { sets: setCodes, playerCount, lang, freeHero, includeHeroes, freeHeroPool, addUniques, heroMode, draftFormat, timerEnabled, timerSeconds },
         shuffledPlayers, packs, heroPool
       )
       const { error: upErr } = await supabase.from('draft_rooms').update({ state }).eq('id', code)
