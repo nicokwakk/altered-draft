@@ -68,11 +68,11 @@ export default function WinstonBoard({ state, myIndex, cardMap, isMyTurn, onActi
         <div className="bg-surface border border-accent/30 rounded-xl p-4 space-y-3">
           <p className="text-sm text-ink2">
             You're looking at <span className="text-accent font-semibold">Pile {peek + 1}</span> ({currentPile.length} card{currentPile.length !== 1 ? 's' : ''}).
-            Only you can see it.
+            Only you can see it. <span className="text-faint">Click a card to view it full-size.</span>
           </p>
           {currentPile.length > 0 ? (
             <div className="flex flex-wrap gap-2">
-              {currentPile.map((ref, i) => <ZoomCard key={`${ref}-${i}`} ref_={ref} card={cardMap?.[ref]} width="w-24 sm:w-28" />)}
+              {currentPile.map((ref, i) => <ZoomCard key={`${ref}-${i}`} ref_={ref} card={cardMap?.[ref]} width="w-28 sm:w-32" />)}
             </div>
           ) : (
             <p className="text-sm text-faint">This pile is empty.</p>
@@ -99,7 +99,7 @@ export default function WinstonBoard({ state, myIndex, cardMap, isMyTurn, onActi
       {/* The card you took blind off the deck (declined all three piles) — shown only to you. */}
       {state.lastBlind?.seat === myIndex && (
         <div className="bg-surface border border-accent/40 rounded-xl p-3 flex items-center gap-3">
-          <ZoomCard ref_={state.lastBlind.ref} card={cardMap?.[state.lastBlind.ref]} width="w-24 sm:w-28" highlight />
+          <ZoomCard ref_={state.lastBlind.ref} card={cardMap?.[state.lastBlind.ref]} width="w-28 sm:w-32" highlight />
           <div>
             <p className="text-sm text-accent font-semibold">You drew this off the deck</p>
             <p className="text-xs text-faint mt-0.5">
