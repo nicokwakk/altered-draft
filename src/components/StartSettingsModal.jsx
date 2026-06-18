@@ -13,6 +13,7 @@ export default function StartSettingsModal({
   heroMode, setHeroMode,
   timerEnabled, setTimerEnabled, timerSeconds, setTimerSeconds,
   draftFormat, setDraftFormat,
+  addUniques, setAddUniques, showUniques = false,
   playerCount,
   loading, startError,
   onStart, onClose,
@@ -126,6 +127,21 @@ export default function StartSettingsModal({
               })}
             </div>
           </div>
+
+          {/* Random uniques — booster-based modes only (cubes manage their own uniques) */}
+          {showUniques && (
+            <div className="space-y-1.5">
+              <div className="flex items-center gap-3">
+                <input type="checkbox" id="add-uniques" checked={!!addUniques}
+                  onChange={e => setAddUniques(e.target.checked)}
+                  className="accent-accent w-4 h-4" />
+                <label htmlFor="add-uniques" className="text-sm text-ink2 cursor-pointer">Add random uniques to packs</label>
+              </div>
+              <p className="text-xs text-faint pl-7 leading-relaxed">
+                About 1 in 6 boosters gets a real unique card (random stats, pulled live) in its last slot, like opening real packs.
+              </p>
+            </div>
+          )}
 
           {/* Pick timer — draft only (sealed has no pick passing) */}
           {isDraft && (

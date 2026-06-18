@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase.js'
-import { fetchSet, SETS, apiSetCode, fetchUniques, isUniqueRef, needsCardApi } from '../lib/cardData.js'
+import { fetchSet, SETS, apiSetCode, fetchUniques, fetchRandomUniques, isUniqueRef, needsCardApi } from '../lib/cardData.js'
 import { SET_ASSETS } from '../lib/assets.js'
 import { COMMUNITY_CUBES, setsForCube, SPOTLIGHT } from '../lib/cubes.js'
 import CubePreviewModal from '../components/CubePreviewModal.jsx'
@@ -107,6 +107,7 @@ export default function Lobby() {
   // Draft format (booster | rochester | …) + the pre-flight settings modal toggle.
   const [draftFormat, setDraftFormat] = useState(DEFAULT_FORMAT)
   const [showStart, setShowStart] = useState(false)
+  const [addUniques, setAddUniques] = useState(false)
 
   const joinUrl = `${window.location.origin}/?join=${code}`
   const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=140x140&data=${encodeURIComponent(joinUrl)}&bgcolor=111827&color=f59e0b`
@@ -223,6 +224,15 @@ export default function Lobby() {
     setLoadingDecks(false)
   }
 
+  // "Add random uniques" mode: ~1 in 6 boosters gets a real unique in its last slot.
+  const UNIQUE_RATE = 1 / 6
+  // Fetch a random real-unique pool per set (keyed by the same set codes the pack
+  // generators iterate). [] for any set whose fetch fails — that set just gets no uniques.
+  async function fetchUniquePools(setCodes) {
+    const entries = await Promise.all(setCodes.map(async s => [s, await fetchRandomUniques(s, 50, lang)]))
+    return Object.fromEntries(entries)
+  }
+
   const handleStart = async () => {
     if (!roomState) return
     if (draftMode === 'draft' && roomState.players.length < 2) { setStartError('Need at least 2 players to start a draft.'); return }
@@ -326,12 +336,13 @@ export default function Lobby() {
         if (!Object.values(cardsBySet).some(c => c.length)) { setStartError('No cards loaded.'); setLoading(false); return }
         const apiCodes = [...new Set(setCodes.map(apiSetCode))]
         const freeHeroPool = freeHero ? uniqueHeroRefs(Object.values(cardsBySet).flat()) : []
+        const uniquesBySet = addUniques ? await fetchUniquePools(setCodes) : {}
         const sealedPacks = {}
         for (let i = 0; i < playerCount; i++) {
-          sealedPacks[String(i)] = generateChaosPacks(cardsBySet, mix, { includeHeroes: packHeroes })
+          sealedPacks[String(i)] = generateChaosPacks(cardsBySet, mix, { includeHeroes: packHeroes, uniquesBySet, randomUniqueRate: addUniques ? UNIQUE_RATE : 0 })
         }
         const state = {
-          config: { sets: apiCodes, playerCount, lang, freeHero, includeHeroes, freeHeroPool, mode: 'sealed', packMix: mix },
+          config: { sets: apiCodes, playerCount, lang, freeHero, includeHeroes, freeHeroPool, addUniques, mode: 'sealed', packMix: mix },
           players: shuffledPlayers, phase: 'sealed', sealedPacks, version: 0,
         }
         {
@@ -444,13 +455,14 @@ export default function Lobby() {
         const results = await Promise.all(rawCodes.map(s => fetchSet(s, lang).catch(() => [])))
         const refSet = new Set(refs)
         const allCards = results.flat().filter(c => refSet.has(c.reference))
+        const uniquePool = addUniques ? Object.values(await fetchUniquePools(rawCodes)).flat() : []
         const packs = allCards.length
-          ? generateAllPacks(allCards, playerCount, 4, { includeHeroes: packHeroes })
+          ? generateAllPacks(allCards, playerCount, 4, { includeHeroes: packHeroes, uniquePool, randomUniqueRate: addUniques ? UNIQUE_RATE : 0 })
           : generatePacksFromPool(refs, playerCount, 4) // fallback if fetch fails
         const apiCodes = [...new Set(rawCodes.map(apiSetCode))]
         const { heroPool, freeHeroPool } = resolveDraftHeroes(uniqueHeroRefs(allCards), playerCount, heroMode)
         const state = buildDraftState(
-          { sets: apiCodes, playerCount, lang, freeHero, customPool: true, includeHeroes, freeHeroPool, draftFormat, timerEnabled, timerSeconds },
+          { sets: apiCodes, playerCount, lang, freeHero, customPool: true, includeHeroes, freeHeroPool, addUniques, draftFormat, timerEnabled, timerSeconds },
           shuffledPlayers, packs, heroPool
         )
         {
@@ -479,13 +491,15 @@ export default function Lobby() {
         const fetched = await Promise.all(setCodes.map(async s => [s, await fetchSet(s, lang).catch(() => [])]))
         const cardsBySet = Object.fromEntries(fetched)
         if (!Object.values(cardsBySet).some(c => c.length)) { setStartError('No cards loaded. Check set selection.'); setLoading(false); return }
+        const uniquesBySet = addUniques ? await fetchUniquePools(setCodes) : {}
+        const uniqueOpts = { uniquesBySet, randomUniqueRate: addUniques ? UNIQUE_RATE : 0 }
         const packs = equalPacks
-          ? generateStructuredPacks(cardsBySet, mix, playerCount, { includeHeroes: packHeroes })
-          : generateChaosPacks(cardsBySet, mix, { includeHeroes: packHeroes })
+          ? generateStructuredPacks(cardsBySet, mix, playerCount, { includeHeroes: packHeroes, ...uniqueOpts })
+          : generateChaosPacks(cardsBySet, mix, { includeHeroes: packHeroes, ...uniqueOpts })
         const apiCodes = [...new Set(setCodes.map(apiSetCode))]
         const { heroPool, freeHeroPool } = resolveDraftHeroes(uniqueHeroRefs(Object.values(cardsBySet).flat()), playerCount, heroMode)
         const state = buildDraftState(
-          { sets: apiCodes, playerCount, lang, freeHero, includeHeroes, freeHeroPool, draftFormat, timerEnabled, timerSeconds, multiSetMix: mix, equalPacks },
+          { sets: apiCodes, playerCount, lang, freeHero, includeHeroes, freeHeroPool, addUniques, draftFormat, timerEnabled, timerSeconds, multiSetMix: mix, equalPacks },
           shuffledPlayers, packs, heroPool
         )
         {
@@ -508,10 +522,11 @@ export default function Lobby() {
       const allCards = results.flat()
       if (!allCards.length) { setStartError('No cards loaded. Check set selection.'); setLoading(false); return }
 
-      const packs = generateAllPacks(allCards, playerCount, 4, { includeHeroes: packHeroes })
+      const uniquePool = addUniques ? Object.values(await fetchUniquePools(setCodes)).flat() : []
+      const packs = generateAllPacks(allCards, playerCount, 4, { includeHeroes: packHeroes, uniquePool, randomUniqueRate: addUniques ? UNIQUE_RATE : 0 })
       const { heroPool, freeHeroPool } = resolveDraftHeroes(uniqueHeroRefs(allCards), playerCount, heroMode)
       const state = buildDraftState(
-        { sets: setCodes, playerCount, lang, freeHero, includeHeroes, freeHeroPool, draftFormat, timerEnabled, timerSeconds },
+        { sets: setCodes, playerCount, lang, freeHero, includeHeroes, freeHeroPool, addUniques, draftFormat, timerEnabled, timerSeconds },
         shuffledPlayers, packs, heroPool
       )
       const { error: upErr } = await supabase.from('draft_rooms').update({ state }).eq('id', code)
@@ -988,6 +1003,8 @@ export default function Lobby() {
           timerEnabled={timerEnabled} setTimerEnabled={setTimerEnabled}
           timerSeconds={timerSeconds} setTimerSeconds={setTimerSeconds}
           draftFormat={draftFormat} setDraftFormat={setDraftFormat}
+          addUniques={addUniques} setAddUniques={setAddUniques}
+          showUniques={configTab !== 'cubes'}
           playerCount={roomState.players.length}
           loading={loading} startError={startError}
           onStart={handleStart}

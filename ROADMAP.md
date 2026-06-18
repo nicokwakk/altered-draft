@@ -67,6 +67,38 @@ _Hardening fast-follow: move the refresh token to an httpOnly cookie._ ✅ done.
 **Status:** intro + project updates posted to Discord; docs now in hand. **Next concrete step:** read the
 plugin doc and scope which features port first (draft/sealed engine vs. just the cube/deck tooling).
 
+**Plugin feasibility — assessed (Jun 2026, from README.html + `plugin.schema.json` + the `equinox-deck-import`
+example).** The plugin system is **server-side PHP inside the alteredcore-website**, NOT an iframe/embed:
+- A plugin = `plugin.json` manifest + `pages/` (PHP templates served at `/pages/{slug}`), `admin/`, `api/`
+  endpoints (`/api/{id}/{endpoint}` → JSON), `assets/` (css/js), `sql/` (own MySQL tables via `$db` PDO).
+  Manifest fields: `id,name,version,description,author,icon,table_prefix,pages[],admin[],api[],assets{css,
+  js,global_*},sql,tables[]`.
+- **Auth/data come FOR FREE:** `kcIsLoggedIn()`, `kcUser()`→`{sub,email,username}`, `deckApiToken()`, plus
+  `CARDS_API_URL`/`DECKS_API_URL`/`COLLECTION_API_URL`/`CDN_URL`. So inside a plugin our **entire
+  Vercel-token-exchange + decks-proxy layer disappears** (server-side API calls, no CORS, Keycloak already
+  wired). `equinox-deck-import` already does deck-API writes server-side (`CurlDeckApiClient` +
+  `KeycloakTokenProvider`) — a solved pattern we can copy.
+- **Client-side UI is possible:** a page PHP template can mount a JS bundle from `assets.js` into a div
+  (equinox-deck-import ships a vanilla-JS app driving `papi/` endpoints). So our **React UI can be bundled
+  and mounted** — we don't have to rewrite it in vanilla JS, just drop `react-router` (the page is the
+  mount point) and adapt the build to emit one asset bundle.
+- **THE blocker = realtime.** The host gives PHP + MySQL + request/response JSON only. **No websockets/SSE
+  anywhere** in the schema or examples. Our whole multiplayer layer is **Supabase Realtime** (row-UPDATE
+  subscription + optimistic `version` writes). Porting it means **polling** a plugin API endpoint backed by
+  a MySQL `draft_rooms`-equivalent table.
+  - Turn-based formats (Rochester/Rotisserie/Winston/hero draft) are low-frequency (one writer per turn) →
+    polling every ~1-2s is fine; ports cleanly.
+  - Booster draft is simultaneous, but our optimistic version-concurrency already handles contention;
+    polling just gets chattier. Feasible, more work.
+- **Feature feasibility verdict:** single-player / async (cube preview, deckbuilding, stats, sealed-solo,
+  **save/load to Re:Union**) ports well and gets *simpler*. Multiplayer realtime draft is the real
+  re-implementation (sync layer Supabase→MySQL-poll).
+- **Recommended path = phased.** (1) Ship a small plugin first — cube preview + sealed-solo + deck
+  save/load — to validate the PHP toolchain and the bundled-React-mount, near-zero risk, immediate value on
+  the Re:Union site. (2) Then port the realtime layer to MySQL-poll and bring the draft modes over. **Open
+  question for Shnk before committing to multiplayer:** does/will the host expose any realtime channel, and
+  is bundling a client-side SPA on a plugin page blessed? Standalone Vercel app stays as-is meanwhile.
+
 **Auth setup (provided by the Re:Union dev):**
 - Protocol: **OpenID Connect** via **Keycloak**.
 - Issuer / base: `https://auth.altered.re/`, realm `players`
@@ -331,6 +363,14 @@ This is a DIFFERENT, newer cube than the LuigiNico cube already in the app.
 
 ## Recently shipped
 
+- **"Add random uniques to packs"** (Jun 2026). Optional StartSettingsModal toggle (`config.addUniques`),
+  booster-based modes only (presets / multi-set / custom-pool draft + sealed; NOT cubes). Standard set
+  files carry no uniques, so off by default = no uniques as before. On: each booster has an independent
+  **1/6** chance its **last slot** becomes a **real, live-fetched unique** (`fetchRandomUniques` →
+  `cards.alteredcore.org` `rarity=UNIQUE&set.reference=<SET>&random=1`). Threaded through
+  `generateAllPacks`/`generateChaosPacks`/`generateStructuredPacks` + `generateOnePack(randomUniqueRate)`.
+  Injected serialized `_U_` refs resolve for display via a new `uniqueRefsIn(state)` scan + `fetchUniques`
+  in Draft/Sealed/Results. (`src/lib/cardData.js`, `src/lib/packGenerator.js`, `StartSettingsModal.jsx`, `Lobby.jsx`)
 - **Cube sealed booster labels fixed** (June 2026). Cube sealed packs are multiset, but the
   booster header labeled each by its first card's set (e.g. "Booster 2 · Skybound Odyssey 1/1").
   Now cube rooms (built-in or pasted) show the cube name, no set icon/ordinal; Multi-Set/Chaos

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase.js'
-import { fetchSet, apiSetCode, SET_ABBREV, SET_FULL_NAMES, fetchUniques, isUniqueRef, needsCardApi } from '../lib/cardData.js'
+import { fetchSet, apiSetCode, SET_ABBREV, SET_FULL_NAMES, fetchUniques, isUniqueRef, needsCardApi, uniqueRefsIn } from '../lib/cardData.js'
 import { COMMUNITY_CUBES } from '../lib/cubes.js'
 import { SET_ICONS, setCodeFromRef } from '../lib/assets.js'
 import { buildDecklist } from '../lib/exportFormat.js'
@@ -50,6 +50,13 @@ export default function Sealed() {
         const cubeRefs = [...(cube?.refs ?? (cc ? [...(cc.cards ?? []), ...(cc.heroes ?? [])] : [])), ...freeHeroPool]
         if (cubeRefs.length) {
           const uCards = await fetchUniques(cubeRefs.filter(needsCardApi), data.state.config.lang || 'EN')
+          for (const c of uCards) maps[c.reference] = c
+        }
+        // Uniques injected into boosters (the "add random uniques" option) aren't in set
+        // data or the cube ref list — scan the live state for …_U_ refs and fetch them.
+        const liveUniques = uniqueRefsIn(data.state).filter(r => !maps[r])
+        if (liveUniques.length) {
+          const uCards = await fetchUniques(liveUniques, data.state.config.lang || 'EN')
           for (const c of uCards) maps[c.reference] = c
         }
         setCardMap(maps)

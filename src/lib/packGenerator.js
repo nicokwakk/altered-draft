@@ -44,7 +44,7 @@ function splitPools(allCards, includeHeroes) {
 }
 
 export function generateAllPacks(allCards, playerCount, packsPerPlayer = 4, options = {}) {
-  const { includeHeroes = true, cubeMode = false } = options
+  const { includeHeroes = true, cubeMode = false, uniquePool = [], randomUniqueRate = 0 } = options
   const { heroes, commons, rares, uniques } = splitPools(allCards, includeHeroes)
 
   const totalPacks = playerCount * packsPerPlayer
@@ -53,9 +53,12 @@ export function generateAllPacks(allCards, playerCount, packsPerPlayer = 4, opti
     return generateCubePacks(heroes, commons, rares, uniques, totalPacks, includeHeroes)
   }
 
+  // "Add random uniques" mode draws the unique slot from an injected real-unique pool
+  // (standard sets carry no uniques in the card data, so `uniques` is otherwise empty).
+  const useUniques = randomUniqueRate > 0 && uniquePool.length ? uniquePool : uniques
   const packs = []
   for (let i = 0; i < totalPacks; i++) {
-    packs.push(generateOnePack(heroes, commons, rares, uniques, i))
+    packs.push(generateOnePack(heroes, commons, rares, useUniques, i, randomUniqueRate))
   }
   return packs
 }
@@ -69,15 +72,16 @@ export function generateAllPacks(allCards, playerCount, packsPerPlayer = 4, opti
  * @returns {string[][]} flat, shuffled array of packs
  */
 export function generateChaosPacks(cardsBySet, packMix, options = {}) {
-  const { includeHeroes = true } = options
+  const { includeHeroes = true, uniquesBySet = {}, randomUniqueRate = 0 } = options
   const allPacks = []
   for (const [setCode, count] of Object.entries(packMix)) {
     if (!count || count < 1) continue
     const cards = cardsBySet[setCode] ?? []
     if (!cards.length) continue
     const { heroes, commons, rares, uniques } = splitPools(cards, includeHeroes)
+    const useUniques = randomUniqueRate > 0 && uniquesBySet[setCode]?.length ? uniquesBySet[setCode] : uniques
     for (let i = 0; i < count; i++) {
-      allPacks.push(generateOnePack(heroes, commons, rares, uniques, i))
+      allPacks.push(generateOnePack(heroes, commons, rares, useUniques, i, randomUniqueRate))
     }
   }
   return shuffle(allPacks)
@@ -97,7 +101,7 @@ export function generateChaosPacks(cardsBySet, packMix, options = {}) {
  * @param {number} playerCount
  */
 export function generateStructuredPacks(cardsBySet, perPlayerMix, playerCount, options = {}) {
-  const { includeHeroes = true } = options
+  const { includeHeroes = true, uniquesBySet = {}, randomUniqueRate = 0 } = options
   // Expand the per-player counts into one set per round: {CORE:2, BISE:2} → [CORE,CORE,BISE,BISE]
   const rounds = []
   for (const [setCode, count] of Object.entries(perPlayerMix)) {
@@ -109,8 +113,9 @@ export function generateStructuredPacks(cardsBySet, perPlayerMix, playerCount, o
   for (const setCode of rounds) {
     if (!poolsBySet[setCode]) poolsBySet[setCode] = splitPools(cardsBySet[setCode] ?? [], includeHeroes)
     const { heroes, commons, rares, uniques } = poolsBySet[setCode]
+    const useUniques = randomUniqueRate > 0 && uniquesBySet[setCode]?.length ? uniquesBySet[setCode] : uniques
     for (let s = 0; s < playerCount; s++) {
-      packs.push(generateOnePack(heroes, commons, rares, uniques, packIndex++))
+      packs.push(generateOnePack(heroes, commons, rares, useUniques, packIndex++, randomUniqueRate))
     }
   }
   return packs
@@ -256,7 +261,7 @@ function generateCubePacks(heroes, commons, rares, uniques, totalPacks, includeH
   return packs
 }
 
-function generateOnePack(heroes, commons, rares, uniques, packIndex) {
+function generateOnePack(heroes, commons, rares, uniques, packIndex, randomUniqueRate = 0) {
   const pack = []
 
   // 1 hero (only if heroes pool is non-empty)
@@ -295,10 +300,15 @@ function generateOnePack(heroes, commons, rares, uniques, packIndex) {
     }
   }
 
-  // 3 rares (1-in-8 packs: one slot becomes a unique). If the pool can't supply a
-  // rare/unique for a slot (e.g. an all-commons cube has none), backfill it with
-  // another unused common so every booster stays full size (9 + 3 = 12 body cards).
-  const uniquePack = packIndex % 8 === 7
+  // 3 rares — the LAST slot can become a unique. Default: deterministic 1-in-8 packs
+  // (used by cube data that actually carries uniques). "Add random uniques" mode
+  // (randomUniqueRate > 0) instead gives EACH pack an independent chance (1/6) of its
+  // last slot being a real injected unique. If the pool can't supply a rare/unique for
+  // a slot (e.g. an all-commons cube has none), backfill it with another unused common
+  // so every booster stays full size (9 + 3 = 12 body cards).
+  const uniquePack = randomUniqueRate > 0
+    ? (uniques.length > 0 && Math.random() < randomUniqueRate)
+    : (packIndex % 8 === 7)
   const shuffledRares = shuffle(rares)
   const fillerCommons = shuffle(commons)
   let rareIdx = 0

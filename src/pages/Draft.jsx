@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase.js'
-import { fetchSet, apiSetCode, fetchUniques, isUniqueRef, needsCardApi } from '../lib/cardData.js'
+import { fetchSet, apiSetCode, fetchUniques, isUniqueRef, needsCardApi, uniqueRefsIn } from '../lib/cardData.js'
 import { applyPick, applyHeroPick } from '../lib/draftLogic.js'
 import { applyRochesterPick } from '../lib/rochesterLogic.js'
 import { applyRotisseriePick } from '../lib/rotisserieLogic.js'
@@ -106,6 +106,13 @@ export default function Draft() {
           const cubeRefs = cube?.refs ?? (cc ? [...(cc.cards ?? []), ...(cc.heroes ?? [])] : null)
           if (cubeRefs) {
             const uCards = await fetchUniques(cubeRefs.filter(needsCardApi), state.config.lang || 'EN')
+            for (const c of uCards) maps[c.reference] = c
+          }
+          // Uniques injected into packs (the "add random uniques" option) aren't in set
+          // data or the cube ref list — scan the live state for any …_U_ refs and fetch them.
+          const liveUniques = uniqueRefsIn(state).filter(r => !maps[r])
+          if (liveUniques.length) {
+            const uCards = await fetchUniques(liveUniques, state.config.lang || 'EN')
             for (const c of uCards) maps[c.reference] = c
           }
           setCardMap(maps)

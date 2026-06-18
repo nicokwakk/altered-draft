@@ -112,6 +112,35 @@ export async function fetchUniques(references, lang = 'EN') {
   return out
 }
 
+// Pull a RANDOM pool of real uniques for a set — used by the optional "add random uniques
+// to packs" mode. The cards API registers every unique ever opened (millions), so we ask
+// it for a random page filtered to the set (`random=1` reshuffles each call). Returns
+// normalized card objects (rarity 'U', real art + stats); [] on any failure so pack
+// generation degrades gracefully to no-uniques. `setCode` is the internal set code
+// (CORE/ALIZE/BISE/…), which the API exposes as `set.reference`.
+export async function fetchRandomUniques(setCode, count = 50, lang = 'EN') {
+  const loc = (LOCALE[lang] ?? 'en-us').slice(0, 2)
+  try {
+    const url = `https://cards.alteredcore.org/api/cards?rarity=UNIQUE&set.reference=${encodeURIComponent(setCode)}&random=1&itemsPerPage=${count}`
+    const res = await fetch(url, { headers: { Accept: 'application/json' } })
+    if (!res.ok) throw new Error(`uniques ${setCode}: ${res.status}`)
+    const members = (await res.json()).member ?? []
+    const cards = members.map(m => normalizeAlteredCore(m, loc)).filter(c => c.reference)
+    for (const c of cards) uniqueCache[`${c.reference}_${lang}`] = c // warm the by-ref cache
+    return cards
+  } catch { return [] }
+}
+
+// Scan any value (object/array/string) for unique references (…_U_<serial>) it contains.
+// Used by the draft/sealed/results pages to resolve uniques that were injected into packs
+// (they aren't in set data or the cube ref list, so they must be fetched by reference).
+export function uniqueRefsIn(value) {
+  if (value == null) return []
+  const str = typeof value === 'string' ? value : JSON.stringify(value)
+  const matches = str.match(/ALT_[A-Za-z0-9]+(?:_[A-Za-z0-9]+)*?_U_\d+/g) ?? []
+  return [...new Set(matches)]
+}
+
 // Strip #...# formatting markers used in Altered card text fields
 function stripMarkers(val) {
   if (val == null) return null
