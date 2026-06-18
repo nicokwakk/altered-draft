@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase.js'
 import { fetchSet, SETS, apiSetCode, fetchUniques, fetchRandomUniques, isUniqueRef, needsCardApi } from '../lib/cardData.js'
@@ -226,12 +226,44 @@ export default function Lobby() {
 
   // "Add random uniques" mode: ~1 in 6 boosters gets a real unique in its last slot.
   const UNIQUE_RATE = 1 / 6
-  // Fetch a random real-unique pool per set (keyed by the same set codes the pack
-  // generators iterate). [] for any set whose fetch fails — that set just gets no uniques.
+  // The live random-unique fetch (`random=1` over millions of rows) is ~1.5s, so we PREFETCH
+  // it the moment the toggle is on and the settings modal is open — by the time the host
+  // clicks Start it's already done (or in flight, so Start just awaits the same promise
+  // instead of starting a fresh request). Cached by set-codes + language.
+  const uniquePoolsRef = useRef({ key: null, promise: null })
   async function fetchUniquePools(setCodes) {
-    const entries = await Promise.all(setCodes.map(async s => [s, await fetchRandomUniques(s, 50, lang)]))
+    const entries = await Promise.all(setCodes.map(async s => [s, await fetchRandomUniques(s, 40, lang)]))
     return Object.fromEntries(entries)
   }
+  // Returns the prefetched pool when the set selection hasn't changed; otherwise kicks off
+  // (and memoizes) a fresh fetch. Always resolves to a { setCode: uniques[] } map.
+  function getUniquePools(setCodes) {
+    const key = [...setCodes].sort().join(',') + '|' + lang
+    if (uniquePoolsRef.current.key !== key || !uniquePoolsRef.current.promise) {
+      uniquePoolsRef.current = { key, promise: fetchUniquePools(setCodes) }
+    }
+    return uniquePoolsRef.current.promise
+  }
+  // The set codes the current tab will draft from — used to prefetch the unique pool.
+  // Returns [] for cubes (they manage their own uniques) so no prefetch fires.
+  function activeUniqueSetCodes() {
+    if (configTab === 'cubes') return []
+    if (draftMode === 'draft' && customPoolText.trim()) {
+      return [...new Set(customPoolText.trim().split(/\s+/).filter(r => r.startsWith('ALT_')).map(r => r.split('_')[1]).filter(Boolean))]
+    }
+    if (configTab === 'multiset') return Object.keys(multiSetMix).filter(s => multiSetMix[s] > 0)
+    if (configTab === 'advanced') return Object.keys(selectedSets).filter(s => selectedSets[s] > 0)
+    if (configTab === 'presets') return selectedPreset ? [selectedPreset] : []
+    return []
+  }
+
+  // Warm the unique pool while the host is still looking at the settings modal.
+  useEffect(() => {
+    if (!showStart || !addUniques) return
+    const codes = activeUniqueSetCodes()
+    if (codes.length) getUniquePools(codes) // fire-and-forget; result memoized in the ref
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showStart, addUniques, configTab, draftMode, selectedPreset, selectedSets, multiSetMix, customPoolText, lang])
 
   const handleStart = async () => {
     if (!roomState) return
@@ -336,7 +368,7 @@ export default function Lobby() {
         if (!Object.values(cardsBySet).some(c => c.length)) { setStartError('No cards loaded.'); setLoading(false); return }
         const apiCodes = [...new Set(setCodes.map(apiSetCode))]
         const freeHeroPool = freeHero ? uniqueHeroRefs(Object.values(cardsBySet).flat()) : []
-        const uniquesBySet = addUniques ? await fetchUniquePools(setCodes) : {}
+        const uniquesBySet = addUniques ? await getUniquePools(setCodes) : {}
         const sealedPacks = {}
         for (let i = 0; i < playerCount; i++) {
           sealedPacks[String(i)] = generateChaosPacks(cardsBySet, mix, { includeHeroes: packHeroes, uniquesBySet, randomUniqueRate: addUniques ? UNIQUE_RATE : 0 })
@@ -455,7 +487,7 @@ export default function Lobby() {
         const results = await Promise.all(rawCodes.map(s => fetchSet(s, lang).catch(() => [])))
         const refSet = new Set(refs)
         const allCards = results.flat().filter(c => refSet.has(c.reference))
-        const uniquePool = addUniques ? Object.values(await fetchUniquePools(rawCodes)).flat() : []
+        const uniquePool = addUniques ? Object.values(await getUniquePools(rawCodes)).flat() : []
         const packs = allCards.length
           ? generateAllPacks(allCards, playerCount, 4, { includeHeroes: packHeroes, uniquePool, randomUniqueRate: addUniques ? UNIQUE_RATE : 0 })
           : generatePacksFromPool(refs, playerCount, 4) // fallback if fetch fails
@@ -491,7 +523,7 @@ export default function Lobby() {
         const fetched = await Promise.all(setCodes.map(async s => [s, await fetchSet(s, lang).catch(() => [])]))
         const cardsBySet = Object.fromEntries(fetched)
         if (!Object.values(cardsBySet).some(c => c.length)) { setStartError('No cards loaded. Check set selection.'); setLoading(false); return }
-        const uniquesBySet = addUniques ? await fetchUniquePools(setCodes) : {}
+        const uniquesBySet = addUniques ? await getUniquePools(setCodes) : {}
         const uniqueOpts = { uniquesBySet, randomUniqueRate: addUniques ? UNIQUE_RATE : 0 }
         const packs = equalPacks
           ? generateStructuredPacks(cardsBySet, mix, playerCount, { includeHeroes: packHeroes, ...uniqueOpts })
@@ -522,7 +554,7 @@ export default function Lobby() {
       const allCards = results.flat()
       if (!allCards.length) { setStartError('No cards loaded. Check set selection.'); setLoading(false); return }
 
-      const uniquePool = addUniques ? Object.values(await fetchUniquePools(setCodes)).flat() : []
+      const uniquePool = addUniques ? Object.values(await getUniquePools(setCodes)).flat() : []
       const packs = generateAllPacks(allCards, playerCount, 4, { includeHeroes: packHeroes, uniquePool, randomUniqueRate: addUniques ? UNIQUE_RATE : 0 })
       const { heroPool, freeHeroPool } = resolveDraftHeroes(uniqueHeroRefs(allCards), playerCount, heroMode)
       const state = buildDraftState(
