@@ -20,23 +20,25 @@ import { COMMUNITY_CUBES } from '../lib/cubes.js'
 
 // Compact read-only strip of the heroes you've drafted (during the hero phase, and
 // as a reminder afterward). `label` lets callers relabel it per phase.
-function MyHeroes({ heroes, cardMap, label = 'Your heroes' }) {
+function MyHeroes({ heroes, cardMap, label = 'Your heroes', onHover }) {
   if (!heroes?.length) return null
   return (
-    <div className="mb-4 border border-accent/30 bg-accent/5 rounded-lg px-3 py-2">
+    <div className="mb-4 border border-accent/30 bg-accent/5 rounded-lg px-3 py-2.5">
       <p className="text-xs font-semibold text-accent mb-2">{label} ({heroes.length})</p>
       <div className="flex flex-wrap gap-2">
         {heroes.map((ref, i) => {
           const card = cardMap?.[ref]
           return (
-            <div key={`${ref}-${i}`} className="w-12 rounded overflow-hidden border border-line bg-surface2 shrink-0"
-              title={card?.name ?? ref}>
+            <div key={`${ref}-${i}`} className="w-20 sm:w-24 rounded-lg overflow-hidden border border-line bg-surface2 shrink-0 cursor-zoom-in"
+              title={card?.name ?? ref}
+              onMouseEnter={() => onHover?.(card ?? { reference: ref, name: ref })}
+              onMouseLeave={() => onHover?.(null)}>
               {card?.imagePath ? (
                 <img src={card.imagePath} alt={card?.name ?? ''} loading="lazy"
                   className="w-full aspect-[2/3] object-cover"
                   onError={e => { e.currentTarget.style.display = 'none' }} />
               ) : (
-                <div className="aspect-[2/3] flex items-center justify-center p-0.5 text-[8px] text-faint text-center leading-tight">
+                <div className="aspect-[2/3] flex items-center justify-center p-1 text-[10px] text-faint text-center leading-tight">
                   {card?.name ?? ref}
                 </div>
               )}
@@ -421,8 +423,8 @@ export default function Draft() {
               Winston (2 players): look at the top pile, then Take it or Pass. Passing adds a face-down card and moves you on; pass all three and you draw blind. Piles stay hidden from your opponent.
             </p>
           )}
-          {isHeroPhase && myHeroPicks.length > 0 && <MyHeroes heroes={myHeroPicks} cardMap={cardMap} label="Heroes you've taken" />}
-          {!isHeroPhase && myHeroPicks.length > 0 && <MyHeroes heroes={myHeroPicks} cardMap={cardMap} />}
+          {isHeroPhase && myHeroPicks.length > 0 && <MyHeroes heroes={myHeroPicks} cardMap={cardMap} onHover={setHoverCard} label="Heroes you've taken" />}
+          {!isHeroPhase && myHeroPicks.length > 0 && <MyHeroes heroes={myHeroPicks} cardMap={cardMap} onHover={setHoverCard} />}
           {roomState.config?.timerEnabled && roomState.pickDeadline && (
             <PickTimer deadline={roomState.pickDeadline} isMyTurn={isMyTurn} onTimeout={handleTimeout} />
           )}
