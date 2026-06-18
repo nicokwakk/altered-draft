@@ -1,13 +1,53 @@
 import { useState } from 'react'
 import { FACTIONS, FACTION_NAMES, FACTION_COLORS } from '../lib/cardData.js'
 import { FACTION_ICONS, RARITY_GEMS } from '../lib/assets.js'
-import { cardSorter } from './PoolGrid.jsx'
+import { cardSorter, useZoomOrigin } from './PoolGrid.jsx'
+
+// One pool card: art grows in place on hover (deckbuilder-style); clicking drafts one copy.
+function RotisserieCard({ ref_, card, count, onPick, disabled }) {
+  const { ref, origin, onMouseEnter } = useZoomOrigin()
+  const faction = card?.faction ?? 'XX'
+  const rarity = card?.rarity ?? 'C'
+  return (
+    <div className="relative flex flex-col rounded-lg border border-line bg-surface">
+      <button
+        ref={ref} onMouseEnter={onMouseEnter} onClick={() => !disabled && onPick(ref_)} disabled={disabled}
+        style={{ transformOrigin: origin }} title={card?.name ?? ref_}
+        className={`aspect-[2/3] bg-surface2 overflow-hidden rounded-t-lg relative transition-transform duration-150 ease-out
+          ${disabled ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer hover:scale-[1.6] hover:z-30 hover:shadow-xl hover:shadow-black/70'}`}>
+        {card?.imagePath ? (
+          <img src={card.imagePath} alt={card.name} className="w-full h-full object-cover" loading="lazy"
+            onError={e => { e.currentTarget.style.display = 'none' }} />
+        ) : (
+          <div className="w-full h-full flex items-center justify-center text-faint text-xs px-2 text-center break-all">{card?.name ?? ref_}</div>
+        )}
+        {count > 1 && (
+          <div className="absolute top-1 left-1 bg-surface/90 text-ink2 font-bold text-xs px-1.5 py-0.5 rounded border border-line">×{count}</div>
+        )}
+      </button>
+      <div className="p-1.5 space-y-1">
+        <p className="text-xs font-medium leading-tight line-clamp-1 text-ink">{card?.name ?? ref_}</p>
+        <div className="flex items-center gap-1">
+          {FACTION_ICONS[faction] ? (
+            <img src={FACTION_ICONS[faction]} alt={FACTION_NAMES[faction] ?? faction}
+              className="w-4 h-4 object-contain shrink-0" onError={e => { e.currentTarget.style.display = 'none' }} />
+          ) : (
+            <span className="text-xs text-faint font-mono">{faction}</span>
+          )}
+          {RARITY_GEMS[rarity] && card?.cardType !== 'HERO' && (
+            <img src={RARITY_GEMS[rarity]} alt={rarity} className="w-3.5 h-3.5 object-contain ml-auto" />
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
 
 // The shared Rotisserie pool: every draftable card face-up. Deduped with an ×N count (a cube
 // can hold several copies), faction-filtered, and sorted like the deckbuilder. Clicking a card
 // drafts ONE copy — only enabled on your turn. Distinct from CardGrid (which keys by ref and so
 // can't show a pool with duplicates) and PoolGrid (deckbuild +/- controls).
-export default function RotisserieGrid({ refs, cardMap, onPick, onHover, disabled }) {
+export default function RotisserieGrid({ refs, cardMap, onPick, disabled }) {
   const [filterFaction, setFilterFaction] = useState('ALL')
 
   if (!refs?.length) return <div className="text-faint text-sm">The pool is empty.</div>
@@ -38,47 +78,10 @@ export default function RotisserieGrid({ refs, cardMap, onPick, onHover, disable
       </div>
 
       <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-2">
-        {unique.map(ref => {
-          const card = cardMap[ref]
-          const faction = card?.faction ?? 'XX'
-          const rarity = card?.rarity ?? 'C'
-          const n = counts.get(ref)
-          return (
-            <button key={ref}
-              onClick={() => !disabled && onPick(ref)}
-              onMouseEnter={() => onHover?.(card ?? { reference: ref, name: ref })}
-              onMouseLeave={() => onHover?.(null)}
-              disabled={disabled}
-              className={`relative flex flex-col rounded-lg overflow-hidden border border-line bg-surface text-left transition-all duration-150 ${
-                disabled ? 'opacity-60 cursor-not-allowed' : 'hover:border-accent hover:shadow-lg hover:shadow-accent/10 hover:scale-105 cursor-pointer'}`}>
-              <div className="aspect-[2/3] bg-surface2 flex items-center justify-center overflow-hidden relative">
-                {card?.imagePath ? (
-                  <img src={card.imagePath} alt={card.name} className="w-full h-full object-cover" loading="lazy"
-                    onError={e => { e.currentTarget.style.display = 'none' }} />
-                ) : (
-                  <div className="text-faint text-xs px-2 text-center break-all">{card?.name ?? ref}</div>
-                )}
-                {n > 1 && (
-                  <div className="absolute top-1 left-1 bg-surface/90 text-ink2 font-bold text-xs px-1.5 py-0.5 rounded border border-line">×{n}</div>
-                )}
-              </div>
-              <div className="p-1.5 space-y-1">
-                <p className="text-xs font-medium leading-tight line-clamp-1 text-ink">{card?.name ?? ref}</p>
-                <div className="flex items-center gap-1">
-                  {FACTION_ICONS[faction] ? (
-                    <img src={FACTION_ICONS[faction]} alt={FACTION_NAMES[faction] ?? faction}
-                      className="w-4 h-4 object-contain shrink-0" onError={e => { e.currentTarget.style.display = 'none' }} />
-                  ) : (
-                    <span className="text-xs text-faint font-mono">{faction}</span>
-                  )}
-                  {RARITY_GEMS[rarity] && card?.cardType !== 'HERO' && (
-                    <img src={RARITY_GEMS[rarity]} alt={rarity} className="w-3.5 h-3.5 object-contain" />
-                  )}
-                </div>
-              </div>
-            </button>
-          )
-        })}
+        {unique.map(ref => (
+          <RotisserieCard key={ref} ref_={ref} card={cardMap[ref]} count={counts.get(ref)}
+            onPick={onPick} disabled={disabled} />
+        ))}
       </div>
     </div>
   )

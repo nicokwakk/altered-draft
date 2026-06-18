@@ -11,7 +11,7 @@ import RotisserieGrid from '../components/RotisserieGrid.jsx'
 import WinstonBoard from '../components/WinstonBoard.jsx'
 import DraftSidebar from '../components/DraftSidebar.jsx'
 import PlayerStatus from '../components/PlayerStatus.jsx'
-import CardPreview from '../components/CardPreview.jsx'
+import ZoomCard from '../components/ZoomCard.jsx'
 import PickTimer from '../components/PickTimer.jsx'
 import MobileTabBar from '../components/MobileTabBar.jsx'
 import ThemeToggle from '../components/ThemeToggle.jsx'
@@ -20,31 +20,15 @@ import { COMMUNITY_CUBES } from '../lib/cubes.js'
 
 // Compact read-only strip of the heroes you've drafted (during the hero phase, and
 // as a reminder afterward). `label` lets callers relabel it per phase.
-function MyHeroes({ heroes, cardMap, label = 'Your heroes', onHover }) {
+function MyHeroes({ heroes, cardMap, label = 'Your heroes' }) {
   if (!heroes?.length) return null
   return (
     <div className="mb-4 border border-accent/30 bg-accent/5 rounded-lg px-3 py-2.5">
       <p className="text-xs font-semibold text-accent mb-2">{label} ({heroes.length})</p>
       <div className="flex flex-wrap gap-2">
-        {heroes.map((ref, i) => {
-          const card = cardMap?.[ref]
-          return (
-            <div key={`${ref}-${i}`} className="w-20 sm:w-24 rounded-lg overflow-hidden border border-line bg-surface2 shrink-0 cursor-zoom-in"
-              title={card?.name ?? ref}
-              onMouseEnter={() => onHover?.(card ?? { reference: ref, name: ref })}
-              onMouseLeave={() => onHover?.(null)}>
-              {card?.imagePath ? (
-                <img src={card.imagePath} alt={card?.name ?? ''} loading="lazy"
-                  className="w-full aspect-[2/3] object-cover"
-                  onError={e => { e.currentTarget.style.display = 'none' }} />
-              ) : (
-                <div className="aspect-[2/3] flex items-center justify-center p-1 text-[10px] text-faint text-center leading-tight">
-                  {card?.name ?? ref}
-                </div>
-              )}
-            </div>
-          )
-        })}
+        {heroes.map((ref, i) => (
+          <ZoomCard key={`${ref}-${i}`} ref_={ref} card={cardMap?.[ref]} width="w-20 sm:w-24" />
+        ))}
       </div>
     </div>
   )
@@ -57,7 +41,6 @@ export default function Draft() {
   const [roomState, setRoomState] = useState(null)
   const [me, setMe] = useState(null)
   const [cardMap, setCardMap] = useState({})
-  const [hoverCard, setHoverCard] = useState(null)
   const [picking, setPicking] = useState(false)
   const [reconnecting, setReconnecting] = useState(false)
   const [fetchErrors, setFetchErrors] = useState([])
@@ -423,8 +406,8 @@ export default function Draft() {
               Winston (2 players): look at the top pile, then Take it or Pass. Passing adds a face-down card and moves you on; pass all three and you draw blind. Piles stay hidden from your opponent.
             </p>
           )}
-          {isHeroPhase && myHeroPicks.length > 0 && <MyHeroes heroes={myHeroPicks} cardMap={cardMap} onHover={setHoverCard} label="Heroes you've taken" />}
-          {!isHeroPhase && myHeroPicks.length > 0 && <MyHeroes heroes={myHeroPicks} cardMap={cardMap} onHover={setHoverCard} />}
+          {isHeroPhase && myHeroPicks.length > 0 && <MyHeroes heroes={myHeroPicks} cardMap={cardMap} label="Heroes you've taken" />}
+          {!isHeroPhase && myHeroPicks.length > 0 && <MyHeroes heroes={myHeroPicks} cardMap={cardMap} />}
           {roomState.config?.timerEnabled && roomState.pickDeadline && (
             <PickTimer deadline={roomState.pickDeadline} isMyTurn={isMyTurn} onTimeout={handleTimeout} />
           )}
@@ -439,10 +422,10 @@ export default function Draft() {
           )}
           {isWinston
             ? <WinstonBoard state={roomState} myIndex={myIndex} cardMap={cardMap} isMyTurn={isMyTurn}
-                onAction={doWinstonAction} onHover={setHoverCard} disabled={picking} />
+                onAction={doWinstonAction} disabled={picking} />
             : isRotisserie
-              ? <RotisserieGrid refs={myPack} cardMap={cardMap} onPick={doPick} onHover={setHoverCard} disabled={!isMyTurn || picking} />
-              : <CardGrid packRefs={myPack} cardMap={cardMap} onPick={doPick} onHover={setHoverCard} disabled={!isMyTurn || picking} />}
+              ? <RotisserieGrid refs={myPack} cardMap={cardMap} onPick={doPick} disabled={!isMyTurn || picking} />
+              : <CardGrid packRefs={myPack} cardMap={cardMap} onPick={doPick} disabled={!isMyTurn || picking} />}
         </div>
         <div className="w-80 border-l border-line flex flex-col">
           <DraftSidebar pickedRefs={activePicks} cardMap={cardMap} round={roomState.round} code={code} />
@@ -472,12 +455,12 @@ export default function Draft() {
             )}
             {isWinston
               ? <WinstonBoard state={roomState} myIndex={myIndex} cardMap={cardMap} isMyTurn={isMyTurn}
-                  onAction={doWinstonAction} onHover={() => {}} disabled={picking} />
+                  onAction={doWinstonAction} disabled={picking} />
               : isRotisserie
                 ? <RotisserieGrid refs={myPack} cardMap={cardMap} onPick={(ref) => { doPick(ref); setMobileTab('pack') }}
-                    onHover={() => {}} disabled={!isMyTurn || picking} />
+                    disabled={!isMyTurn || picking} />
                 : <CardGrid packRefs={myPack} cardMap={cardMap} onPick={(ref) => { doPick(ref); setMobileTab('pack') }}
-                    onHover={() => {}} disabled={!isMyTurn || picking} />}
+                    disabled={!isMyTurn || picking} />}
           </div>
         )}
         {mobileTab === 'picks' && (
@@ -490,7 +473,6 @@ export default function Draft() {
         )}
       </div>
 
-      {hoverCard && <CardPreview card={hoverCard} />}
       <MobileTabBar tab={mobileTab} setTab={setMobileTab} pickCount={activePicks.length} />
     </div>
   )

@@ -4,29 +4,11 @@
 // state, so this component is what keeps the hidden info hidden; never render a pile's cards
 // to a player who shouldn't see them.
 
+import ZoomCard from './ZoomCard.jsx'
+
 function nextNonEmpty(piles, from) {
   for (let k = from; k < piles.length; k++) if (piles[k].length) return k
   return -1
-}
-
-function MiniCard({ ref_, card, onHover, highlight }) {
-  return (
-    <div className={`w-24 sm:w-28 rounded-lg overflow-hidden border bg-surface2 shrink-0 ${
-        highlight ? 'border-accent ring-2 ring-accent/60' : 'border-line'}`}
-      title={card?.name ?? ref_}
-      onMouseEnter={() => onHover?.(card ?? { reference: ref_, name: ref_ })}
-      onMouseLeave={() => onHover?.(null)}>
-      {card?.imagePath ? (
-        <img src={card.imagePath} alt={card?.name ?? ''} loading="lazy"
-          className="w-full aspect-[2/3] object-cover"
-          onError={e => { e.currentTarget.style.display = 'none' }} />
-      ) : (
-        <div className="aspect-[2/3] flex items-center justify-center p-1 text-[11px] text-faint text-center leading-tight">
-          {card?.name ?? ref_}
-        </div>
-      )}
-    </div>
-  )
 }
 
 // A face-down pile/deck rendered as a stack of card backs with a big card count.
@@ -51,7 +33,7 @@ function FaceDown({ label, count, highlight }) {
   )
 }
 
-export default function WinstonBoard({ state, myIndex, cardMap, isMyTurn, onAction, onHover, disabled }) {
+export default function WinstonBoard({ state, myIndex, cardMap, isMyTurn, onAction, disabled }) {
   const piles = state.piles ?? [[], [], []]
   const deckCount = state.deck?.length ?? 0
   const rawPeek = state.peekIndex ?? 0
@@ -90,7 +72,7 @@ export default function WinstonBoard({ state, myIndex, cardMap, isMyTurn, onActi
           </p>
           {currentPile.length > 0 ? (
             <div className="flex flex-wrap gap-2">
-              {currentPile.map((ref, i) => <MiniCard key={`${ref}-${i}`} ref_={ref} card={cardMap?.[ref]} onHover={onHover} />)}
+              {currentPile.map((ref, i) => <ZoomCard key={`${ref}-${i}`} ref_={ref} card={cardMap?.[ref]} width="w-24 sm:w-28" />)}
             </div>
           ) : (
             <p className="text-sm text-faint">This pile is empty.</p>
@@ -117,7 +99,7 @@ export default function WinstonBoard({ state, myIndex, cardMap, isMyTurn, onActi
       {/* The card you took blind off the deck (declined all three piles) — shown only to you. */}
       {state.lastBlind?.seat === myIndex && (
         <div className="bg-surface border border-accent/40 rounded-xl p-3 flex items-center gap-3">
-          <MiniCard ref_={state.lastBlind.ref} card={cardMap?.[state.lastBlind.ref]} onHover={onHover} highlight />
+          <ZoomCard ref_={state.lastBlind.ref} card={cardMap?.[state.lastBlind.ref]} width="w-24 sm:w-28" highlight />
           <div>
             <p className="text-sm text-accent font-semibold">You drew this off the deck</p>
             <p className="text-xs text-faint mt-0.5">
