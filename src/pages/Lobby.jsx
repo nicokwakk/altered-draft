@@ -28,6 +28,13 @@ const MODES = [
 ]
 const WIZARD_STEPS = ['How to play', 'Cards', 'Settings']
 
+// Target pool size per mode, as boosters per player (~13 cards each). The mode sets how many
+// cards a game wants; the card source then hits it — Presets generate it automatically, the
+// Boosters source asks the host for that many, cubes generate up to it. Winston pools and
+// splits 2 ways, so 6/player = 12 boosters total ≈ 72 cards each.
+const BOOSTERS_PER_PLAYER = { booster: 4, rochester: 4, rotisserie: 4, winston: 6, sealed: 7 }
+const boostersPerPlayer = m => BOOSTERS_PER_PLAYER[m] ?? 4
+
 function shuffle(arr) {
   const a = [...arr]
   for (let i = a.length - 1; i > 0; i--) {
@@ -89,6 +96,7 @@ export default function Lobby() {
   const isSealed = mode === 'sealed'
   const draftMode = isSealed ? 'sealed' : 'draft'      // derived, kept for the build logic below
   const draftFormat = isSealed ? 'booster' : mode      // sealed ignores format
+  const bpp = boostersPerPlayer(mode)                  // target boosters per player for this mode
   const [configTab, setConfigTab] = useState('presets') // 'presets' | 'cubes' | 'advanced'
   const [selectedPreset, setSelectedPreset] = useState(null) // set code
   const [selectedCube, setSelectedCube] = useState(null) // cube id
@@ -431,7 +439,7 @@ export default function Lobby() {
         const seedHeroes = freeHero || (heroMode === 'draft' && !useHeroDraft)
         const cardRefs = (useHeroDraft || useSplit || seedHeroes) ? customCube.cards : [...customCube.cards, ...customCube.heroes]
         const cardPool = cardRefs.map(r => byRef.get(r)).filter(Boolean)
-        const totalPacks = playerCount * 4
+        const totalPacks = playerCount * bpp
         if (cardPool.length < totalPacks) {
           setStartError(`This cube is too small for ${playerCount} players. Needs at least ${totalPacks} non-hero cards (has ${cardPool.length}).`)
           setLoading(false); return
@@ -477,14 +485,14 @@ export default function Lobby() {
           const allCards = cube.refs.map(r => byRef.get(r)).filter(Boolean)
           if (!allCards.length) { setStartError('Could not load cube card data.'); setLoading(false); return }
           packs = cube.booster
-            ? generateCubeRecipePacks(allCards, playerCount * 4, cube.booster)
-            : generateAllPacks(allCards, playerCount, 4, { includeHeroes: false, cubeMode: true })
+            ? generateCubeRecipePacks(allCards, playerCount * bpp, cube.booster)
+            : generateAllPacks(allCards, playerCount, bpp, { includeHeroes: false, cubeMode: true })
           if (freeHero) freeHeroPool = [...new Set(cube.heroes ?? [])].filter(r => byRef.has(r))
         } else {
           const cubeRefSet = new Set(cube.refs)
           const allCards = results.flat().filter(c => cubeRefSet.has(c.reference))
           if (!allCards.length) { setStartError('Could not load cube card data.'); setLoading(false); return }
-          packs = generateAllPacks(allCards, playerCount, 4, { includeHeroes: packHeroes, cubeMode: true })
+          packs = generateAllPacks(allCards, playerCount, bpp, { includeHeroes: packHeroes, cubeMode: true })
           // 'free'/'draft' on a non-heroDraft cube use the HERO cards within the pool.
           const hh = resolveDraftHeroes(uniqueHeroRefs(allCards), playerCount, heroMode)
           freeHeroPool = hh.freeHeroPool
@@ -517,8 +525,8 @@ export default function Lobby() {
         const allCards = results.flat().filter(c => refSet.has(c.reference))
         const uniquePool = addUniques ? Object.values(await getUniquePools(rawCodes)).flat() : []
         const packs = allCards.length
-          ? generateAllPacks(allCards, playerCount, 4, { includeHeroes: packHeroes, uniquePool, randomUniqueRate: addUniques ? UNIQUE_RATE : 0 })
-          : generatePacksFromPool(refs, playerCount, 4) // fallback if fetch fails
+          ? generateAllPacks(allCards, playerCount, bpp, { includeHeroes: packHeroes, uniquePool, randomUniqueRate: addUniques ? UNIQUE_RATE : 0 })
+          : generatePacksFromPool(refs, playerCount, bpp) // fallback if fetch fails
         const apiCodes = [...new Set(rawCodes.map(apiSetCode))]
         const { heroPool, freeHeroPool } = resolveDraftHeroes(uniqueHeroRefs(allCards), playerCount, heroMode)
         const state = buildDraftState(
@@ -541,11 +549,11 @@ export default function Lobby() {
         const setCodes = Object.keys(mix)
         if (!setCodes.length) { setStartError('Select at least one set.'); setLoading(false); return }
         const total = Object.values(mix).reduce((a, b) => a + b, 0)
-        const target = equalPacks ? 4 : playerCount * 4
+        const target = equalPacks ? bpp : playerCount * bpp
         if (total !== target) {
           setStartError(equalPacks
-            ? `Each player drafts exactly 4 packs. You have ${total}.`
-            : `The bag needs exactly ${target} boosters (${playerCount} players × 4). You have ${total}.`)
+            ? `This mode wants ${bpp} packs per player. You have ${total}.`
+            : `The bag needs exactly ${target} boosters (${playerCount} × ${bpp}). You have ${total}.`)
           setLoading(false); return
         }
         const fetched = await Promise.all(setCodes.map(async s => [s, await fetchSet(s, lang).catch(() => [])]))
@@ -583,7 +591,7 @@ export default function Lobby() {
       if (!allCards.length) { setStartError('No cards loaded. Check set selection.'); setLoading(false); return }
 
       const uniquePool = addUniques ? Object.values(await getUniquePools(setCodes)).flat() : []
-      const packs = generateAllPacks(allCards, playerCount, 4, { includeHeroes: packHeroes, uniquePool, randomUniqueRate: addUniques ? UNIQUE_RATE : 0 })
+      const packs = generateAllPacks(allCards, playerCount, bpp, { includeHeroes: packHeroes, uniquePool, randomUniqueRate: addUniques ? UNIQUE_RATE : 0 })
       const { heroPool, freeHeroPool } = resolveDraftHeroes(uniqueHeroRefs(allCards), playerCount, heroMode)
       const state = buildDraftState(
         { sets: setCodes, playerCount, lang, freeHero, includeHeroes, freeHeroPool, addUniques, heroMode, draftFormat, timerEnabled, timerSeconds },
@@ -605,7 +613,7 @@ export default function Lobby() {
 
   // Step 2 → 3 gate: a usable card pool is selected for the current source tab. A pasted
   // custom pool (handleStart checks it first) counts on its own.
-  const poolTarget = equalPacks ? 4 : roomState.players.length * 4
+  const poolTarget = equalPacks ? bpp : roomState.players.length * bpp
   const poolReady = !!customPoolText.trim()
     || (configTab === 'presets' && !!selectedPreset)
     || (configTab === 'cubes' && (!!selectedCube || !!customCube))
@@ -726,7 +734,11 @@ export default function Lobby() {
               {configTab === 'presets' && (
                 <div>
                   <p className="text-sm text-muted mb-3">
-                    Select a set. Each player receives {draftMode === 'sealed' ? 7 : 4} packs of that set.
+                    {isSealed
+                      ? 'Select a set. Each player receives 7 packs of that set.'
+                      : mode === 'winston'
+                        ? `Select a set. ${bpp * roomState.players.length} boosters are pooled and split between the players.`
+                        : `Select a set. Each player drafts ${bpp} packs of that set.`}
                   </p>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     {SETS.filter(s => !s.hidden).map(set => {
@@ -1027,7 +1039,7 @@ export default function Lobby() {
                     onChange={setMultiSetMix}
                     equalPacks={equalPacks}
                     onEqualChange={setEqualPacks}
-                    target={equalPacks ? 4 : roomState.players.length * 4}
+                    target={equalPacks ? bpp : roomState.players.length * bpp}
                     disabled={loading}
                   />
 
