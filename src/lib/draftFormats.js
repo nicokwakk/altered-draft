@@ -1,7 +1,7 @@
-// Draft formats offered in the pre-flight settings modal. One source of truth for the
-// selector UI (StartSettingsModal) and for the engine dispatch (config.draftFormat →
-// buildDraftState in draftLogic.js). `available:false` formats render as "Coming soon"
-// and can't be selected yet — they're the next builds in the roadmap (Rotisserie, Winston).
+// Draft formats offered in the lobby's mode step (step 1 of the wizard). One source of
+// truth for the mode selector UI (Lobby `MODES`) and for the engine dispatch
+// (config.draftFormat → buildDraftState in draftLogic.js). `available:false` formats render
+// as "Coming soon" and can't be selected yet.
 export const DRAFT_FORMATS = [
   {
     id: 'booster',

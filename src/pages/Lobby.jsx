@@ -13,11 +13,20 @@ import { listDecks, getDeck, deckCardsToRefs } from '../lib/decks.js'
 import { useAuth } from '../auth/AuthProvider.jsx'
 import SetSelector from '../components/SetSelector.jsx'
 import MultiSetSelector from '../components/MultiSetSelector.jsx'
-import StartSettingsModal from '../components/StartSettingsModal.jsx'
-import { DEFAULT_FORMAT } from '../lib/draftFormats.js'
+import SettingsFields from '../components/SettingsFields.jsx'
+import { DRAFT_FORMATS } from '../lib/draftFormats.js'
 import TopNav from '../components/TopNav.jsx'
 
 const TAB_LABELS = { presets: 'Presets', cubes: 'Cubes', advanced: 'Advanced', multiset: 'Multi-Set' }
+
+// Lobby wizard, step 1: how to play. Modes are the draft formats plus Sealed; player-count
+// badges come from the format metadata. Booster Draft is the classic pick-and-pass format.
+const MODES = [
+  ...DRAFT_FORMATS,
+  { id: 'sealed', name: 'Sealed', players: '1+', available: true,
+    blurb: 'Open your boosters and build a deck from your own pool. No passing; play at your own pace.' },
+]
+const WIZARD_STEPS = ['How to play', 'Cards', 'Settings']
 
 function shuffle(arr) {
   const a = [...arr]
@@ -73,8 +82,13 @@ export default function Lobby() {
   const [startError, setStartError] = useState('')
   const [linkCopied, setLinkCopied] = useState(false)
 
-  // Config
-  const [draftMode, setDraftMode] = useState('draft') // 'draft' | 'sealed'
+  // Config. The lobby is a 3-step wizard: pick a MODE (how to play) → a card pool → settings.
+  // `mode` unifies the old draft/sealed toggle + draft-format selector into one choice.
+  const [mode, setMode] = useState('booster') // 'booster'|'rochester'|'rotisserie'|'winston'|'sealed'
+  const [wizardStep, setWizardStep] = useState(1) // 1 = mode, 2 = cards, 3 = settings
+  const isSealed = mode === 'sealed'
+  const draftMode = isSealed ? 'sealed' : 'draft'      // derived, kept for the build logic below
+  const draftFormat = isSealed ? 'booster' : mode      // sealed ignores format
   const [configTab, setConfigTab] = useState('presets') // 'presets' | 'cubes' | 'advanced'
   const [selectedPreset, setSelectedPreset] = useState(null) // set code
   const [selectedCube, setSelectedCube] = useState(null) // cube id
@@ -107,10 +121,19 @@ export default function Lobby() {
   const [timerSeconds, setTimerSeconds] = useState(60)
   const [showCustomPool, setShowCustomPool] = useState(false)
   const [customPoolText, setCustomPoolText] = useState('')
-  // Draft format (booster | rochester | …) + the pre-flight settings modal toggle.
-  const [draftFormat, setDraftFormat] = useState(DEFAULT_FORMAT)
-  const [showStart, setShowStart] = useState(false)
   const [addUniques, setAddUniques] = useState(false)
+
+  // Keep the card-source tab and hero choice valid when the mode changes. (Multi-Set is
+  // draft-only; Advanced is the sealed equivalent. 'draft'/'split' heroes need a pick phase;
+  // 'split' is Winston-only.)
+  useEffect(() => {
+    if (isSealed && configTab === 'multiset') setConfigTab('advanced')
+    if (!isSealed && configTab === 'advanced') setConfigTab('multiset')
+    if (isSealed && (heroMode === 'draft' || heroMode === 'split')) setHeroMode('packs')
+    if (!isSealed && mode !== 'winston' && heroMode === 'split') setHeroMode('packs')
+    if (mode === 'winston' && heroMode === 'draft') setHeroMode('packs')
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mode])
 
   const joinUrl = `${window.location.origin}/?join=${code}`
   const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=140x140&data=${encodeURIComponent(joinUrl)}&bgcolor=111827&color=f59e0b`
@@ -260,13 +283,13 @@ export default function Lobby() {
     return []
   }
 
-  // Warm the unique pool while the host is still looking at the settings modal.
+  // Warm the unique pool once the host reaches the settings step (so Start stays snappy).
   useEffect(() => {
-    if (!showStart || !addUniques) return
+    if (wizardStep !== 3 || !addUniques) return
     const codes = activeUniqueSetCodes()
     if (codes.length) getUniquePools(codes) // fire-and-forget; result memoized in the ref
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [showStart, addUniques, configTab, draftMode, selectedPreset, selectedSets, multiSetMix, customPoolText, lang])
+  }, [wizardStep, addUniques, configTab, draftMode, selectedPreset, selectedSets, multiSetMix, customPoolText, lang])
 
   const handleStart = async () => {
     if (!roomState) return
@@ -580,6 +603,15 @@ export default function Lobby() {
 
   const isHost = me.isHost
 
+  // Step 2 → 3 gate: a usable card pool is selected for the current source tab. A pasted
+  // custom pool (handleStart checks it first) counts on its own.
+  const poolTarget = equalPacks ? 4 : roomState.players.length * 4
+  const poolReady = !!customPoolText.trim()
+    || (configTab === 'presets' && !!selectedPreset)
+    || (configTab === 'cubes' && (!!selectedCube || !!customCube))
+    || (configTab === 'advanced' && Object.values(selectedSets).some(n => n > 0))
+    || (configTab === 'multiset' && Object.values(multiSetMix).reduce((a, b) => a + (b || 0), 0) === poolTarget)
+
   return (
     <div className="min-h-screen flex flex-col">
       <TopNav />
@@ -634,40 +666,62 @@ export default function Lobby() {
         {/* Draft config — host only */}
         {isHost && (
           <div className="bg-surface rounded-xl overflow-hidden">
-            {/* Mode selector: Draft vs Sealed */}
-            <div className="grid grid-cols-2 border-b border-line">
-              {[{ id: 'draft', label: 'Draft', desc: 'Pick from passing packs' },
-                { id: 'sealed', label: 'Sealed', desc: '7 boosters, build your pool' }].map(m => (
-                <button key={m.id} onClick={() => {
-                    setDraftMode(m.id)
-                    // The Multi-Set tab is draft-only; sealed keeps the classic Advanced tab.
-                    if (m.id === 'sealed' && configTab === 'multiset') setConfigTab('advanced')
-                    if (m.id === 'draft' && configTab === 'advanced') setConfigTab('multiset')
-                    // 'Draft' heroes is meaningless in sealed (no draft phase) — fall back.
-                    if (m.id === 'sealed' && heroMode === 'draft') setHeroMode('packs')
-                  }}
-                  className={`py-3 px-4 text-left transition-colors ${
-                    draftMode === m.id ? 'bg-accent/10 border-b-2 border-accent' : 'hover:bg-surface2/50'}`}>
-                  <p className={`text-sm font-semibold ${draftMode === m.id ? 'text-accent' : 'text-muted'}`}>{m.label}</p>
-                  <p className="text-xs text-faint hidden sm:block">{m.desc}</p>
-                </button>
-              ))}
-            </div>
-
-            {/* Config tab bar */}
+            {/* Wizard progress: How to play → Cards → Settings */}
             <div className="flex border-b border-line">
-              {(draftMode === 'draft' ? ['presets', 'cubes', 'multiset'] : ['presets', 'cubes', 'advanced']).map(t => (
-                <button key={t} onClick={() => setConfigTab(t)}
-                  className={`flex-1 py-3 text-sm font-medium transition-colors ${
-                    configTab === t
-                      ? 'text-accent border-b-2 border-accent2 bg-surface'
-                      : 'text-faint hover:text-ink2 bg-surface2/50'}`}>
-                  {TAB_LABELS[t] ?? t}
-                </button>
-              ))}
+              {WIZARD_STEPS.map((label, i) => {
+                const n = i + 1, active = wizardStep === n, done = wizardStep > n
+                return (
+                  <div key={label}
+                    className={`flex-1 py-3 px-2 text-center text-xs sm:text-sm font-medium border-b-2 ${
+                      active ? 'border-accent text-accent' : 'border-transparent ' + (done ? 'text-ink2' : 'text-faint')}`}>
+                    <span className={`inline-flex items-center justify-center w-5 h-5 rounded-full text-[11px] mr-1.5 ${
+                      active ? 'bg-accent text-on-accent' : done ? 'bg-surface3 text-ink' : 'bg-surface2 text-faint'}`}>{done ? '✓' : n}</span>
+                    <span className="hidden sm:inline">{label}</span>
+                  </div>
+                )
+              })}
             </div>
 
             <div className="p-6 space-y-5">
+              {/* STEP 1 — how to play (the mode) */}
+              {wizardStep === 1 && (
+                <div className="space-y-2">
+                  {MODES.map(m => {
+                    const active = mode === m.id
+                    const needs2 = m.players === '2' && roomState.players.length !== 2
+                    return (
+                      <button key={m.id} type="button" onClick={() => setMode(m.id)}
+                        className={`w-full text-left px-3 py-2.5 rounded-lg border transition-colors ${
+                          active ? 'border-accent bg-accent/5' : 'border-line bg-surface2 hover:bg-surface3'}`}>
+                        <div className="flex items-center gap-2">
+                          <span className={`w-4 h-4 rounded-full border shrink-0 flex items-center justify-center ${active ? 'border-accent' : 'border-faint'}`}>
+                            {active && <span className="w-2 h-2 rounded-full bg-accent" />}
+                          </span>
+                          <span className={`text-sm font-semibold ${active ? 'text-ink' : 'text-ink2'}`}>{m.name}</span>
+                          <span className="text-[10px] uppercase tracking-wide text-faint border border-line rounded px-1 py-0.5">{m.players} players</span>
+                          {active && needs2 && <span className="ml-auto text-[10px] uppercase tracking-wide text-accent2">Needs exactly 2</span>}
+                        </div>
+                        <p className="text-xs text-faint mt-1.5 leading-relaxed pl-6">{m.blurb}</p>
+                      </button>
+                    )
+                  })}
+                </div>
+              )}
+
+              {/* STEP 2 — what cards (the pool) */}
+              {wizardStep === 2 && (<>
+              {/* Card-source tabs */}
+              <div className="flex border-b border-line -mx-6 -mt-6 mb-1">
+                {(draftMode === 'draft' ? ['presets', 'cubes', 'multiset'] : ['presets', 'cubes', 'advanced']).map(t => (
+                  <button key={t} onClick={() => setConfigTab(t)}
+                    className={`flex-1 py-3 text-sm font-medium transition-colors ${
+                      configTab === t
+                        ? 'text-accent border-b-2 border-accent2 bg-surface'
+                        : 'text-faint hover:text-ink2 bg-surface2/50'}`}>
+                    {TAB_LABELS[t] ?? t}
+                  </button>
+                ))}
+              </div>
               {/* PRESETS TAB */}
               {configTab === 'presets' && (
                 <div>
@@ -1001,21 +1055,47 @@ export default function Lobby() {
                 </div>
               )}
 
-              {startError && !showStart && <p className="text-red-400 text-sm">{startError}</p>}
+              </>)}
 
-              {/* Opens the pre-flight settings modal (format · language · heroes · timer)
-                  where the host makes final choices and launches. */}
-              <button
-                onClick={() => { setStartError(''); setShowStart(true) }}
-                disabled={loading
-                || (draftMode === 'draft' && roomState.players.length < 2)
-                || (configTab === 'presets' && !selectedPreset)
-                || (configTab === 'cubes' && !selectedCube && !customCube)
-                || (configTab === 'multiset' && Object.values(multiSetMix).reduce((a, b) => a + (b || 0), 0) !== (equalPacks ? 4 : roomState.players.length * 4))}
-                className="w-full py-3 bg-accent hover:bg-accent2 disabled:opacity-40 text-on-accent font-bold rounded-lg transition-colors"
-              >
-                {draftMode === 'sealed' ? 'Start sealed' : 'Start draft'}
-              </button>
+              {/* STEP 3 — settings */}
+              {wizardStep === 3 && (
+                <SettingsFields
+                  mode={draftMode} draftFormat={draftFormat}
+                  lang={lang} setLang={setLang}
+                  heroMode={heroMode} setHeroMode={setHeroMode}
+                  timerEnabled={timerEnabled} setTimerEnabled={setTimerEnabled}
+                  timerSeconds={timerSeconds} setTimerSeconds={setTimerSeconds}
+                  addUniques={addUniques} setAddUniques={setAddUniques}
+                  showUniques={configTab !== 'cubes'}
+                />
+              )}
+
+              {startError && <p className="text-red-400 text-sm">{startError}</p>}
+            </div>
+
+            {/* Wizard nav: Back · Next / Start */}
+            <div className="flex items-center gap-3 px-6 py-4 border-t border-line">
+              {wizardStep > 1 && (
+                <button onClick={() => { setStartError(''); setWizardStep(s => s - 1) }} disabled={loading}
+                  className="px-4 py-2 rounded-lg bg-surface2 hover:bg-surface3 disabled:opacity-40 text-ink2 text-sm font-medium transition-colors">
+                  Back
+                </button>
+              )}
+              {wizardStep < 3 ? (
+                <button onClick={() => { setStartError(''); setWizardStep(s => s + 1) }}
+                  disabled={wizardStep === 2 && !poolReady}
+                  className="flex-1 py-2.5 bg-accent hover:bg-accent2 disabled:opacity-40 text-on-accent font-bold rounded-lg transition-colors">
+                  Next
+                </button>
+              ) : (
+                <button onClick={handleStart}
+                  disabled={loading
+                    || (draftMode === 'draft' && roomState.players.length < 2)
+                    || (draftFormat === 'winston' && roomState.players.length !== 2)}
+                  className="flex-1 py-2.5 bg-accent hover:bg-accent2 disabled:opacity-40 text-on-accent font-bold rounded-lg transition-colors">
+                  {loading ? 'Generating packs…' : isSealed ? 'Start sealed' : 'Start draft'}
+                </button>
+              )}
             </div>
           </div>
         )}
@@ -1030,23 +1110,6 @@ export default function Lobby() {
 
       {previewCube && (
         <CubePreviewModal cube={previewCube} onClose={() => setPreviewCube(null)} />
-      )}
-
-      {showStart && (
-        <StartSettingsModal
-          mode={draftMode}
-          lang={lang} setLang={setLang}
-          heroMode={heroMode} setHeroMode={setHeroMode}
-          timerEnabled={timerEnabled} setTimerEnabled={setTimerEnabled}
-          timerSeconds={timerSeconds} setTimerSeconds={setTimerSeconds}
-          draftFormat={draftFormat} setDraftFormat={setDraftFormat}
-          addUniques={addUniques} setAddUniques={setAddUniques}
-          showUniques={configTab !== 'cubes'}
-          playerCount={roomState.players.length}
-          loading={loading} startError={startError}
-          onStart={handleStart}
-          onClose={() => { if (!loading) setShowStart(false) }}
-        />
       )}
     </div>
   )
