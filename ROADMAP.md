@@ -363,6 +363,31 @@ This is a DIFFERENT, newer cube than the LuigiNico cube already in the app.
 
 ## Recently shipped
 
+- **Lobby reframed as a mode-first 3-step wizard** (Jun 2026). FIFA-style: **how to play → cards →
+  settings** (replaces the old draft/sealed toggle + the pre-flight modal). Step 1 picks the **mode**
+  (Booster Draft + Sealed up front; Rochester / Rotisserie / Winston behind an "Other draft options"
+  toggle). Step 2 picks the card pool (the existing Presets / Cubes / Multi-Set / Advanced sources,
+  filtered to the mode). Step 3 is mode-aware settings (`SettingsFields`, extracted from the deleted
+  `StartSettingsModal`). `mode` state drives everything (draftMode + draftFormat now derived);
+  `wizardStep` + Back/Next/Start replace the modal. Engines, generation, and `handleStart` logic
+  unchanged. (`Lobby.jsx`, `SettingsFields.jsx`)
+- **Mode-driven pool size** (Jun 2026). Each mode targets boosters per player (`BOOSTERS_PER_PLAYER` in
+  `Lobby.jsx`): booster/rochester/rotisserie 4, **Winston 6** (= 12 total for 2p ≈ 72 cards each), sealed
+  7. `bpp` replaces the hardcoded 4 across every draft path — Presets generate it automatically, the
+  Multi-Set/Boosters source validates against it (asks the host for the right number), cubes generate
+  `players × bpp` packs. Only Winston's amount changed; fixes its previously-thin pool. The sealed
+  **Advanced** picker was also restyled to match the Multi-Set picker (set icons + −/+ steppers + running
+  "Boosters per player" total). (`SetSelector.jsx`)
+- **Winston polish** (Jun 2026). Selectable hero handling instead of the end-of-draft snake (heroMode
+  `packs` = shuffle into pool, `free` = pick from all, **`split`** = each seat pre-dealt one hero per
+  faction into `heroPicks`, NEW). Board redone: piles render as a card-back **stack with a big count**;
+  the **blind-drawn card** (decline all three) is surfaced highlighted to the drawer only (`state.lastBlind`).
+  (`winstonLogic.js`, `WinstonBoard.jsx`)
+- **Deckbuilder-style hover zoom in the draft** (Jun 2026). Replaced the detached bottom-right
+  `CardPreview` (deleted) with the deckbuilder's **in-place zoom** (`useZoomOrigin`): cards grow under the
+  cursor, anchored to stay on-screen. New shared `ZoomCard` for standalone cards (Winston piles, hero
+  strip) hovers at 2x and **opens a full-size lightbox on click**; `CardGrid`/`RotisserieGrid` zoom the
+  art in place. (`ZoomCard.jsx`, `CardGrid.jsx`, `RotisserieGrid.jsx`, `Draft.jsx`)
 - **"Add random uniques to packs"** (Jun 2026). Optional StartSettingsModal toggle (`config.addUniques`),
   booster-based modes only (presets / multi-set / custom-pool draft + sealed; NOT cubes). Standard set
   files carry no uniques, so off by default = no uniques as before. On: each booster has an independent
@@ -411,14 +436,14 @@ anon-readable Supabase row, so **open-information formats fit cleanly** (nothing
 formats can only be "honor system" — acceptable IF the UI never surfaces the hidden cards (so you can't
 cheat *through the UI*, only by inspecting raw network/state).
 
-**✅ Pre-flight settings modal shipped (Jun 2026).** "Start draft"/"Start sealed" no longer launches
-immediately — it opens a `StartSettingsModal` with the final choices: **Draft format**, card language,
-**Heroes** (now 3 options: In packs / Free choice / **Draft**), and pick timer. Sealed shows only language
-+ Heroes (no timer/format — neither applies). Formats come from `src/lib/draftFormats.js` (`DRAFT_FORMATS`);
-`available:false` ones render greyed "Coming soon". The new **Heroes → Draft** option snake-drafts heroes
-in-app (generalizes cube hero-draft to any pool via `resolveDraftHeroes` in `Lobby.jsx`; too few heroes →
-seeded into pools as a fallback). All draft branches now build state through `buildDraftState`
-(`draftLogic.js`), which dispatches on `config.draftFormat`.
+**✅ Pre-flight settings modal shipped (Jun 2026) — later SUPERSEDED by the lobby wizard (see Recently
+shipped).** The format/heroes/timer choices it gathered now live in the 3-step wizard (`StartSettingsModal`
+→ `SettingsFields`), and the draft-format selector became the wizard's step-1 "mode" picker. The original
+design: "Start draft"/"Start sealed" opened a modal with **Draft format**, card language, **Heroes** (In
+packs / Free choice / **Draft**), pick timer. The **Heroes → Draft** option snake-drafts heroes in-app
+(generalizes cube hero-draft to any pool via `resolveDraftHeroes` in `Lobby.jsx`; too few heroes → seeded
+into pools as a fallback). All draft branches build state through `buildDraftState` (`draftLogic.js`),
+which dispatches on `config.draftFormat`.
 
 1. **✅ Rochester — SHIPPED (Jun 2026).** One booster opened **face-up for everyone**; players draft one
    card each in **snake order** from that single shared pack until it's empty, then the next pack opens
@@ -450,8 +475,12 @@ seeded into pools as a fallback). All draft branches now build state through `bu
 - (Grid draft — also open-info, the other canonical 2-player format — considered but not prioritized;
   revisit if 2-player demand shows up.)
 
-All three alternate formats (Rochester, Rotisserie, Winston) are now built. Next: **the user reviews all
-the new modes over the coming days**, then we explore the Re:Union plugin feasibility (see Now #1).
+All three alternate formats (Rochester, Rotisserie, Winston) are built and have since been **refined from
+user feedback** (see Recently shipped): the lobby is now a mode-first wizard, pool size is mode-driven
+(Winston gets a deeper 12-booster pool), Winston has selectable hero handling + a reworked board, and the
+draft uses deckbuilder-style hover zoom. **Still pending: a real multiplayer playtest of each format.**
+Then we explore the Re:Union plugin feasibility (see Now #1). Hero handling across all modes is flagged for
+a later consistency review.
 
 ## Other candidate / backlog (ideas from other drafting sites)
 - **Draft log & replay** — record each seat's picks *and* passes; review after the draft.
