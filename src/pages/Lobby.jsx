@@ -102,6 +102,9 @@ export default function Lobby() {
   const draftMode = isSealed ? 'sealed' : 'draft'      // derived, kept for the build logic below
   const draftFormat = isSealed ? 'booster' : mode      // sealed ignores format
   const bpp = boostersPerPlayer(mode)                  // target boosters per player for this mode
+  // Winston pools all packs into one shared deck, so "same packs for everyone" is meaningless —
+  // force the whole-bag distribution and hide the toggle for it.
+  const effectiveEqualPacks = mode === 'winston' ? false : equalPacks
   const [configTab, setConfigTab] = useState('presets') // 'presets' | 'cubes' | 'advanced'
   const [selectedPreset, setSelectedPreset] = useState(null) // set code
   const [selectedCube, setSelectedCube] = useState(null) // cube id
@@ -554,9 +557,9 @@ export default function Lobby() {
         const setCodes = Object.keys(mix)
         if (!setCodes.length) { setStartError('Select at least one set.'); setLoading(false); return }
         const total = Object.values(mix).reduce((a, b) => a + b, 0)
-        const target = equalPacks ? bpp : playerCount * bpp
+        const target = effectiveEqualPacks ? bpp : playerCount * bpp
         if (total !== target) {
-          setStartError(equalPacks
+          setStartError(effectiveEqualPacks
             ? `This mode wants ${bpp} packs per player. You have ${total}.`
             : `The bag needs exactly ${target} boosters (${playerCount} × ${bpp}). You have ${total}.`)
           setLoading(false); return
@@ -566,13 +569,13 @@ export default function Lobby() {
         if (!Object.values(cardsBySet).some(c => c.length)) { setStartError('No cards loaded. Check set selection.'); setLoading(false); return }
         const uniquesBySet = addUniques ? await getUniquePools(setCodes) : {}
         const uniqueOpts = { uniquesBySet, randomUniqueRate: addUniques ? UNIQUE_RATE : 0 }
-        const packs = equalPacks
+        const packs = effectiveEqualPacks
           ? generateStructuredPacks(cardsBySet, mix, playerCount, { includeHeroes: packHeroes, ...uniqueOpts })
           : generateChaosPacks(cardsBySet, mix, { includeHeroes: packHeroes, ...uniqueOpts })
         const apiCodes = [...new Set(setCodes.map(apiSetCode))]
         const { heroPool, freeHeroPool } = resolveDraftHeroes(uniqueHeroRefs(Object.values(cardsBySet).flat()), playerCount, heroMode)
         const state = buildDraftState(
-          { sets: apiCodes, playerCount, lang, freeHero, includeHeroes, freeHeroPool, addUniques, heroMode, draftFormat, timerEnabled, timerSeconds, multiSetMix: mix, equalPacks },
+          { sets: apiCodes, playerCount, lang, freeHero, includeHeroes, freeHeroPool, addUniques, heroMode, draftFormat, timerEnabled, timerSeconds, multiSetMix: mix, equalPacks: effectiveEqualPacks },
           shuffledPlayers, packs, heroPool
         )
         {
@@ -618,7 +621,7 @@ export default function Lobby() {
 
   // Step 2 → 3 gate: a usable card pool is selected for the current source tab. A pasted
   // custom pool (handleStart checks it first) counts on its own.
-  const poolTarget = equalPacks ? bpp : roomState.players.length * bpp
+  const poolTarget = effectiveEqualPacks ? bpp : roomState.players.length * bpp
   const poolReady = !!customPoolText.trim()
     || (configTab === 'presets' && !!selectedPreset)
     || (configTab === 'cubes' && (!!selectedCube || !!customCube))
@@ -1053,9 +1056,10 @@ export default function Lobby() {
                   <MultiSetSelector
                     mix={multiSetMix}
                     onChange={setMultiSetMix}
-                    equalPacks={equalPacks}
+                    equalPacks={effectiveEqualPacks}
                     onEqualChange={setEqualPacks}
-                    target={equalPacks ? bpp : roomState.players.length * bpp}
+                    hideToggle={mode === 'winston'}
+                    target={poolTarget}
                     disabled={loading}
                   />
 

@@ -10,7 +10,7 @@ import { SET_ASSETS } from '../lib/assets.js'
  *         boosters are shuffled together and dealt at random (chaos).
  * `target` (passed in) is 4 when ON, players × 4 when OFF.
  */
-export default function MultiSetSelector({ mix, onChange, equalPacks, onEqualChange, target = 4, disabled }) {
+export default function MultiSetSelector({ mix, onChange, equalPacks, onEqualChange, target = 4, disabled, hideToggle = false }) {
   const total = Object.values(mix).reduce((a, b) => a + (b || 0), 0)
   const reached = total === target
 
@@ -24,20 +24,24 @@ export default function MultiSetSelector({ mix, onChange, equalPacks, onEqualCha
 
   return (
     <div className="space-y-4">
-      {/* Distribution toggle */}
-      <label className={`flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${
-        equalPacks ? 'border-accent/40 bg-accent/5' : 'border-line bg-surface2'}`}>
-        <input type="checkbox" checked={equalPacks} disabled={disabled}
-          onChange={e => onEqualChange(e.target.checked)} className="accent-accent w-4 h-4 mt-0.5 shrink-0" />
-        <span>
-          <span className="block text-sm text-ink font-medium">All players receive the same packs</span>
-          <span className="block text-xs text-faint mt-0.5">
-            {equalPacks
-              ? 'Every player drafts the same single-set boosters, one set per round.'
-              : 'Build the whole booster bag; all boosters are shuffled and dealt at random.'}
+      {/* Distribution toggle. Hidden for pooled formats (Winston) where it's meaningless. */}
+      {hideToggle ? (
+        <p className="text-xs text-faint">All boosters are pooled into one shared deck and split between the players.</p>
+      ) : (
+        <label className={`flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${
+          equalPacks ? 'border-accent/40 bg-accent/5' : 'border-line bg-surface2'}`}>
+          <input type="checkbox" checked={equalPacks} disabled={disabled}
+            onChange={e => onEqualChange(e.target.checked)} className="accent-accent w-4 h-4 mt-0.5 shrink-0" />
+          <span>
+            <span className="block text-sm text-ink font-medium">All players receive the same packs</span>
+            <span className="block text-xs text-faint mt-0.5">
+              {equalPacks
+                ? 'Every player drafts the same single-set boosters, one set per round.'
+                : 'Build the whole booster bag; all boosters are shuffled and dealt at random.'}
+            </span>
           </span>
-        </span>
-      </label>
+        </label>
+      )}
 
       <div>
         <div className="flex items-center justify-between mb-2">

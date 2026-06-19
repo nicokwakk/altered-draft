@@ -65,7 +65,7 @@ room link in a second tab as a 2nd player). Tick as you go.
 
 ---
 
-### Notes / things to watch
-- Winston + Multi-Set: the "same packs" toggle is meaningless for Winston (it pools everything) but should still produce 12 boosters either way — worth a glance.
-- Uniques in a **non-EN** language: confirm they still resolve (falls back to live fetch).
-- The split-hero deal uses the ref's faction letters; if any hero looks mis-bucketed, flag it.
+### Notes / things to watch — RESOLVED (fixed/verified, no need to re-check)
+- ~~Winston + Multi-Set "same packs" toggle~~ — **fixed**: the toggle is now hidden for Winston (replaced by "All boosters are pooled… and split"), and it forces the whole-bag total (12).
+- ~~Uniques in a non-EN language~~ — **verified**: the cards API returns all five locales; `normalizeAlteredCore` picks the right name and falls back to the EN image if a locale's art is missing.
+- ~~Split-hero faction bucketing~~ — **verified**: the all-sets heroes are standard `ALT_<SET>_B_<FAC>_NN_C` refs (exactly 2 per faction), so the ref's faction letters bucket them correctly.
