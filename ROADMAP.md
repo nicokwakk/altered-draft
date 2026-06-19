@@ -13,7 +13,15 @@ closing window on the old `api.altered.gg` card/unique API before it's retired.
 
 ## Now — active priorities (in order)
 
-### 1. Re:Union (Altered Reunion) account integration — NEW, blocked on dev deliverables
+### 0. Make the website as good as possible — CURRENT FOCUS (Jun 2026, user's call)
+With Re:Union **account integration live and verified**, the priority shifts from new integrations to
+**polishing and validating what's deployed**. Plugin integration and open-sourcing are both **postponed**
+(the account integration already delivers the Re:Union value; being embedded on their site is now a
+nice-to-have, not a goal). Backlog ideas (draft log/replay, cube analytics) are **not being pursued**.
+Immediate work: **QA the recent batch** (`TESTING.md` checklist — the alternate formats, the lobby wizard,
+mode-driven pool size, random uniques, Winston, hover zoom), then continue UX/visual polish.
+
+### 1. Re:Union (Altered Reunion) account integration — core SHIPPED; site-plugin thread POSTPONED
 Connect the app to the **official Re:Union identity** so logged-in users can push their
 drafted deck straight into their account. This does NOT mean building our own accounts
 (see Dropped) — Re:Union owns the identity layer (Keycloak), DB, and auth; we're a client.
@@ -55,7 +63,9 @@ over-invest in pool polish. **Not feasible:** a deck-size (≥80 cards) picker f
 returns no card count (only the per-deck detail does).
 _Hardening fast-follow: move the refresh token to an httpOnly cookie._ ✅ done.
 
-**Re:Union site plugin integration (NEW thread, Jun 2026).** noobiwow [ALTR] reached out: Re:Union has a
+**Re:Union site plugin integration — POSTPONED (Jun 2026, user's call).** Account integration is live, so
+being embedded on the Re:Union site is no longer a priority; the feasibility is assessed (below) and can be
+revived later. Original thread: noobiwow [ALTR] reached out: Re:Union has a
 **plugin system** to add community tools directly onto the Re:Union site, and invited the project into the
 `software-dev-website` channel to discuss with their web dev team. **Plugin docs received (Jun 2026):**
 - How-to / API: **`https://altered.re/plugins/README.html`** (also in the repo below).
@@ -333,7 +343,9 @@ function reads the cookie + rotates it); a readable `reunion_auth=1` hint cookie
 skip the refresh probe for anonymous loads; logout clears both. Proper BFF pattern — closes the one
 real auth-flow security debt and unblocks open-sourcing.
 
-### Open-source under Altered-Community — REPO PREPPED ✅, move pending (user confirmed)
+### Open-source under Altered-Community — REPO PREPPED ✅, move POSTPONED (user's call, Jun 2026)
+**Postponed alongside the plugin** — focus is on polishing the live site, not the org move. Everything is
+ready (below); the actual transfer is a user-driven GitHub step whenever it's wanted.
 The Re:Union dev offered to host the project open-source on the official
 [Altered-Community](https://github.com/Altered-Community) GitHub org.
 
@@ -482,7 +494,8 @@ draft uses deckbuilder-style hover zoom. **Still pending: a real multiplayer pla
 Then we explore the Re:Union plugin feasibility (see Now #1). Hero handling across all modes is flagged for
 a later consistency review.
 
-## Other candidate / backlog (ideas from other drafting sites)
+## Other candidate / backlog — NOT being pursued (user's call, Jun 2026)
+Parked indefinitely; focus is polishing what's live, not adding features.
 - **Draft log & replay** — record each seat's picks *and* passes; review after the draft.
 - **Cube analytics** — extend `CubePreviewModal` with curve / faction-balance / rarity stats.
 
