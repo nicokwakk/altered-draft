@@ -492,9 +492,15 @@ export default function Lobby() {
           for (const c of uniqueCards) byRef.set(c.reference, c)
           const allCards = cube.refs.map(r => byRef.get(r)).filter(Boolean)
           if (!allCards.length) { setStartError('Could not load cube card data.'); setLoading(false); return }
-          packs = cube.booster
-            ? generateCubeRecipePacks(allCards, playerCount * bpp, cube.booster)
-            : generateAllPacks(allCards, playerCount, bpp, { includeHeroes: false, cubeMode: true })
+          // Winston/Rotisserie flatten every booster into ONE shared pool, so the per-booster
+          // recipe (which recycles cards across boosters to hit its 3C/8R/1U quota) would inject
+          // duplicates. For those formats deal the cube's multiset without recycling instead.
+          const flattenPool = draftFormat === 'winston' || draftFormat === 'rotisserie'
+          packs = flattenPool
+            ? generateCubeDraftPacks(allCards, playerCount * bpp)
+            : cube.booster
+              ? generateCubeRecipePacks(allCards, playerCount * bpp, cube.booster)
+              : generateAllPacks(allCards, playerCount, bpp, { includeHeroes: false, cubeMode: true })
           if (freeHero) freeHeroPool = [...new Set(cube.heroes ?? [])].filter(r => byRef.has(r))
         } else {
           const cubeRefSet = new Set(cube.refs)
