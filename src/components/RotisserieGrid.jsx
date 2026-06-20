@@ -5,7 +5,8 @@ import { cardSorter, useZoomOrigin } from './PoolGrid.jsx'
 
 // One pool card: art grows in place on hover (deckbuilder-style); clicking drafts one copy.
 function RotisserieCard({ ref_, card, count, onPick, disabled }) {
-  const { ref, origin, onMouseEnter } = useZoomOrigin()
+  // The pool is a dense grid of small cards, so zoom bigger (2x, like the Winston cards).
+  const { ref, origin, onMouseEnter } = useZoomOrigin(2)
   const faction = card?.faction ?? 'XX'
   const rarity = card?.rarity ?? 'C'
   return (
@@ -14,7 +15,7 @@ function RotisserieCard({ ref_, card, count, onPick, disabled }) {
         ref={ref} onMouseEnter={onMouseEnter} onClick={() => !disabled && onPick(ref_)} disabled={disabled}
         style={{ transformOrigin: origin }} title={card?.name ?? ref_}
         className={`aspect-[2/3] bg-surface2 overflow-hidden rounded-t-lg relative transition-transform duration-150 ease-out
-          ${disabled ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer hover:scale-[1.6] hover:z-30 hover:shadow-xl hover:shadow-black/70'}`}>
+          ${disabled ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer hover:scale-[2] hover:z-30 hover:shadow-xl hover:shadow-black/70'}`}>
         {card?.imagePath ? (
           <img src={card.imagePath} alt={card.name} className="w-full h-full object-cover" loading="lazy"
             onError={e => { e.currentTarget.style.display = 'none' }} />

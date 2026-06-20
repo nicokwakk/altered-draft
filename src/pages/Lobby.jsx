@@ -17,7 +17,7 @@ import SettingsFields from '../components/SettingsFields.jsx'
 import { DRAFT_FORMATS } from '../lib/draftFormats.js'
 import TopNav from '../components/TopNav.jsx'
 
-const TAB_LABELS = { presets: 'Presets', cubes: 'Cubes', advanced: 'Advanced', multiset: 'Multi-Set' }
+const TAB_LABELS = { presets: 'Presets', cubes: 'Cubes', advanced: 'Multi-Set', multiset: 'Multi-Set' }
 
 // Lobby wizard, step 1: how to play. Modes are the draft formats plus Sealed; player-count
 // badges come from the format metadata. Booster Draft is the classic pick-and-pass format.
