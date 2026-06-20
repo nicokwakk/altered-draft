@@ -13,7 +13,7 @@
  */
 
 import { makeDeadline } from '../components/PickTimer.jsx'
-import { heroOrderFor } from './draftLogic.js'
+import { heroOrderFor, heroTargetFor } from './draftLogic.js'
 import { rochesterOrder } from './rochesterLogic.js' // generic snake-order helper
 
 // Cards each player drafts. Capped so the pool keeps meaningful choices to the end rather than
@@ -49,11 +49,17 @@ export function buildRotisserieState(config, players, allPacks, heroPool = null)
     version: 0,
   }
 
+  // Optional in-app hero draft (heroMode='draft'): heroes are snake-drafted FIRST. Start in a
+  // 'heroDraft' phase and flip to 'rotisserie' (the pool above stays dormant) once each player
+  // has `heroTarget` heroes.
   if (heroPool && heroPool.length) {
-    const ht = Math.min(playerCount >= 5 ? 2 : 3, Math.floor(heroPool.length / playerCount))
+    state.phase = 'heroDraft'
+    state.heroStart = 'rotisserie'
     state.heroPool = heroPool
-    state.heroTarget = Math.max(0, ht)
+    state.heroTarget = heroTargetFor(config, heroPool.length, playerCount)
     state.heroPassesDone = 0
+    state.heroOrder = heroOrderFor(playerCount, 0)
+    state.heroTurnPos = 0
     state.heroPicks = {}
     for (let i = 0; i < playerCount; i++) state.heroPicks[String(i)] = []
   }
@@ -87,22 +93,7 @@ export function applyRotisseriePick(state, seat, ref) {
     return next
   }
 
-  // Draft complete. Run the finishing hero snake if one is pending; else finish.
-  const playerCount = state.players.length
-  const needHero = next.heroPool && next.heroPool.length >= playerCount
-    && (next.heroPassesDone ?? 0) < (next.heroTarget ?? 0)
-  if (needHero) {
-    next = {
-      ...next,
-      phase: 'heroDraft',
-      heroFinish: true,
-      heroOrder: heroOrderFor(playerCount, next.heroPassesDone ?? 0),
-      heroTurnPos: 0,
-    }
-    next.pickDeadline = freshDeadline(next)
-    return next
-  }
-
+  // Draft complete (heroes, if any, were drafted first).
   next.phase = 'done'
   next.pickDeadline = null
   return next

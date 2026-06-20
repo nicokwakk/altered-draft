@@ -7,22 +7,33 @@ export default function SettingsFields({
   mode = 'draft', draftFormat,
   lang, setLang,
   heroMode, setHeroMode,
+  heroCount = 3, setHeroCount, maxHeroes = 1, heroPoolSize = 0,
   timerEnabled, setTimerEnabled, timerSeconds, setTimerSeconds,
   addUniques, setAddUniques, showUniques = false,
 }) {
   const isDraft = mode === 'draft'
   const isWinston = isDraft && draftFormat === 'winston'
 
+  // Booster interleaves a hero pass between card rounds; the other formats draft heroes first.
+  const draftOpt = {
+    v: 'draft',
+    label: 'Draft',
+    desc: draftFormat === 'booster'
+      ? 'Snake-draft heroes in-app, one each between card rounds, until everyone has the number set below.'
+      : 'Snake-draft heroes in-app at the very start, before the cards. Take turns picking from a shared pool.',
+  }
+
   const heroOptions = isWinston
     ? [
         { v: 'packs', label: 'Shuffle into the pool', desc: 'Heroes become normal cards in the draft pool, taken via take/decline like everything else.' },
         { v: 'free', label: 'Free pick from all', desc: 'Every hero is available to both players; pick one at deckbuild. None appear in the pool.' },
         { v: 'split', label: 'Random split (one per faction)', desc: 'Each player is dealt their own heroes, one of each faction, to choose from at deckbuild. Best when there are two heroes per faction (e.g. the all-sets cube).' },
+        draftOpt,
       ]
     : [
         { v: 'packs', label: 'In packs', desc: 'Hero cards appear in boosters. Draft or open them.' },
         { v: 'free', label: 'Free choice', desc: 'Every available hero is added to your pool. Pick one at deckbuild; none appear in packs.' },
-        ...(isDraft ? [{ v: 'draft', label: 'Draft', desc: 'Heroes are snake-drafted in-app: take turns picking from a shared hero pool. (Needs at least as many heroes as players, else they’re added to your pool instead.)' }] : []),
+        ...(isDraft ? [draftOpt] : []),
       ]
 
   return (
@@ -64,6 +75,29 @@ export default function SettingsFields({
             )
           })}
         </div>
+
+        {/* Heroes per player — only when snake-drafting them in-app */}
+        {isDraft && heroMode === 'draft' && (
+          <div className="mt-2 pl-3 space-y-1">
+            <div className="flex items-center gap-3">
+              <span className="text-sm text-ink2">Heroes per player:</span>
+              {heroPoolSize > 0 ? (
+                <div className="flex items-center gap-1.5">
+                  <button type="button" onClick={() => setHeroCount(Math.max(1, heroCount - 1))} disabled={heroCount <= 1}
+                    className="w-7 h-7 rounded bg-surface2 hover:bg-surface3 disabled:opacity-30 text-ink2 font-bold flex items-center justify-center leading-none">−</button>
+                  <span className="w-6 text-center text-sm font-bold text-ink tabular-nums">{Math.min(heroCount, maxHeroes)}</span>
+                  <button type="button" onClick={() => setHeroCount(Math.min(maxHeroes, heroCount + 1))} disabled={heroCount >= maxHeroes}
+                    className="w-7 h-7 rounded bg-surface2 hover:bg-surface3 disabled:opacity-30 text-ink2 font-bold flex items-center justify-center leading-none">+</button>
+                </div>
+              ) : (
+                <span className="text-xs text-faint">counting the pool…</span>
+              )}
+            </div>
+            {heroPoolSize > 0 && (
+              <p className="text-xs text-faint">{heroPoolSize} heroes available, so 1 to {maxHeroes} per player.</p>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Random uniques — booster-based modes only (cubes manage their own uniques) */}

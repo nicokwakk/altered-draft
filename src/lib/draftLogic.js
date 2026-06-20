@@ -135,6 +135,15 @@ export function heroOrderFor(playerCount, passIndex) {
   return passIndex % 2 === 0 ? base : base.reverse()
 }
 
+// How many heroes each player drafts: the host's `config.heroCount` (default 3), clamped to
+// [1, floor(pool/players)] so the shared pool never runs short. `cap` limits it further
+// (booster draft can only interleave one hero per card round, so its cap is the round count).
+export function heroTargetFor(config, poolLen, playerCount, cap = Infinity) {
+  const perPlayerMax = Math.floor(poolLen / playerCount)
+  const want = Number.isFinite(config?.heroCount) ? config.heroCount : Math.min(3, perPlayerMax)
+  return Math.max(1, Math.min(want, perPlayerMax, cap))
+}
+
 /**
  * Apply a HERO pick. Heroes are drafted from ONE shared pool of all the cube's heroes
  * via a simple snake draft: after each card round, every player takes one hero (in
@@ -168,7 +177,15 @@ export function applyHeroPick(state, playerIndex, heroReference) {
   } else {
     // Pass complete — everyone took one hero this round.
     const passesDone = (state.heroPassesDone ?? 0) + 1
-    if (state.heroFinish) {
+    const poolShort = (nextState.heroPool?.length ?? 0) < state.players.length
+    const heroesDone = passesDone >= (state.heroTarget ?? 0) || poolShort
+    if (state.heroStart) {
+      // Heroes are drafted FIRST (Rochester/Rotisserie/Winston): when the snake finishes,
+      // flip into the card phase that was pre-built alongside it.
+      nextState = heroesDone
+        ? { ...nextState, phase: state.heroStart, heroPassesDone: passesDone, heroOrder: undefined, heroTurnPos: 0, pickDeadline: freshDeadline(nextState) }
+        : { ...nextState, heroPassesDone: passesDone, heroOrder: heroOrderFor(state.players.length, passesDone), heroTurnPos: 0, pickDeadline: freshDeadline(nextState) }
+    } else if (state.heroFinish) {
       // Rochester finishing hero snake: there are no card rounds to resume, so keep
       // snaking passes until each player has heroTarget heroes, then end the draft.
       const poolShort = (nextState.heroPool?.length ?? 0) < state.players.length
@@ -257,9 +274,9 @@ export function buildInitialState(config, players, allPacks, heroPool = null) {
   // one-per-player after each card round until each has heroTarget. heroTarget caps at
   // 3 (2 at 5+ players) and at floor(pool/players) so the pool never runs short.
   if (heroPool && heroPool.length) {
-    const target = Math.min(playerCount >= 5 ? 2 : 3, Math.floor(heroPool.length / playerCount))
+    // Booster interleaves one hero pass per card round, so it can draft at most 4 (the rounds).
     state.heroPool = heroPool
-    state.heroTarget = Math.max(0, target)
+    state.heroTarget = heroTargetFor(config, heroPool.length, playerCount, 4)
     state.heroPassesDone = 0
     state.heroPicks = {}
     for (let i = 0; i < playerCount; i++) state.heroPicks[String(i)] = []

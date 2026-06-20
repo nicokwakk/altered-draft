@@ -17,7 +17,7 @@
  */
 
 import { makeDeadline } from '../components/PickTimer.jsx'
-import { heroOrderFor } from './draftLogic.js'
+import { heroOrderFor, heroTargetFor } from './draftLogic.js'
 
 function freshDeadline(state) {
   const seconds = state.config?.timerSeconds
@@ -87,11 +87,15 @@ export function buildWinstonState(config, players, allPacks, heroPool = null) {
       const seats = splitHeroesPerSeat(heroPool, players.length)
       state.heroPicks = Object.fromEntries(seats.map((arr, i) => [String(i), arr]))
     } else {
-      // 'draft': in-app snake at the very end (heroFinish).
-      const ht = Math.min(2, Math.floor(heroPool.length / players.length)) // 2 players
+      // 'draft': snake-draft heroes FIRST, then flip to 'winston' (the deck/piles above stay
+      // dormant until the snake finishes).
+      state.phase = 'heroDraft'
+      state.heroStart = 'winston'
       state.heroPool = heroPool
-      state.heroTarget = Math.max(0, ht)
+      state.heroTarget = heroTargetFor(config, heroPool.length, players.length)
       state.heroPassesDone = 0
+      state.heroOrder = heroOrderFor(players.length, 0)
+      state.heroTurnPos = 0
       state.heroPicks = { '0': [], '1': [] }
     }
   }
@@ -100,23 +104,13 @@ export function buildWinstonState(config, players, allPacks, heroPool = null) {
   return state
 }
 
-// Reached when the deck is empty and every pile is empty: either finish, or (heroMode='draft')
-// run the finishing hero snake first.
+// Reached when the deck is empty and every pile is empty → the draft is done (heroes, if any,
+// were drafted first).
 function finishOrHero(next) {
   const drained = next.deck.length === 0 && next.piles.every(p => !p.length)
   if (!drained) return next
-  const needHero = next.heroPool && next.heroPool.length >= next.players.length
-    && (next.heroPassesDone ?? 0) < (next.heroTarget ?? 0)
-  if (needHero) {
-    next.phase = 'heroDraft'
-    next.heroFinish = true
-    next.heroOrder = heroOrderFor(next.players.length, next.heroPassesDone ?? 0)
-    next.heroTurnPos = 0
-    next.pickDeadline = freshDeadline(next)
-  } else {
-    next.phase = 'done'
-    next.pickDeadline = null
-  }
+  next.phase = 'done'
+  next.pickDeadline = null
   return next
 }
 

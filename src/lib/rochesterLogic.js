@@ -16,7 +16,7 @@
  */
 
 import { makeDeadline } from '../components/PickTimer.jsx'
-import { heroOrderFor } from './draftLogic.js'
+import { heroOrderFor, heroTargetFor } from './draftLogic.js'
 
 function freshDeadline(state) {
   const seconds = state.config?.timerSeconds
@@ -68,13 +68,17 @@ export function buildRochesterState(config, players, allPacks, heroPool = null) 
     version: 0,
   }
 
-  // Optional in-app hero draft (heroMode='draft'): one shared pool, snake-drafted AFTER the
-  // card packs. heroTarget caps at 3 (2 at 5+ players) and at floor(pool/players).
+  // Optional in-app hero draft (heroMode='draft'): heroes are snake-drafted FIRST. Start in a
+  // 'heroDraft' phase and flip to 'rochester' (the card fields above stay dormant) once each
+  // player has `heroTarget` heroes.
   if (heroPool && heroPool.length) {
-    const target = Math.min(playerCount >= 5 ? 2 : 3, Math.floor(heroPool.length / playerCount))
+    state.phase = 'heroDraft'
+    state.heroStart = 'rochester'
     state.heroPool = heroPool
-    state.heroTarget = Math.max(0, target)
+    state.heroTarget = heroTargetFor(config, heroPool.length, playerCount)
     state.heroPassesDone = 0
+    state.heroOrder = heroOrderFor(playerCount, 0)
+    state.heroTurnPos = 0
     state.heroPicks = {}
     for (let i = 0; i < playerCount; i++) state.heroPicks[String(i)] = []
   }
@@ -127,21 +131,7 @@ export function applyRochesterPick(state, seat, ref) {
     return next
   }
 
-  // All packs drafted. Run the finishing hero snake if one is pending; else finish.
-  const needHero = next.heroPool && next.heroPool.length >= playerCount
-    && (next.heroPassesDone ?? 0) < (next.heroTarget ?? 0)
-  if (needHero) {
-    next = {
-      ...next,
-      phase: 'heroDraft',
-      heroFinish: true,
-      heroOrder: heroOrderFor(playerCount, next.heroPassesDone ?? 0),
-      heroTurnPos: 0,
-    }
-    next.pickDeadline = freshDeadline(next)
-    return next
-  }
-
+  // All packs drafted (heroes, if any, were drafted first). Draft complete.
   next.phase = 'done'
   next.pickDeadline = null
   return next

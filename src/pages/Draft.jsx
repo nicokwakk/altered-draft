@@ -403,7 +403,9 @@ export default function Draft() {
           </div>
           {isHeroPhase && (
             <p className="mb-3 text-sm text-muted">
-              Between packs, each player snake-drafts one hero from the shared pool, {heroTarget} in total.
+              {roomState.heroStart
+                ? `Heroes first: each player snake-drafts ${heroTarget} hero${heroTarget !== 1 ? 'es' : ''} from the shared pool, then the card draft begins.`
+                : `Between packs, each player snake-drafts one hero from the shared pool, ${heroTarget} in total.`}
             </p>
           )}
           {isRochester && (
