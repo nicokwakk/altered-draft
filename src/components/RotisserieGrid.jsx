@@ -1,14 +1,12 @@
 import { useState } from 'react'
 import { FACTIONS, FACTION_NAMES, FACTION_COLORS } from '../lib/cardData.js'
-import { FACTION_ICONS, RARITY_GEMS } from '../lib/assets.js'
+import { FACTION_ICONS } from '../lib/assets.js'
 import { cardSorter, useZoomOrigin } from './PoolGrid.jsx'
 
 // One pool card: art grows in place on hover (deckbuilder-style); clicking drafts one copy.
 function RotisserieCard({ ref_, card, count, onPick, disabled }) {
   // The pool is a dense grid of small cards, so zoom bigger (2x, like the Winston cards).
   const { ref, origin, onMouseEnter } = useZoomOrigin(2)
-  const faction = card?.faction ?? 'XX'
-  const rarity = card?.rarity ?? 'C'
   return (
     <div className="relative flex flex-col rounded-lg border border-line bg-surface">
       <button
@@ -26,20 +24,8 @@ function RotisserieCard({ ref_, card, count, onPick, disabled }) {
           <div className="absolute top-1 left-1 bg-surface/90 text-ink2 font-bold text-xs px-1.5 py-0.5 rounded border border-line">×{count}</div>
         )}
       </button>
-      <div className="p-1.5 space-y-1">
-        <p className="text-xs font-medium leading-tight line-clamp-1 text-ink">{card?.name ?? ref_}</p>
-        <div className="flex items-center gap-1">
-          {FACTION_ICONS[faction] ? (
-            <img src={FACTION_ICONS[faction]} alt={FACTION_NAMES[faction] ?? faction}
-              className="w-4 h-4 object-contain shrink-0" onError={e => { e.currentTarget.style.display = 'none' }} />
-          ) : (
-            <span className="text-xs text-faint font-mono">{faction}</span>
-          )}
-          {RARITY_GEMS[rarity] && card?.cardType !== 'HERO' && (
-            <img src={RARITY_GEMS[rarity]} alt={rarity} className="w-3.5 h-3.5 object-contain ml-auto" />
-          )}
-        </div>
-      </div>
+      {/* Minimal footer — name only; faction/rarity read off the art (and the hover zoom). */}
+      <p className="px-1 py-0.5 text-[10px] text-ink2 leading-tight line-clamp-1">{card?.name ?? ref_}</p>
     </div>
   )
 }
@@ -78,7 +64,7 @@ export default function RotisserieGrid({ refs, cardMap, onPick, disabled }) {
         ))}
       </div>
 
-      <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-2">
+      <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-10 gap-2">
         {unique.map(ref => (
           <RotisserieCard key={ref} ref_={ref} card={cardMap[ref]} count={counts.get(ref)}
             onPick={onPick} disabled={disabled} />

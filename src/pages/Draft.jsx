@@ -358,8 +358,8 @@ export default function Draft() {
             : <span className="text-faint text-xs">Waiting…</span>}
         </span>
         <button onClick={() => setShowPool(true)}
-          className="text-xs px-2.5 py-1 rounded-lg bg-surface2 hover:bg-surface3 text-ink2 font-medium transition-colors shrink-0">
-          My pool ({poolRefs.length})
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-accent/15 hover:bg-accent/25 border border-accent/40 text-accent font-semibold text-sm transition-colors shrink-0">
+          <span aria-hidden="true">▦</span> My pool ({poolRefs.length})
         </button>
         <ThemeToggle />
       </div>
