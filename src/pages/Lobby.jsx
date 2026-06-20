@@ -668,6 +668,15 @@ export default function Lobby() {
     || (configTab === 'advanced' && Object.values(selectedSets).some(n => n > 0))
     || (configTab === 'multiset' && Object.values(multiSetMix).reduce((a, b) => a + (b || 0), 0) === poolTarget)
 
+  // Short recap of the chosen card source, shown in the wizard header so the host can see
+  // their earlier picks while on a later step.
+  const cardSummary =
+    (draftMode === 'draft' && customPoolText.trim()) ? 'Custom pool'
+    : configTab === 'cubes' ? (customCube?.name ?? COMMUNITY_CUBES.find(c => c.id === selectedCube)?.name ?? null)
+    : configTab === 'presets' ? (SETS.find(s => s.code === selectedPreset)?.name ?? null)
+    : (configTab === 'multiset' || configTab === 'advanced') ? 'Multi-Set'
+    : null
+
   // Keep the alternate formats expanded if one of them is the current pick.
   const otherModesExpanded = showOtherModes || OTHER_MODE_IDS.includes(mode)
   const modeButton = m => {
@@ -759,6 +768,16 @@ export default function Lobby() {
                 )
               })}
             </div>
+
+            {/* Recap of earlier picks, so the host sees their mode/cards on later steps */}
+            {wizardStep > 1 && (
+              <div className="px-6 py-2 border-b border-line bg-surface2/40 text-xs flex flex-wrap items-center gap-x-4 gap-y-0.5">
+                <span><span className="text-faint">Mode:</span> <span className="text-ink2 font-medium">{MODE_BY_ID[mode]?.name}</span></span>
+                {wizardStep > 2 && cardSummary && (
+                  <span><span className="text-faint">Cards:</span> <span className="text-ink2 font-medium">{cardSummary}</span></span>
+                )}
+              </div>
+            )}
 
             <div className="p-6 space-y-5">
               {/* STEP 1 — how to play (the mode). Booster Draft + Sealed up front; the

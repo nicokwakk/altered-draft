@@ -19,8 +19,8 @@ export default function SettingsFields({
     v: 'draft',
     label: 'Draft',
     desc: draftFormat === 'booster'
-      ? 'Snake-draft heroes in-app, one each between card rounds, until everyone has the number set below.'
-      : 'Snake-draft heroes in-app at the very start, before the cards. Take turns picking from a shared pool.',
+      ? 'Every hero in your set or cube goes into one shared pool; snake-draft them one each between card rounds, until everyone has the number set below.'
+      : 'Every hero in your set or cube goes into one shared pool; snake-draft them at the very start, before the cards.',
   }
 
   const heroOptions = isWinston
@@ -94,7 +94,7 @@ export default function SettingsFields({
               )}
             </div>
             {heroPoolSize > 0 && (
-              <p className="text-xs text-faint">{heroPoolSize} heroes available, so 1 to {maxHeroes} per player.</p>
+              <p className="text-xs text-faint">All {heroPoolSize} heroes available go into the shared pool; each player drafts 1 to {maxHeroes}.</p>
             )}
           </div>
         )}
