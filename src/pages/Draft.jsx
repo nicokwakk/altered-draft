@@ -10,6 +10,7 @@ import CardGrid from '../components/CardGrid.jsx'
 import RotisserieGrid from '../components/RotisserieGrid.jsx'
 import WinstonBoard from '../components/WinstonBoard.jsx'
 import DraftSidebar from '../components/DraftSidebar.jsx'
+import PoolGrid from '../components/PoolGrid.jsx'
 import PlayerStatus from '../components/PlayerStatus.jsx'
 import ZoomCard from '../components/ZoomCard.jsx'
 import PickTimer from '../components/PickTimer.jsx'
@@ -50,6 +51,7 @@ export default function Draft() {
   const [needsRejoin, setNeedsRejoin] = useState(false)
   const [rejoinName, setRejoinName] = useState('')
   const [rejoinError, setRejoinError] = useState('')
+  const [showPool, setShowPool] = useState(false) // full filterable view of what you've drafted
 
   const stateRef = useRef(null)
   stateRef.current = roomState
@@ -124,6 +126,13 @@ export default function Draft() {
     return () => supabase.removeChannel(channel)
   }, [code, navigate])
 
+  useEffect(() => {
+    if (!showPool) return
+    const onKey = e => { if (e.key === 'Escape') setShowPool(false) }
+    document.addEventListener('keydown', onKey)
+    return () => document.removeEventListener('keydown', onKey)
+  }, [showPool])
+
   const isHeroPhase = roomState?.phase === 'heroDraft'
   const isRochester = roomState?.phase === 'rochester'
   const isRotisserie = roomState?.phase === 'rotisserie'
@@ -146,6 +155,8 @@ export default function Draft() {
   const myCardPack = (myIndex !== -1 && roomState) ? (roomState.packs?.[String(myIndex)] ?? []) : []
   const myPicks = (myIndex !== -1 && roomState) ? (roomState.picks[String(myIndex)] ?? []) : []
   const myHeroPicks = (myIndex !== -1 && roomState) ? (roomState.heroPicks?.[String(myIndex)] ?? []) : []
+  // Everything you've drafted so far (heroes first), for the "My pool" overlay.
+  const poolRefs = [...myHeroPicks, ...myPicks]
   const myPack = isHeroPhase ? (roomState?.heroPool ?? [])
     : isRochester ? (roomState?.activePack ?? [])
     : isRotisserie ? (roomState?.pool ?? [])
@@ -346,6 +357,10 @@ export default function Draft() {
             ? <span className="text-green-400 font-medium text-sm">Your turn</span>
             : <span className="text-faint text-xs">Waiting…</span>}
         </span>
+        <button onClick={() => setShowPool(true)}
+          className="text-xs px-2.5 py-1 rounded-lg bg-surface2 hover:bg-surface3 text-ink2 font-medium transition-colors shrink-0">
+          My pool ({poolRefs.length})
+        </button>
         <ThemeToggle />
       </div>
 
@@ -474,6 +489,28 @@ export default function Draft() {
       </div>
 
       <MobileTabBar tab={mobileTab} setTab={setMobileTab} pickCount={activePicks.length} />
+
+      {/* My pool — a full, filterable/sortable view of everything you've drafted so far,
+          same browser as the Results pool tab (read-only here). */}
+      {showPool && (
+        <div className="fixed inset-0 z-50 bg-black/60 p-2 sm:p-6 flex flex-col"
+          onMouseDown={e => { if (e.target === e.currentTarget) setShowPool(false) }}>
+          <div className="bg-base border border-line rounded-2xl w-full max-w-6xl mx-auto flex-1 min-h-0 flex flex-col overflow-hidden shadow-2xl">
+            <div className="flex items-center justify-between px-4 py-3 border-b border-line shrink-0">
+              <h2 className="font-display text-lg text-ink">
+                Your pool <span className="text-faint text-sm font-sans">({poolRefs.length} card{poolRefs.length !== 1 ? 's' : ''})</span>
+              </h2>
+              <button onClick={() => setShowPool(false)}
+                className="text-faint hover:text-ink2 transition-colors text-2xl leading-none">×</button>
+            </div>
+            <div className="flex-1 min-h-0">
+              {poolRefs.length
+                ? <PoolGrid refs={poolRefs} cardMap={cardMap} />
+                : <p className="p-6 text-sm text-faint">Nothing drafted yet. Pick some cards and they'll show up here.</p>}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

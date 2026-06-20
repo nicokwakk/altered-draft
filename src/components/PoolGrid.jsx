@@ -240,15 +240,20 @@ function PoolCard({ ref_, occurrences, card, loading, deck, poolCounts, onAdd, o
       <div className="p-1">
         <p className="text-xs text-ink2 leading-tight line-clamp-1">{card?.name ?? ''}</p>
         <div className="flex items-center gap-1 mt-1">
-          <button onClick={() => onRemove(ref_)} disabled={!canRemove}
-            className="w-5 h-5 rounded bg-surface2 hover:bg-red-800 disabled:opacity-25 text-white font-bold flex items-center justify-center text-sm leading-none transition-colors">
-            −
-          </button>
-          <span className={`w-4 text-center text-xs font-bold ${inDeck > 0 ? 'text-accent' : 'text-faint'}`}>{inDeck}</span>
-          <button onClick={() => onAdd(ref_)} disabled={!canAdd}
-            className="w-5 h-5 rounded bg-surface2 hover:bg-green-800 disabled:opacity-25 text-white font-bold flex items-center justify-center text-sm leading-none transition-colors">
-            +
-          </button>
+          {/* Deck +/- controls only when wired (deckbuilder). Read-only pool views omit them. */}
+          {onAdd && onRemove && (
+            <>
+              <button onClick={() => onRemove(ref_)} disabled={!canRemove}
+                className="w-5 h-5 rounded bg-surface2 hover:bg-red-800 disabled:opacity-25 text-white font-bold flex items-center justify-center text-sm leading-none transition-colors">
+                −
+              </button>
+              <span className={`w-4 text-center text-xs font-bold ${inDeck > 0 ? 'text-accent' : 'text-faint'}`}>{inDeck}</span>
+              <button onClick={() => onAdd(ref_)} disabled={!canAdd}
+                className="w-5 h-5 rounded bg-surface2 hover:bg-green-800 disabled:opacity-25 text-white font-bold flex items-center justify-center text-sm leading-none transition-colors">
+                +
+              </button>
+            </>
+          )}
           <span className="ml-auto flex items-center gap-1">
             {card?.cardType !== 'HERO' && RARITY_GEMS[card?.rarity] && <img src={RARITY_GEMS[card.rarity]} alt="" className="w-3 h-3 object-contain" />}
             {setIcon && <img src={setIcon} alt="" className="w-3 h-3 object-contain opacity-50" onError={e => { e.currentTarget.style.display = 'none' }} />}
