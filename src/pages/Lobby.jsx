@@ -102,9 +102,6 @@ export default function Lobby() {
   const draftMode = isSealed ? 'sealed' : 'draft'      // derived, kept for the build logic below
   const draftFormat = isSealed ? 'booster' : mode      // sealed ignores format
   const bpp = boostersPerPlayer(mode)                  // target boosters per player for this mode
-  // Winston pools all packs into one shared deck, so "same packs for everyone" is meaningless —
-  // force the whole-bag distribution and hide the toggle for it.
-  const effectiveEqualPacks = mode === 'winston' ? false : equalPacks
   const [configTab, setConfigTab] = useState('presets') // 'presets' | 'cubes' | 'advanced'
   const [selectedPreset, setSelectedPreset] = useState(null) // set code
   const [selectedCube, setSelectedCube] = useState(null) // cube id
@@ -126,6 +123,9 @@ export default function Lobby() {
   const [selectedSets, setSelectedSets] = useState({ CORE: 1 })
   const [multiSetMix, setMultiSetMix] = useState({ CORE: 4 }) // per-player pack counts (sum = 4) for the Multi-Set draft tab
   const [equalPacks, setEqualPacks] = useState(true) // ON = same single-set boosters for all; OFF = random bag
+  // Winston pools all packs into one shared deck, so "same packs for everyone" is meaningless —
+  // force the whole-bag distribution and hide the toggle for it. (Declared after equalPacks.)
+  const effectiveEqualPacks = mode === 'winston' ? false : equalPacks
   const [lang, setLang] = useState('EN')
   // One control for how players get their hero:
   //  'packs' → hero cards appear in boosters (draft/open them)
