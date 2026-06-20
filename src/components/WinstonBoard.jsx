@@ -53,9 +53,9 @@ export default function WinstonBoard({ state, myIndex, cardMap, isMyTurn, onActi
     : 'Pass to next pile'
 
   return (
-    <div className="space-y-5">
-      {/* Deck + piles row */}
-      <div className="flex items-start gap-4 sm:gap-6 flex-wrap">
+    <div className="flex flex-col xl:flex-row xl:items-start gap-5 xl:gap-8">
+      {/* Deck + piles (left) */}
+      <div className="flex items-start gap-4 sm:gap-6 flex-wrap shrink-0">
         <FaceDown label="Deck" count={deckCount} highlight={false} />
         <div className="w-px self-stretch bg-line hidden sm:block" />
         {piles.map((p, idx) => (
@@ -64,50 +64,53 @@ export default function WinstonBoard({ state, myIndex, cardMap, isMyTurn, onActi
         ))}
       </div>
 
-      {isMyTurn ? (
-        <div className="bg-surface border border-accent/30 rounded-xl p-4 space-y-3">
-          <p className="text-sm text-ink2">
-            You're looking at <span className="text-accent font-semibold">Pile {peek + 1}</span> ({currentPile.length} card{currentPile.length !== 1 ? 's' : ''}).
-            Only you can see it. <span className="text-faint">Click a card to view it full-size.</span>
-          </p>
-          {currentPile.length > 0 ? (
-            <div className="flex flex-wrap gap-2">
-              {currentPile.map((ref, i) => <ZoomCard key={`${ref}-${i}`} ref_={ref} card={cardMap?.[ref]} width="w-28 sm:w-32" />)}
-            </div>
-          ) : (
-            <p className="text-sm text-faint">This pile is empty.</p>
-          )}
-          <div className="flex gap-3 pt-1">
-            <button onClick={() => onAction('take')} disabled={disabled || currentPile.length === 0}
-              className="px-4 py-2 bg-accent hover:bg-accent2 disabled:opacity-40 text-on-accent font-bold rounded-lg text-sm transition-colors">
-              Take this pile
-            </button>
-            {canPass && (
-              <button onClick={() => onAction('decline')} disabled={disabled}
-                className="px-4 py-2 bg-surface2 hover:bg-surface3 disabled:opacity-40 text-ink2 font-medium rounded-lg text-sm transition-colors">
-                {passLabel}
-              </button>
-            )}
-          </div>
-        </div>
-      ) : (
-        <div className="bg-surface border border-line rounded-lg px-4 py-3 text-sm text-muted">
-          Waiting for <span className="text-ink">{opponent}</span> to take or pass… (piles stay hidden until your turn)
-        </div>
-      )}
-
-      {/* The card you took blind off the deck (declined all three piles) — shown only to you. */}
-      {state.lastBlind?.seat === myIndex && (
-        <div className="bg-surface border border-accent/40 rounded-xl p-3 flex items-center gap-3">
-          <ZoomCard ref_={state.lastBlind.ref} card={cardMap?.[state.lastBlind.ref]} width="w-28 sm:w-32" highlight />
-          <div>
-            <p className="text-sm text-accent font-semibold">You drew this off the deck</p>
-            <p className="text-xs text-faint mt-0.5">
-              {cardMap?.[state.lastBlind.ref]?.name ?? 'A random card'} went straight into your pool, unseen.
+      {/* The pile you're looking at + actions (right; below the piles on narrow screens) */}
+      <div className="flex-1 min-w-0 space-y-4">
+        {isMyTurn ? (
+          <div className="bg-surface border border-accent/30 rounded-xl p-4 space-y-3">
+            <p className="text-sm text-ink2">
+              You're looking at <span className="text-accent font-semibold">Pile {peek + 1}</span> ({currentPile.length} card{currentPile.length !== 1 ? 's' : ''}).
+              Only you can see it. <span className="text-faint">Click a card to view it full-size.</span>
             </p>
+            {currentPile.length > 0 ? (
+              <div className="flex flex-wrap gap-2">
+                {currentPile.map((ref, i) => <ZoomCard key={`${ref}-${i}`} ref_={ref} card={cardMap?.[ref]} width="w-32 sm:w-36" />)}
+              </div>
+            ) : (
+              <p className="text-sm text-faint">This pile is empty.</p>
+            )}
+            <div className="flex gap-3 pt-1">
+              <button onClick={() => onAction('take')} disabled={disabled || currentPile.length === 0}
+                className="px-4 py-2 bg-accent hover:bg-accent2 disabled:opacity-40 text-on-accent font-bold rounded-lg text-sm transition-colors">
+                Take this pile
+              </button>
+              {canPass && (
+                <button onClick={() => onAction('decline')} disabled={disabled}
+                  className="px-4 py-2 bg-surface2 hover:bg-surface3 disabled:opacity-40 text-ink2 font-medium rounded-lg text-sm transition-colors">
+                  {passLabel}
+                </button>
+              )}
+            </div>
           </div>
-        </div>
-      )}
+        ) : (
+          <div className="bg-surface border border-line rounded-lg px-4 py-3 text-sm text-muted">
+            Waiting for <span className="text-ink">{opponent}</span> to take or pass… (piles stay hidden until your turn)
+          </div>
+        )}
+
+        {/* The card you took blind off the deck (declined all three piles) — shown only to you. */}
+        {state.lastBlind?.seat === myIndex && (
+          <div className="bg-surface border border-accent/40 rounded-xl p-3 flex items-center gap-3">
+            <ZoomCard ref_={state.lastBlind.ref} card={cardMap?.[state.lastBlind.ref]} width="w-28 sm:w-32" highlight />
+            <div>
+              <p className="text-sm text-accent font-semibold">You drew this off the deck</p>
+              <p className="text-xs text-faint mt-0.5">
+                {cardMap?.[state.lastBlind.ref]?.name ?? 'A random card'} went straight into your pool, unseen.
+              </p>
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   )
 }
