@@ -54,23 +54,6 @@ export function useZoomOrigin(scale = HOVER_SCALE) {
   return { ref, origin, onMouseEnter }
 }
 
-// Split a faction's cards into one row per hand cost (mainCost), ascending; heroes (no cost)
-// first, then any cost-less cards last. Used so the faction view reads like a curve.
-function rowsByCost(refs, cardMap) {
-  const heroes = [], buckets = {}
-  for (const ref of refs) {
-    const card = cardMap[ref]
-    if (card?.cardType === 'HERO') { heroes.push(ref); continue }
-    const cost = card?.mainCost != null ? String(card.mainCost) : '—'
-    ;(buckets[cost] = buckets[cost] ?? []).push(ref)
-  }
-  const rows = Object.keys(buckets)
-    .sort((a, b) => (a === '—' ? 99 : Number(a)) - (b === '—' ? 99 : Number(b)))
-    .map(cost => ({ cost, refs: buckets[cost] }))
-  if (heroes.length) rows.unshift({ cost: 'hero', refs: heroes })
-  return rows
-}
-
 /**
  * Shared pool browser with faction filter, sort/group, +/- deck controls,
  * and a large hover preview. Heroes are grouped inside their own faction.
@@ -189,26 +172,8 @@ export default function PoolGrid({ refs, cardMap, deck, poolCounts, onAdd, onRem
               {group.icon && <img src={group.icon} alt="" className="w-3.5 h-3.5 object-contain" onError={e => { e.currentTarget.style.display = 'none' }} />}
               {group.label} <span className="font-bold">({group.refs.length})</span>
             </div>
-            {sortBy === 'faction' ? (
-              // One row per hand cost so the faction reads as a curve.
-              <div className="space-y-1.5">
-                {rowsByCost(group.refs, cardMap).map(row => (
-                  <div key={row.cost} className="flex items-start gap-2">
-                    <span title="Hand cost"
-                      className="shrink-0 w-6 mt-1 text-center text-xs font-bold text-faint tabular-nums">
-                      {row.cost === 'hero' ? '★' : row.cost === '—' ? '–' : row.cost}
-                    </span>
-                    <div className="flex-1 min-w-0">
-                      <CardGridInner refs={row.refs} cardMap={cardMap} loading={loading}
-                        deck={deck} poolCounts={poolCounts} onAdd={onAdd} onRemove={onRemove} />
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <CardGridInner refs={group.refs} cardMap={cardMap} loading={loading}
-                deck={deck} poolCounts={poolCounts} onAdd={onAdd} onRemove={onRemove} />
-            )}
+            <CardGridInner refs={group.refs} cardMap={cardMap} loading={loading}
+              deck={deck} poolCounts={poolCounts} onAdd={onAdd} onRemove={onRemove} />
           </div>
         ))}
       </div>
