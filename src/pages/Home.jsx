@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase.js'
 import { generateRoomCode } from '../lib/roomCode.js'
+import { decodeSetup } from '../lib/setupLink.js'
 import { useAuth } from '../auth/AuthProvider.jsx'
 import TopNav from '../components/TopNav.jsx'
 
@@ -10,11 +11,15 @@ export default function Home() {
   const { user } = useAuth()
   const params = new URLSearchParams(window.location.search)
   const prefillCode = params.get('join') ?? ''
+  // Tournament invite link (?setup=<token>): drop the visitor straight into a "create your
+  // own sealed" flow — the locked config is carried through to the room's lobby.
+  const setupParam = params.get('setup') ?? ''
+  const invited = decodeSetup(setupParam)
 
   const [joinCode, setJoinCode] = useState(prefillCode.toUpperCase())
   const [joinName, setJoinName] = useState('')
   const [createName, setCreateName] = useState('')
-  const [mode, setMode] = useState(prefillCode ? 'join' : null)
+  const [mode, setMode] = useState(prefillCode ? 'join' : invited ? 'create' : null)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
@@ -58,7 +63,7 @@ export default function Home() {
     }
 
     localStorage.setItem(`player_${code}`, JSON.stringify({ id: playerId, name: createName.trim(), isHost: true }))
-    navigate(`/room/${code}`)
+    navigate(`/room/${code}${setupParam ? `?setup=${encodeURIComponent(setupParam)}` : ''}`)
   }
 
   async function handleJoin(e) {
@@ -137,7 +142,10 @@ export default function Home() {
 
         {mode === 'create' && (
           <form onSubmit={handleCreate} className="bg-surface rounded-xl p-6 space-y-4">
-            <h2 className="font-semibold text-lg">Create a draft room</h2>
+            <div>
+              <h2 className="font-semibold text-lg">{invited ? "You're invited to a Sealed" : 'Create a draft room'}</h2>
+              {invited && <p className="text-sm text-muted mt-1">Enter your name to open your own sealed pool with the organizer's settings.</p>}
+            </div>
             <div>
               <label className="block text-sm text-muted mb-1">Your display name</label>
               <input value={createName} onChange={e => setCreateName(e.target.value)}
@@ -147,11 +155,13 @@ export default function Home() {
             </div>
             {error && <p className="text-red-400 text-sm">{error}</p>}
             <div className="flex gap-3">
-              <button type="button" onClick={() => { setMode(null); setError('') }}
-                className="flex-1 py-2 rounded-lg bg-surface2 hover:bg-surface3 text-sm transition-colors">Back</button>
+              {!invited && (
+                <button type="button" onClick={() => { setMode(null); setError('') }}
+                  className="flex-1 py-2 rounded-lg bg-surface2 hover:bg-surface3 text-sm transition-colors">Back</button>
+              )}
               <button type="submit" disabled={loading}
                 className="flex-1 py-2 rounded-lg bg-accent hover:bg-accent2 text-on-accent font-semibold text-sm transition-colors disabled:opacity-50">
-                {loading ? 'Creating…' : 'Create room'}
+                {loading ? 'Creating…' : invited ? 'Create my pool' : 'Create room'}
               </button>
             </div>
           </form>
