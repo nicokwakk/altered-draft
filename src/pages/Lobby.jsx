@@ -759,13 +759,25 @@ export default function Lobby() {
             <div>
               <p className="text-xs text-faint uppercase tracking-widest mb-1">Tournament invite</p>
               <h1 className="text-2xl font-display">You're starting a Sealed</h1>
-              <p className="text-sm text-muted mt-1">These settings are locked by the organizer — just start to open your own pool.</p>
+              <p className="text-sm text-muted mt-1">The organizer set these — pick your card language, then start to open your own pool.</p>
             </div>
             <dl className="text-sm divide-y divide-line rounded-lg border border-line overflow-hidden">
               {row('Cards', cardSummary ?? '—')}
               {row('Boosters', boosterCount)}
               {row('Heroes', heroMode === 'free' ? 'Free choice at deckbuild' : 'In the boosters')}
-              {row('Language', lang)}
+              {/* Card language is a personal display choice (same pool either way), so the
+                  invited player can override the organizer's setting. */}
+              {row('Card language', (
+                <div className="flex gap-1 justify-end flex-wrap">
+                  {['EN', 'FR', 'ES', 'DE', 'IT'].map(l => (
+                    <button key={l} type="button" onClick={() => setLang(l)}
+                      className={`px-2 py-0.5 rounded text-xs font-mono transition-colors ${
+                        lang === l ? 'bg-accent text-on-accent font-bold' : 'bg-surface2 hover:bg-surface3 text-ink2'}`}>
+                      {l}
+                    </button>
+                  ))}
+                </div>
+              ))}
               {extras.length > 0 && row('Options', extras.join(' · '))}
             </dl>
             {startError && <p className="text-red-400 text-sm">{startError}</p>}
