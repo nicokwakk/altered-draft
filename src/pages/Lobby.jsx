@@ -10,6 +10,7 @@ import { buildDraftState } from '../lib/draftLogic.js'
 import { parseDecklist } from '../lib/cubeParser.js'
 import { resolveCubeRefs } from '../lib/cubeResolve.js'
 import { filterBanned } from '../lib/banlist.js'
+import { decodeSetup, buildInviteUrl } from '../lib/setupLink.js'
 import { listDecks, getDeck, deckCardsToRefs } from '../lib/decks.js'
 import { useAuth } from '../auth/AuthProvider.jsx'
 import SetSelector from '../components/SetSelector.jsx'
@@ -153,6 +154,38 @@ export default function Lobby() {
     if (!isSealed && mode !== 'winston' && heroMode === 'split') setHeroMode('packs')
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mode])
+
+  // Tournament invite link: ?setup=<token> pre-selects + LOCKS a sealed config (setupLink.js).
+  // Organizer-only flow — a normal "play with friends" host never sees this; they invite by
+  // room code as usual.
+  const [invited] = useState(() => decodeSetup(new URLSearchParams(window.location.search).get('setup')))
+  const locked = !!invited
+  const [inviteCopied, setInviteCopied] = useState(false)
+
+  async function copyInvite() {
+    try {
+      await navigator.clipboard.writeText(
+        buildInviteUrl({ configTab, selectedPreset, selectedCube, selectedSets, heroMode, lang, addUniques, excludeBanlist }),
+      )
+      setInviteCopied(true)
+      setTimeout(() => setInviteCopied(false), 1500)
+    } catch { /* clipboard blocked — ignore */ }
+  }
+
+  // Apply the invited config once on mount; the wizard is then rendered read-only + one Start.
+  useEffect(() => {
+    if (!invited) return
+    setMode('sealed')
+    if (invited.configTab) setConfigTab(invited.configTab)
+    if ('selectedPreset' in invited) setSelectedPreset(invited.selectedPreset ?? null)
+    if ('selectedCube' in invited) setSelectedCube(invited.selectedCube ?? null)
+    if (invited.selectedSets) setSelectedSets(invited.selectedSets)
+    if (invited.heroMode) setHeroMode(invited.heroMode)
+    if (invited.lang) setLang(invited.lang)
+    if (typeof invited.addUniques === 'boolean') setAddUniques(invited.addUniques)
+    if (typeof invited.excludeBanlist === 'boolean') setExcludeBanlist(invited.excludeBanlist)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const joinUrl = `${window.location.origin}/?join=${code}`
   const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=140x140&data=${encodeURIComponent(joinUrl)}&bgcolor=111827&color=f59e0b`
@@ -708,6 +741,44 @@ export default function Lobby() {
     )
   }
 
+  // Invite-link (organizer) flow: the whole wizard is replaced by a locked summary + one
+  // Start button, so the invited player can't change anything and just opens their own pool.
+  if (locked) {
+    const boosterCount = configTab === 'advanced'
+      ? Object.values(selectedSets).reduce((a, b) => a + (b || 0), 0)
+      : 7
+    const extras = [addUniques && 'Random uniques', excludeBanlist && 'Ban list'].filter(Boolean)
+    const row = (label, value) => (
+      <div className="flex justify-between gap-4 px-3 py-2"><dt className="text-faint">{label}</dt><dd className="text-ink2 text-right">{value}</dd></div>
+    )
+    return (
+      <div className="min-h-screen flex flex-col">
+        <TopNav />
+        <div className="flex-1 flex flex-col items-center justify-center px-4 py-8">
+          <div className="max-w-md w-full bg-surface rounded-xl p-6 space-y-5">
+            <div>
+              <p className="text-xs text-faint uppercase tracking-widest mb-1">Tournament invite</p>
+              <h1 className="text-2xl font-display">You're starting a Sealed</h1>
+              <p className="text-sm text-muted mt-1">These settings are locked by the organizer — just start to open your own pool.</p>
+            </div>
+            <dl className="text-sm divide-y divide-line rounded-lg border border-line overflow-hidden">
+              {row('Cards', cardSummary ?? '—')}
+              {row('Boosters', boosterCount)}
+              {row('Heroes', heroMode === 'free' ? 'Free choice at deckbuild' : 'In the boosters')}
+              {row('Language', lang)}
+              {extras.length > 0 && row('Options', extras.join(' · '))}
+            </dl>
+            {startError && <p className="text-red-400 text-sm">{startError}</p>}
+            <button onClick={handleStart} disabled={loading || !poolReady}
+              className="w-full py-3 rounded-lg bg-accent hover:bg-accent2 text-on-accent font-semibold transition-colors disabled:opacity-50">
+              {loading ? 'Generating your pool…' : 'Start sealed'}
+            </button>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="min-h-screen flex flex-col">
       <TopNav />
@@ -1171,6 +1242,22 @@ export default function Lobby() {
                   excludeBanlist={excludeBanlist} setExcludeBanlist={setExcludeBanlist}
                   showBanlist={isSealed}
                 />
+              )}
+
+              {/* Organizer-only: a locked invite link so each player opens the SAME sealed with
+                  one click (tournament use). Sealed only, hidden for un-encodable pasted cubes,
+                  and styled quietly so it doesn't distract casual "play with friends" hosts. */}
+              {wizardStep === 3 && isSealed && !customCube && (
+                <div className="mt-5 pt-4 border-t border-line">
+                  <p className="text-xs text-faint uppercase tracking-widest mb-1">Tournament organizer</p>
+                  <p className="text-xs text-faint mb-2 leading-relaxed">
+                    Share a locked link — everyone who opens it starts their own sealed pool with these exact settings, no host needed.
+                  </p>
+                  <button type="button" onClick={copyInvite} disabled={!poolReady}
+                    className="text-xs px-3 py-1.5 rounded-lg border border-line bg-surface2 hover:bg-surface3 disabled:opacity-40 text-ink2 transition-colors">
+                    {inviteCopied ? '✓ Invite link copied' : 'Copy invite link'}
+                  </button>
+                </div>
               )}
 
               {startError && <p className="text-red-400 text-sm">{startError}</p>}
