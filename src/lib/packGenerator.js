@@ -56,9 +56,10 @@ export function generateAllPacks(allCards, playerCount, packsPerPlayer = 4, opti
   // "Add random uniques" mode draws the unique slot from an injected real-unique pool
   // (standard sets carry no uniques in the card data, so `uniques` is otherwise empty).
   const useUniques = randomUniqueRate > 0 && uniquePool.length ? uniquePool : uniques
+  const usedUniques = new Set() // shared across packs so no unique serial repeats
   const packs = []
   for (let i = 0; i < totalPacks; i++) {
-    packs.push(generateOnePack(heroes, commons, rares, useUniques, i, randomUniqueRate))
+    packs.push(generateOnePack(heroes, commons, rares, useUniques, i, randomUniqueRate, usedUniques))
   }
   return packs
 }
@@ -74,6 +75,7 @@ export function generateAllPacks(allCards, playerCount, packsPerPlayer = 4, opti
 export function generateChaosPacks(cardsBySet, packMix, options = {}) {
   const { includeHeroes = true, uniquesBySet = {}, randomUniqueRate = 0 } = options
   const allPacks = []
+  const usedUniques = new Set() // shared across every booster so no unique serial repeats
   for (const [setCode, count] of Object.entries(packMix)) {
     if (!count || count < 1) continue
     const cards = cardsBySet[setCode] ?? []
@@ -81,7 +83,7 @@ export function generateChaosPacks(cardsBySet, packMix, options = {}) {
     const { heroes, commons, rares, uniques } = splitPools(cards, includeHeroes)
     const useUniques = randomUniqueRate > 0 && uniquesBySet[setCode]?.length ? uniquesBySet[setCode] : uniques
     for (let i = 0; i < count; i++) {
-      allPacks.push(generateOnePack(heroes, commons, rares, useUniques, i, randomUniqueRate))
+      allPacks.push(generateOnePack(heroes, commons, rares, useUniques, i, randomUniqueRate, usedUniques))
     }
   }
   return shuffle(allPacks)
@@ -109,13 +111,14 @@ export function generateStructuredPacks(cardsBySet, perPlayerMix, playerCount, o
   }
   const poolsBySet = {}
   const packs = []
+  const usedUniques = new Set() // shared across every booster so no unique serial repeats
   let packIndex = 0
   for (const setCode of rounds) {
     if (!poolsBySet[setCode]) poolsBySet[setCode] = splitPools(cardsBySet[setCode] ?? [], includeHeroes)
     const { heroes, commons, rares, uniques } = poolsBySet[setCode]
     const useUniques = randomUniqueRate > 0 && uniquesBySet[setCode]?.length ? uniquesBySet[setCode] : uniques
     for (let s = 0; s < playerCount; s++) {
-      packs.push(generateOnePack(heroes, commons, rares, useUniques, packIndex++, randomUniqueRate))
+      packs.push(generateOnePack(heroes, commons, rares, useUniques, packIndex++, randomUniqueRate, usedUniques))
     }
   }
   return packs
@@ -261,7 +264,7 @@ function generateCubePacks(heroes, commons, rares, uniques, totalPacks, includeH
   return packs
 }
 
-function generateOnePack(heroes, commons, rares, uniques, packIndex, randomUniqueRate = 0) {
+function generateOnePack(heroes, commons, rares, uniques, packIndex, randomUniqueRate = 0, usedUniques = new Set()) {
   const pack = []
 
   // 1 hero (only if heroes pool is non-empty)
@@ -316,10 +319,14 @@ function generateOnePack(heroes, commons, rares, uniques, packIndex, randomUniqu
 
   for (let slot = 0; slot < 3; slot++) {
     if (slot === 2 && uniquePack && uniques.length) {
-      const uni = pickRandom(uniques.filter(c => !usedRefs.has(c.reference)))
+      // usedUniques is shared across ALL boosters in this pool, so a given unique serial
+      // can appear at most once total (the pool is a small fetched sample, so drawing with
+      // replacement per-pack could otherwise hand out the same unique twice).
+      const uni = pickRandom(uniques.filter(c => !usedRefs.has(c.reference) && !usedUniques.has(c.reference)))
       if (uni) {
         pack.push(uni.reference)
         usedRefs.add(uni.reference)
+        usedUniques.add(uni.reference)
         continue
       }
     }
